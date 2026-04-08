@@ -615,10 +615,23 @@ export default function App() {
       {/* Header */}
       <header className="bg-black/40 border-b border-white/10 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 h-auto min-h-[80px] py-4 flex flex-col md:flex-row items-center justify-between gap-4">
+          
           <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-start">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 flex items-center justify-center bg-white/5 border border-white/10 rounded-xl sm:rounded-2xl shadow-2xl group hover:border-blue-500/50 transition-all duration-500">
-                <Activity className="w-6 h-6 text-blue-500 group-hover:scale-110 transition-transform duration-500" />
+              <div className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 rounded-xl sm:rounded-2xl overflow-hidden">
+                <svg viewBox="0 0 680 680" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+                  <rect x="90" y="90" width="500" height="500" rx="100" fill="#0f1729"/>
+                  <rect x="185" y="440" width="80" height="120" rx="12" fill="#3b6fd4"/>
+                  <rect x="290" y="340" width="80" height="220" rx="12" fill="#4a7fe8"/>
+                  <rect x="395" y="260" width="80" height="300" rx="12" fill="#5a8ff5"/>
+                  <rect x="500" y="310" width="80" height="250" rx="12" fill="#4a7fe8"/>
+                  <polyline points="185,420 270,310 375,240 455,265 545,230" fill="none" stroke="#4ecdc4" strokeWidth="14" strokeLinecap="round" strokeLinejoin="round"/>
+                  <circle cx="185" cy="420" r="14" fill="#4ecdc4"/>
+                  <circle cx="270" cy="310" r="14" fill="#4ecdc4"/>
+                  <circle cx="375" cy="240" r="14" fill="#4ecdc4"/>
+                  <circle cx="455" cy="265" r="14" fill="#4ecdc4"/>
+                  <circle cx="545" cy="230" r="14" fill="#4ecdc4"/> 
+                </svg>
               </div>
               <div>
                 <h1 className="font-black text-xl sm:text-2xl tracking-tighter text-white leading-none uppercase">Analysis <span className="text-blue-500">Hub</span></h1>
