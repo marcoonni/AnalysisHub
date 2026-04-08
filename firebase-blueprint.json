@@ -1,0 +1,54 @@
+{
+  "entities": {
+    "Match": {
+      "title": "Match",
+      "description": "A football match with xG and dangerzone data",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "homeTeam": { "type": "string" },
+        "awayTeam": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "totalXG": { "type": "number" },
+        "totalGoals": { "type": "number" },
+        "dangerEventsHome": { "type": "object" },
+        "dangerEventsAway": { "type": "object" },
+        "goalsHome": { "type": "number" },
+        "goalsAway": { "type": "number" },
+        "possessionHomeSeconds": { "type": "number" },
+        "possessionAwaySeconds": { "type": "number" }
+      },
+      "required": ["userId", "homeTeam", "awayTeam", "date"]
+    },
+    "Shot": {
+      "title": "Shot",
+      "description": "A single shot in a match",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "matchId": { "type": "string" },
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "xg": { "type": "number" },
+        "isGoal": { "type": "boolean" },
+        "playerName": { "type": "string" },
+        "bodyPart": { "type": "string" },
+        "assistType": { "type": "string" },
+        "minute": { "type": "number" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["matchId", "x", "y", "xg", "isGoal"]
+    }
+  },
+  "firestore": {
+    "/matches/{matchId}": {
+      "schema": "Match",
+      "description": "Collection of matches"
+    },
+    "/matches/{matchId}/shots/{shotId}": {
+      "schema": "Shot",
+      "description": "Subcollection of shots for a specific match"
+    }
+  }
+}

@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Analysis Hub</title>
+    <script>
+      // Prevent libraries from trying to overwrite window.fetch in environments where it's read-only
+      (function() {
+        const originalFetch = window.fetch;
+        if (originalFetch) {
+          try {
+            Object.defineProperty(window, 'fetch', {
+              get: function() { return originalFetch; },
+              set: function() { console.warn('Attempt to overwrite window.fetch blocked.'); },
+              configurable: false
+            });
+          } catch (e) {
+            // If it's already a getter, we might not be able to redefine it, but that's fine
+          }
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

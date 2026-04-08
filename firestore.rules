@@ -1,0 +1,95 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+         (request.auth.token.email == "onnivellomarco@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function hasRequiredFields(data, fields) {
+      return data.keys().hasAll(fields);
+    }
+
+    function isValidString(val, min, max) {
+      return val is string && val.size() >= min && val.size() <= max;
+    }
+
+    function isValidNumber(val, min, max) {
+      return val is number && val >= min && val <= max;
+    }
+
+    function hasOnlyAllowedFields(data, fields) {
+      return data.keys().hasOnly(fields);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+    function isValidMatch(data) {
+      let allowedFields = [
+        'userId', 'homeTeam', 'awayTeam', 'date', 'createdAt', 
+        'totalXG', 'totalGoals', 'dangerEventsHome', 'dangerEventsAway', 
+        'goalsHome', 'goalsAway', 'possessionHomeSeconds', 'possessionAwaySeconds'
+      ];
+      return hasRequiredFields(data, ['userId', 'homeTeam', 'awayTeam', 'date']) &&
+             hasOnlyAllowedFields(data, allowedFields) &&
+             data.userId == request.auth.uid &&
+             isValidString(data.homeTeam, 1, 100) &&
+             isValidString(data.awayTeam, 1, 100) &&
+             isValidString(data.date, 1, 50);
+    }
+
+    function isValidShot(data) {
+      let allowedFields = [
+        'id', 'matchId', 'x', 'y', 'xg', 'isGoal', 'playerName', 
+        'bodyPart', 'assistType', 'minute', 'timestamp'
+      ];
+      return hasRequiredFields(data, ['matchId', 'x', 'y', 'xg', 'isGoal']) &&
+             hasOnlyAllowedFields(data, allowedFields) &&
+             isValidNumber(data.x, -10, 110) &&
+             isValidNumber(data.y, -10, 110) &&
+             isValidNumber(data.xg, 0, 1) &&
+             (!('playerName' in data) || isValidString(data.playerName, 1, 100)) &&
+             (!('bodyPart' in data) || isValidString(data.bodyPart, 1, 20)) &&
+             (!('assistType' in data) || isValidString(data.assistType, 1, 20));
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+    match /matches/{matchId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && isValidMatch(request.resource.data);
+      allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin()) && isValidMatch(request.resource.data);
+      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+
+      match /shots/{shotId} {
+        allow read: if isAuthenticated() && (get(/databases/$(database)/documents/matches/$(matchId)).data.userId == request.auth.uid || isAdmin());
+        allow create: if isAuthenticated() && (get(/databases/$(database)/documents/matches/$(matchId)).data.userId == request.auth.uid || isAdmin()) && isValidShot(request.resource.data);
+        allow update: if isAuthenticated() && (get(/databases/$(database)/documents/matches/$(matchId)).data.userId == request.auth.uid || isAdmin()) && isValidShot(request.resource.data);
+        allow delete: if isAuthenticated() && (get(/databases/$(database)/documents/matches/$(matchId)).data.userId == request.auth.uid || isAdmin());
+      }
+    }
+
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (isOwner(userId) || isAdmin());
+      allow create: if isAuthenticated() && isOwner(userId) && (!('role' in request.resource.data) || request.resource.data.role == 'user');
+      allow update: if isAuthenticated() && (isOwner(userId) && request.resource.data.role == resource.data.role || isAdmin());
+    }
+  }
+}
