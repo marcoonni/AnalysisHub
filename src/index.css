@@ -15,3 +15,7 @@
   --color-white: #ffffff;
   --color-transparent: transparent;
 }
+
+body {
+  overscroll-behavior-y: none;
+}
