@@ -13,7 +13,6 @@ export interface Shot {
   minute: number;
   playerName?: string;
   matchName?: string;
-  team: 'home' | 'away';
 }
 
 export interface PitchDimensions {

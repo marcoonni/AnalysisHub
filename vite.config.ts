@@ -12,7 +12,11 @@ export default defineConfig(({mode}) => {
       tailwindcss(),
       VitePWA({
         registerType: 'autoUpdate',
-        includeAssets: ['pwa-512x512.svg', 'apple-touch-icon.png'],
+        devOptions: {
+          enabled: true,
+          type: 'module'
+        },
+        includeAssets: ['pwa-512x512.svg'],
         manifest: {
           name: 'Football Analysis Hub',
           short_name: 'AnalysisHub',
@@ -39,6 +43,9 @@ export default defineConfig(({mode}) => {
         },
         workbox: {
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+          cleanupOutdatedCaches: true,
+          clientsClaim: true,
+          skipWaiting: true,
           runtimeCaching: [
             {
               urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
@@ -47,7 +54,7 @@ export default defineConfig(({mode}) => {
                 cacheName: 'google-fonts-cache',
                 expiration: {
                   maxEntries: 10,
-                  maxAgeSeconds: 60 * 60 * 24 * 365 // <== 365 days
+                  maxAgeSeconds: 60 * 60 * 24 * 365
                 },
                 cacheableResponse: {
                   statuses: [0, 200]
@@ -61,7 +68,7 @@ export default defineConfig(({mode}) => {
                 cacheName: 'gstatic-fonts-cache',
                 expiration: {
                   maxEntries: 10,
-                  maxAgeSeconds: 60 * 60 * 24 * 365 // <== 365 days
+                  maxAgeSeconds: 60 * 60 * 24 * 365
                 },
                 cacheableResponse: {
                   statuses: [0, 200]

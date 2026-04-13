@@ -79,21 +79,20 @@ import html2canvas from 'html2canvas';
 interface Match {
   id: string;
   userId: string;
-  homeTeam: string;
-  awayTeam: string;
-  homeColor?: string;
+  teamName: string;
+  teamColor?: string;
+  awayTeam?: string;
   awayColor?: string;
   date: string;
   createdAt: any;
   totalXG: number;
   totalGoals: number;
-  ipoEventsHome?: any;
+  ipoEvents?: any;
   ipoEventsAway?: any;
-  goalsHome?: number;
+  goals?: number;
   goalsAway?: number;
-  possessionHomeSeconds?: number;
+  possessionSeconds?: number;
   possessionAwaySeconds?: number;
-  myTeamSide?: 'home' | 'away';
   matchEvents?: MatchEvent[];
 }
 
@@ -101,7 +100,6 @@ interface MatchEvent {
   id: string;
   minute: number;
   type: 'shot' | 'goal' | 'ipo_event' | 'possession_change' | 'match_start' | 'match_pause' | 'match_reset';
-  team: 'home' | 'away' | 'none';
   description: string;
   timestamp: number;
   value?: number;
@@ -155,8 +153,35 @@ interface ErrorBoundaryState {
 // Error Boundary Component
 const AppLogo = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 512 512" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M136 376 L256 136 L376 376" stroke="currentColor" strokeWidth="40" strokeLinecap="round" strokeLinejoin="round"/>
-    <circle cx="256" cy="216" r="40" fill="currentColor" className="animate-pulse"/>
+    <defs>
+      <radialGradient id="logoGlow" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stopColor="#00ffff" stopOpacity="1" />
+        <stop offset="70%" stopColor="#0066ff" stopOpacity="0.4" />
+        <stop offset="100%" stopColor="#0066ff" stopOpacity="0" />
+      </radialGradient>
+      <filter id="logoNeon">
+        <feGaussianBlur stdDeviation="8" result="blur" />
+        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+      </filter>
+    </defs>
+    
+    {/* Outer Rings */}
+    <circle cx="256" cy="256" r="200" stroke="#00d4ff" strokeWidth="4" opacity="0.2"/>
+    <circle cx="256" cy="256" r="150" stroke="#00d4ff" strokeWidth="6" opacity="0.4"/>
+    <circle cx="256" cy="256" r="100" stroke="#00d4ff" strokeWidth="10" opacity="0.6"/>
+    
+    {/* Crosshair */}
+    <path d="M256 20 V492 M20 256 H492" stroke="#00d4ff" strokeWidth="12" opacity="0.8" strokeLinecap="round" filter="url(#logoNeon)"/>
+    
+    {/* The "Hit" */}
+    <g transform="translate(100, -100)">
+      <circle cx="256" cy="256" r="80" fill="url(#logoGlow)" opacity="0.8" />
+      <circle cx="256" cy="256" r="35" fill="#00ffff" filter="url(#logoNeon)" />
+      <circle cx="256" cy="256" r="15" fill="white" filter="url(#logoNeon)" />
+      <path d="M226 226 L240 240 M286 286 L272 272 M226 286 L240 272 M286 226 L272 240" stroke="white" strokeWidth="10" strokeLinecap="round" />
+    </g>
+    
+    <circle cx="256" cy="256" r="15" fill="white" filter="url(#logoNeon)"/>
   </svg>
 );
 
@@ -229,10 +254,11 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [matches, setMatches] = useState<Match[]>([]);
   const [showMatchList, setShowMatchList] = useState(false);
+  const [showMatchSettings, setShowMatchSettings] = useState(false);
   const [currentMatchId, setCurrentMatchId] = useState<string | null>(null);
-  const [homeTeam, setHomeTeam] = useState('Bologna U18');
+  const [teamName, setTeamName] = useState('Bologna U18');
+  const [teamColor, setTeamColor] = useState('#eab308'); // Yellow-500
   const [awayTeam, setAwayTeam] = useState('Avversario');
-  const [homeColor, setHomeColor] = useState('#eab308'); // Yellow-500
   const [awayColor, setAwayColor] = useState('#3b82f6'); // Blue-500
   const [isSaving, setIsSaving] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -244,15 +270,23 @@ export default function App() {
   const [showToast, setShowToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [activeTab, setActiveTab] = useState<'xg' | 'ipo'>('xg');
-  const [teamFilter, setTeamFilter] = useState<'all' | 'home' | 'away'>('home');
-  const [myTeamSide, setMyTeamSide] = useState<'home' | 'away'>('home');
+  const [isPWAReady, setIsPWAReady] = useState(false);
+  const [ipoActiveTeam, setIpoActiveTeam] = useState<'home' | 'away'>('home');
+
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.ready.then(() => {
+        setIsPWAReady(true);
+      });
+    }
+  }, []);
 
   // Timer state
   const [timerSeconds, setTimerSeconds] = useState(0);
   const lastTickRef = useRef<number>(Date.now());
   const [isTimerRunning, setIsTimerRunning] = useState(false);
-  const [possessionState, setPossessionState] = useState<'home' | 'away' | 'none'>('none');
-  const [possessionHomeSeconds, setPossessionHomeSeconds] = useState(0);
+  const [possessionState, setPossessionState] = useState<'none' | 'home' | 'away'>('none');
+  const [possessionSeconds, setPossessionSeconds] = useState(0);
   const [possessionAwaySeconds, setPossessionAwaySeconds] = useState(0);
   const [matchEvents, setMatchEvents] = useState<MatchEvent[]>([]);
   const [ripples, setRipples] = useState<{ id: string, x: number, y: number }[]>([]);
@@ -271,7 +305,7 @@ export default function App() {
   };
 
   // IPO State
-  const [ipoEventsHome, setIpoEventsHome] = useState({
+  const [ipoEvents, setIpoEvents] = useState({
     shotsIn: 0,
     shotsOut: 0,
     penalties: 0,
@@ -289,13 +323,11 @@ export default function App() {
     crosses: 0
   });
 
-  const [goalsHome, setGoalsHome] = useState(0);
+  const [goals, setGoals] = useState(0);
   const [goalsAway, setGoalsAway] = useState(0);
 
   // Dynamic Theme Logic
-  const scoreDiff = goalsHome - goalsAway;
-  const possessionDiff = (possessionHomeSeconds - possessionAwaySeconds) / 60;
-  const matchDominance = Math.max(-1, Math.min(1, (scoreDiff * 0.4) + (possessionDiff * 0.05)));
+  const matchDominance = Math.max(-1, Math.min(1, (goals * 0.4) + ((possessionSeconds / 60) * 0.05)));
   
   const weights = {
     shotsIn: 1.3,
@@ -312,21 +344,18 @@ export default function App() {
     }, 0);
   };
 
-  const ipoHome = useMemo(() => calculateIPO(ipoEventsHome), [ipoEventsHome]);
+  const ipo = useMemo(() => calculateIPO(ipoEvents), [ipoEvents]);
   const ipoAway = useMemo(() => calculateIPO(ipoEventsAway), [ipoEventsAway]);
-
-  const prevIpoHome = usePrevious(ipoHome);
+  const prevIpo = usePrevious(ipo);
   const prevIpoAway = usePrevious(ipoAway);
 
   const [newShotConfig, setNewShotConfig] = useState<{
-    team: 'home' | 'away';
     bodyPart: BodyPart;
     assistType: AssistType;
     isGoal: boolean;
     playerName: string;
     minute: number;
   }>({
-    team: 'home',
     bodyPart: 'foot',
     assistType: 'none',
     isGoal: false,
@@ -367,7 +396,7 @@ export default function App() {
           
           // Track possession
           if (possessionState === 'home') {
-            setPossessionHomeSeconds(prev => prev + deltaSec);
+            setPossessionSeconds(prev => prev + deltaSec);
           } else if (possessionState === 'away') {
             setPossessionAwaySeconds(prev => prev + deltaSec);
           }
@@ -384,15 +413,15 @@ export default function App() {
   useEffect(() => {
     if (prevPossessionState.current !== possessionState) {
       if (possessionState !== 'none') {
+        const activeTeam = possessionState === 'home' ? teamName : awayTeam;
         addMatchEvent({
           type: 'possession_change',
-          team: possessionState,
-          description: `Inizio possesso ${possessionState === 'home' ? homeTeam : awayTeam}`
+          description: `Inizio possesso ${activeTeam}`
         });
       }
       prevPossessionState.current = possessionState;
     }
-  }, [possessionState]);
+  }, [possessionState, teamName, awayTeam]);
 
   // Record timer start/stop
   const prevIsTimerRunning = useRef(isTimerRunning);
@@ -400,7 +429,6 @@ export default function App() {
     if (prevIsTimerRunning.current !== isTimerRunning) {
       addMatchEvent({
         type: isTimerRunning ? 'match_start' : 'match_pause',
-        team: 'none',
         description: isTimerRunning ? 'Timer Avviato' : 'Timer Pausato'
       });
       prevIsTimerRunning.current = isTimerRunning;
@@ -410,23 +438,13 @@ export default function App() {
   const currentMinute = Math.floor(timerSeconds / 60);
 
   // Stats
-  const filteredShots = useMemo(() => {
-    if (teamFilter === 'all') return shots;
-    return shots.filter(s => s.team === teamFilter);
-  }, [shots, teamFilter]);
-
-  // Dynamic Stats for the main cards
-  const displayShots = useMemo(() => {
-    if (teamFilter === 'all') return shots.filter(s => s.team === myTeamSide);
-    return filteredShots;
-  }, [shots, filteredShots, teamFilter, myTeamSide]);
-
+  const displayShots = useMemo(() => shots, [shots]);
   const displayXG = useMemo(() => displayShots.reduce((sum, s) => sum + s.xg, 0), [displayShots]);
   const displayGoals = useMemo(() => displayShots.filter(s => s.isGoal).length, [displayShots]);
   const displayXGPerShot = useMemo(() => displayShots.length > 0 ? displayXG / displayShots.length : 0, [displayShots, displayXG]);
 
-  const totalXG = useMemo(() => shots.reduce((sum, s) => sum + s.xg, 0), [shots]);
-  const totalGoals = useMemo(() => shots.filter(s => s.isGoal).length, [shots]);
+  const totalXG = displayXG;
+  const totalGoals = displayGoals;
 
   // Chart Data
   const chartData = useMemo(() => [
@@ -434,10 +452,7 @@ export default function App() {
     { name: 'Gol Reali', value: displayGoals, color: '#eab308' },
   ], [displayXG, displayGoals]);
 
-  const filteredMatchEvents = useMemo(() => {
-    if (teamFilter === 'all') return matchEvents;
-    return matchEvents.filter(e => e.team === teamFilter || e.team === 'none');
-  }, [matchEvents, teamFilter]);
+  const filteredMatchEvents = useMemo(() => matchEvents, [matchEvents]);
 
   const handlePitchClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!pitchRef.current) return;
@@ -451,8 +466,6 @@ export default function App() {
 
     const xg = calculateXG(mX, mY, newShotConfig.bodyPart, newShotConfig.assistType);
 
-    const shotTeam = teamFilter === 'all' ? myTeamSide : teamFilter;
-
     const newShot: Shot = {
       id: Math.random().toString(36).substr(2, 9),
       x: mX,
@@ -464,7 +477,6 @@ export default function App() {
       timestamp: Date.now(),
       minute: currentMinute,
       playerName: newShotConfig.playerName || 'Giocatore',
-      team: shotTeam,
     };
 
     setShots(prev => [...prev, newShot]);
@@ -480,7 +492,6 @@ export default function App() {
     // Record match event
     addMatchEvent({
       type: newShot.isGoal ? 'goal' : 'shot',
-      team: newShotConfig.team,
       description: `${newShot.isGoal ? 'GOL!' : 'Tiro'} - xG: ${newShot.xg.toFixed(2)} (${newShot.playerName})`,
       value: newShot.xg
     });
@@ -530,14 +541,13 @@ export default function App() {
 
       // 2. IPO Stats
       const ipoStats = [
-        { Team: homeTeam, ...ipoEventsHome, Goals: goalsHome, Possession: `${Math.floor(possessionHomeSeconds / 60)}:${(possessionHomeSeconds % 60).toString().padStart(2, '0')}` },
-        { Team: awayTeam, ...ipoEventsAway, Goals: goalsAway, Possession: `${Math.floor(possessionAwaySeconds / 60)}:${(possessionAwaySeconds % 60).toString().padStart(2, '0')}` }
+        { Team: teamName, ...ipoEvents, Goals: goals, Possession: `${Math.floor(possessionSeconds / 60)}:${(possessionSeconds % 60).toString().padStart(2, '0')}` }
       ];
 
       // 3. Match Events Log
       const eventsLog = matchEvents.map(e => ({
         Minuto: e.minute,
-        Squadra: e.team === 'home' ? homeTeam : e.team === 'away' ? awayTeam : 'N/A',
+        Squadra: teamName,
         Evento: e.type,
         Descrizione: e.description
       }));
@@ -553,7 +563,7 @@ export default function App() {
       const logSheet = XLSX.utils.json_to_sheet(eventsLog);
       XLSX.utils.book_append_sheet(workbook, logSheet, "Log Partita");
 
-      XLSX.writeFile(workbook, `MatchReport_${homeTeam}_vs_${awayTeam}_${new Date().toISOString().split('T')[0]}.xlsx`);
+      XLSX.writeFile(workbook, `MatchReport_${teamName}_${new Date().toISOString().split('T')[0]}.xlsx`);
       setShowToast({ message: 'File Excel generato con successo!', type: 'success' });
     } catch (error) {
       console.error("Excel Export Error:", error);
@@ -643,21 +653,20 @@ export default function App() {
     try {
       const matchData = {
         userId: user.uid,
-        homeTeam,
+        teamName,
+        teamColor,
         awayTeam,
-        homeColor,
         awayColor,
         date: new Date().toISOString(),
         createdAt: serverTimestamp(),
         totalXG: totalXG,
-        totalGoals: totalGoals,
-        ipoEventsHome,
+        totalGoals: goals,
+        ipoEvents,
         ipoEventsAway,
-        goalsHome,
+        goals,
         goalsAway,
-        possessionHomeSeconds,
-        possessionAwaySeconds,
-        myTeamSide
+        possessionSeconds,
+        possessionAwaySeconds
       };
 
       let matchId = currentMatchId;
@@ -694,7 +703,10 @@ export default function App() {
         await Promise.all(shotPromises);
       }
 
-      setShowToast({ message: "Partita salvata con successo!", type: 'success' });
+      setShowToast({ 
+        message: isOnline ? "Partita salvata con successo!" : "Salvato localmente (sincronizzazione appena torni online)", 
+        type: 'success' 
+      });
     } catch (error) {
       console.error("Save Match Error:", error);
       handleFirestoreError(error, OperationType.WRITE, 'matches');
@@ -708,19 +720,16 @@ export default function App() {
     setLoadingMatchId(match.id);
     try {
       setCurrentMatchId(match.id);
-      setHomeTeam(match.homeTeam);
-      setAwayTeam(match.awayTeam);
-      setHomeColor(match.homeColor || '#eab308');
+      setTeamName(match.teamName || 'Bologna U18');
+      setTeamColor(match.teamColor || '#eab308');
+      setAwayTeam(match.awayTeam || 'Avversario');
       setAwayColor(match.awayColor || '#3b82f6');
-      setIpoEventsHome(match.ipoEventsHome || { shotsIn: 0, shotsOut: 0, penalties: 0, freeKicks: 0, corners: 0, crosses: 0 });
+      setIpoEvents(match.ipoEvents || { shotsIn: 0, shotsOut: 0, penalties: 0, freeKicks: 0, corners: 0, crosses: 0 });
       setIpoEventsAway(match.ipoEventsAway || { shotsIn: 0, shotsOut: 0, penalties: 0, freeKicks: 0, corners: 0, crosses: 0 });
-      setGoalsHome(match.goalsHome || 0);
+      setGoals(match.goals || 0);
       setGoalsAway(match.goalsAway || 0);
-      setPossessionHomeSeconds(match.possessionHomeSeconds || 0);
+      setPossessionSeconds(match.possessionSeconds || 0);
       setPossessionAwaySeconds(match.possessionAwaySeconds || 0);
-      setMyTeamSide(match.myTeamSide || 'home');
-      setTeamFilter('all');
-      setPossessionState('none');
       
       const shotsSnapshot = await getDocs(collection(db, 'matches', match.id, 'shots'));
       const shotsData = shotsSnapshot.docs.map(doc => ({
@@ -801,11 +810,11 @@ export default function App() {
     setCurrentMatchId(null);
     setTimerSeconds(0);
     setIsTimerRunning(false);
-    setIpoEventsHome({ shotsIn: 0, shotsOut: 0, penalties: 0, freeKicks: 0, corners: 0, crosses: 0 });
+    setIpoEvents({ shotsIn: 0, shotsOut: 0, penalties: 0, freeKicks: 0, corners: 0, crosses: 0 });
     setIpoEventsAway({ shotsIn: 0, shotsOut: 0, penalties: 0, freeKicks: 0, corners: 0, crosses: 0 });
-    setGoalsHome(0);
+    setGoals(0);
     setGoalsAway(0);
-    setPossessionHomeSeconds(0);
+    setPossessionSeconds(0);
     setPossessionAwaySeconds(0);
     setPossessionState('none');
     setMatchEvents([]);
@@ -839,6 +848,12 @@ export default function App() {
                     <span className="text-[8px] font-bold text-red-500 uppercase tracking-widest">Offline Mode</span>
                   </div>
                 )}
+                {isOnline && isPWAReady && (
+                  <div className="flex items-center gap-1 mt-1">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    <span className="text-[8px] font-bold text-emerald-500 uppercase tracking-widest">Ready Offline</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -866,73 +881,52 @@ export default function App() {
 
           <div className="flex flex-nowrap items-center justify-end gap-2 sm:gap-3 w-full md:w-auto overflow-x-auto no-scrollbar">
             {/* Possession UI */}
-            <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-2 sm:px-3 py-1.5 shrink-0">
-              <div className="flex flex-col gap-1">
-                <div className="h-1.5 w-24 sm:w-32 bg-white/10 rounded-full overflow-hidden flex">
-                  <div 
-                    className="h-full transition-all duration-500" 
-                    style={{ 
-                      width: `${possessionHomeSeconds + possessionAwaySeconds > 0 ? (possessionHomeSeconds / (possessionHomeSeconds + possessionAwaySeconds)) * 100 : 50}%`,
-                      backgroundColor: homeColor
-                    }}
-                  />
-                  <div 
-                    className="h-full transition-all duration-500" 
-                    style={{ 
-                      width: `${possessionHomeSeconds + possessionAwaySeconds > 0 ? (possessionAwaySeconds / (possessionHomeSeconds + possessionAwaySeconds)) * 100 : 50}%`,
-                      backgroundColor: awayColor
-                    }}
-                  />
+                <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-2 sm:px-3 py-1.5 shrink-0">
+                  <div className="flex flex-col gap-1">
+                    <div className="h-1.5 w-24 sm:w-32 bg-white/10 rounded-full overflow-hidden flex">
+                      <motion.div 
+                        className="h-full"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${(possessionSeconds + possessionAwaySeconds) > 0 ? (possessionSeconds / (possessionSeconds + possessionAwaySeconds)) * 100 : 50}%` }}
+                        style={{ backgroundColor: teamColor }}
+                      />
+                      <motion.div 
+                        className="h-full"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${(possessionSeconds + possessionAwaySeconds) > 0 ? (possessionAwaySeconds / (possessionSeconds + possessionAwaySeconds)) * 100 : 50}%` }}
+                        style={{ backgroundColor: awayColor }}
+                      />
+                    </div>
+                    <div className="flex justify-between items-center w-24 sm:w-32">
+                      <span className="text-[9px] font-black text-white uppercase tracking-widest">Possesso</span>
+                      <span className="text-[9px] font-black text-white">
+                        {Math.floor(possessionSeconds / 60)}' / {Math.floor(possessionAwaySeconds / 60)}'
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex gap-1">
+                    <button 
+                      onClick={() => setPossessionState(possessionState === 'home' ? 'none' : 'home')}
+                      className={cn(
+                        "w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center transition-all border",
+                        possessionState === 'home' ? "bg-emerald-500 border-emerald-500 text-white shadow-lg shadow-emerald-500/20" : "bg-white/5 border-white/10 text-gray-400 hover:text-white"
+                      )}
+                      style={possessionState === 'home' ? { backgroundColor: teamColor, borderColor: teamColor } : {}}
+                    >
+                      <span className="text-[8px] font-black">{teamName.substring(0, 1)}</span>
+                    </button>
+                    <button 
+                      onClick={() => setPossessionState(possessionState === 'away' ? 'none' : 'away')}
+                      className={cn(
+                        "w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center transition-all border",
+                        possessionState === 'away' ? "bg-emerald-500 border-emerald-500 text-white shadow-lg shadow-emerald-500/20" : "bg-white/5 border-white/10 text-gray-400 hover:text-white"
+                      )}
+                      style={possessionState === 'away' ? { backgroundColor: awayColor, borderColor: awayColor } : {}}
+                    >
+                      <span className="text-[8px] font-black">{awayTeam.substring(0, 1)}</span>
+                    </button>
+                  </div>
                 </div>
-                <div className="flex justify-between items-center w-24 sm:w-32">
-                  <span className="text-[9px] font-black text-white">
-                    {possessionHomeSeconds + possessionAwaySeconds > 0 ? Math.round((possessionHomeSeconds / (possessionHomeSeconds + possessionAwaySeconds)) * 100) : 50}%
-                  </span>
-                  <span className="text-[9px] font-black text-white">
-                    {possessionHomeSeconds + possessionAwaySeconds > 0 ? Math.round((possessionAwaySeconds / (possessionHomeSeconds + possessionAwaySeconds)) * 100) : 50}%
-                  </span>
-                </div>
-              </div>
-              <div className="flex gap-1">
-                <button 
-                  onClick={() => setPossessionState(possessionState === 'home' ? 'none' : 'home')}
-                  className={cn(
-                    "w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center transition-all border",
-                    possessionState === 'home' ? "text-white shadow-lg" : "bg-white/5 border-white/10 text-gray-400 hover:text-white"
-                  )}
-                  style={{ 
-                    backgroundColor: possessionState === 'home' ? homeColor : undefined,
-                    borderColor: possessionState === 'home' ? homeColor : undefined,
-                    boxShadow: possessionState === 'home' ? `0 10px 15px -3px ${homeColor}33` : undefined
-                  }}
-                >
-                  <div className="font-black text-[9px]">H</div>
-                </button>
-                <button 
-                  onClick={() => setPossessionState('none')}
-                  className={cn(
-                    "w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center transition-all border",
-                    possessionState === 'none' ? "bg-white/20 border-white/30 text-white" : "bg-white/5 border-white/10 text-gray-400 hover:text-white"
-                  )}
-                >
-                  <X className="w-3 h-3" />
-                </button>
-                <button 
-                  onClick={() => setPossessionState(possessionState === 'away' ? 'none' : 'away')}
-                  className={cn(
-                    "w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center transition-all border",
-                    possessionState === 'away' ? "text-white shadow-lg" : "bg-white/5 border-white/10 text-gray-400 hover:text-white"
-                  )}
-                  style={{ 
-                    backgroundColor: possessionState === 'away' ? awayColor : undefined,
-                    borderColor: possessionState === 'away' ? awayColor : undefined,
-                    boxShadow: possessionState === 'away' ? `0 10px 15px -3px ${awayColor}33` : undefined
-                  }}
-                >
-                  <div className="font-black text-[9px]">A</div>
-                </button>
-              </div>
-            </div>
 
             <div className="h-8 w-px bg-white/10 shrink-0" />
 
@@ -959,7 +953,7 @@ export default function App() {
                   onClick={() => {
                     setTimerSeconds(0);
                     setIsTimerRunning(false);
-                    setPossessionHomeSeconds(0);
+                    setPossessionSeconds(0);
                     setPossessionAwaySeconds(0);
                     setPossessionState('none');
                   }}
@@ -977,7 +971,7 @@ export default function App() {
               <div className="flex items-center gap-2">
                 <Activity 
                   className="w-3.5 h-3.5 transition-colors"
-                  style={{ color: matchDominance > 0.2 ? homeColor : matchDominance < -0.2 ? awayColor : '#6b7280' }}
+                  style={{ color: matchDominance > 0.2 ? teamColor : '#6b7280' }}
                 />
                 <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Dominio</span>
               </div>
@@ -985,11 +979,9 @@ export default function App() {
                 <motion.div 
                   animate={{ 
                     width: `${Math.abs(matchDominance) * 100}%`,
-                    backgroundColor: matchDominance > 0 ? homeColor : awayColor,
-                    x: matchDominance > 0 ? '50%' : '-50%'
+                    backgroundColor: teamColor,
                   }}
                   className="h-full rounded-full"
-                  style={{ marginLeft: '50%' }}
                   transition={{ type: "spring", stiffness: 100, damping: 20 }}
                 />
               </div>
@@ -1053,37 +1045,7 @@ export default function App() {
 
                 <div className="hidden xl:flex items-center gap-2 mr-2">
                 </div>
-                <div className="flex items-center bg-white/5 rounded-lg p-1 border border-white/10">
-                  <button 
-                    onClick={() => setTeamFilter('all')}
-                    className={cn(
-                      "px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-[10px] sm:text-xs font-medium transition-all",
-                      teamFilter === 'all' ? "bg-white/20 text-white shadow-lg" : "text-gray-400 hover:text-white"
-                    )}
-                  >
-                    Tutti
-                  </button>
-                  <button 
-                    onClick={() => setTeamFilter('home')}
-                    className={cn(
-                      "px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-[10px] sm:text-xs font-medium transition-all",
-                      teamFilter === 'home' ? "text-white shadow-lg" : "text-gray-400 hover:text-white"
-                    )}
-                    style={{ backgroundColor: teamFilter === 'home' ? homeColor : undefined }}
-                  >
-                    Casa
-                  </button>
-                  <button 
-                    onClick={() => setTeamFilter('away')}
-                    className={cn(
-                      "px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-[10px] sm:text-xs font-medium transition-all",
-                      teamFilter === 'away' ? "text-white shadow-lg" : "text-gray-400 hover:text-white"
-                    )}
-                    style={{ backgroundColor: teamFilter === 'away' ? awayColor : undefined }}
-                  >
-                    Ospite
-                  </button>
-                </div>
+
 
                 {showHeatmap && (
                   <div className="hidden lg:flex items-center gap-4 bg-white/5 border border-white/10 rounded-xl px-3 py-1.5">
@@ -1140,6 +1102,16 @@ export default function App() {
 
               {user ? (
                 <>
+                  <motion.button 
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setShowMatchSettings(true)}
+                    className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all border border-white/10 flex items-center gap-2"
+                    title="Impostazioni Partita"
+                  >
+                    <Settings className="w-4 h-4" />
+                    <span className="hidden xl:inline text-xs font-bold">Impostazioni</span>
+                  </motion.button>
                   <motion.button 
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
@@ -1260,12 +1232,8 @@ export default function App() {
           {/* Pitch Container */}
           <motion.div 
             animate={{ 
-              borderColor: possessionState === 'home' ? 'rgba(59, 130, 246, 0.5)' : 
-                          possessionState === 'away' ? 'rgba(239, 68, 68, 0.5)' : 
-                          'rgba(255, 255, 255, 0.1)',
-              boxShadow: possessionState === 'home' ? '0 0 30px rgba(59, 130, 246, 0.15)' : 
-                         possessionState === 'away' ? '0 0 30px rgba(239, 68, 68, 0.15)' : 
-                         '0 0 0px rgba(0,0,0,0)'
+              borderColor: possessionState !== 'none' ? 'rgba(59, 130, 246, 0.5)' : 'rgba(255, 255, 255, 0.1)',
+              boxShadow: possessionState !== 'none' ? '0 0 30px rgba(59, 130, 246, 0.15)' : '0 0 0px rgba(0,0,0,0)'
             }}
             className="relative bg-black/40 border rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl transition-all duration-700"
           >
@@ -1411,7 +1379,7 @@ export default function App() {
               </AnimatePresence>
 
               {/* Shots */}
-              {filteredShots.map((shot) => (
+              {shots.map((shot) => (
                 <motion.button
                   key={shot.id}
                   initial={{ scale: 0, opacity: 0, rotate: -45 }}
@@ -1491,26 +1459,10 @@ export default function App() {
         {/* Right Column: Sidebar */}
         <div className="lg:col-span-4 space-y-6">
           {/* Opponent Input */}
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-4 sm:p-6 backdrop-blur-sm">
-            <div className="flex items-center gap-2 mb-4">
-              <Shield className="w-4 h-4 text-red-500" />
-              <h2 className="font-bold text-xs sm:text-sm uppercase tracking-widest text-gray-400">
-                Avversario
-              </h2>
-            </div>
-            <input 
-              type="text" 
-              value={awayTeam}
-              onChange={(e) => setAwayTeam(e.target.value)}
-              placeholder="Nome Avversario"
-              className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-red-500/50 transition-all"
-            />
-          </div>
-
           {/* Configuration Card */}
           <div className="bg-white/5 border border-white/10 rounded-2xl p-4 sm:p-6 backdrop-blur-sm">
             <div className="flex items-center gap-2 mb-4 sm:mb-6">
-              <Settings className="w-4 h-4 text-red-500" />
+              <Settings className="w-4 h-4 text-blue-500" />
               <h2 className="font-bold text-xs sm:text-sm uppercase tracking-widest text-gray-400">
                 {selectedShot ? 'Modifica Tiro' : 'Nuovo Tiro'}
               </h2>
@@ -1520,7 +1472,7 @@ export default function App() {
               <div>
                 <label className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-2 sm:mb-3 block">Squadra</label>
                 <div className="bg-black/40 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl border border-white/10 text-sm font-bold text-white">
-                  { (selectedShot ? selectedShot.team : (teamFilter === 'all' ? myTeamSide : teamFilter)) === 'home' ? homeTeam : awayTeam }
+                  {teamName}
                 </div>
               </div>
               <div>
@@ -1779,82 +1731,138 @@ export default function App() {
           </AnimatePresence>
 
           <div className="space-y-6">
-            {/* Shot List Summary */}
-            <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
-              <div className="p-3 sm:p-4 border-b border-white/10 flex items-center justify-between">
-                <h3 className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-gray-400">Ultimi Tiri</h3>
-                <span className="bg-emerald-500 text-black text-[10px] font-black px-2 py-0.5 rounded-full">{filteredShots.length}</span>
-              </div>
-              <div className="max-h-[200px] overflow-y-auto custom-scrollbar">
-                {filteredShots.length === 0 ? (
-                  <div className="p-6 text-center text-gray-600 text-[10px] italic">Nessun tiro registrato</div>
-                ) : (
-                  <div className="divide-y divide-white/5">
-                    {filteredShots.slice().reverse().map((shot) => (
-                      <button 
-                        key={shot.id}
-                        onClick={() => setSelectedShot(shot)}
-                        className={cn(
-                          "w-full p-3 flex items-center justify-between hover:bg-white/5 transition-colors text-left",
-                          selectedShot?.id === shot.id && "bg-white/5"
-                        )}
-                      >
-                        <div className="flex items-center gap-2">
-                          <div className={cn(
-                            "w-7 h-7 rounded-lg flex items-center justify-center",
-                            shot.isGoal ? "bg-yellow-500 text-black" : "bg-emerald-500/20 text-emerald-500"
-                          )}>
-                            {shot.isGoal ? <div className="w-1.5 h-1.5 rounded-full bg-black" /> : <Target className="w-3.5 h-3.5" />}
-                          </div>
-                          <div className="overflow-hidden">
-                            <p className="text-[10px] font-bold text-white truncate max-w-[100px]">{shot.playerName}</p>
-                            <p className="text-[8px] text-gray-500">{shot.minute}' • {shot.bodyPart}</p>
-                          </div>
-                        </div>
-                        <div className="text-right shrink-0">
-                          <p className="text-[10px] font-black text-emerald-500">{shot.xg.toFixed(2)}</p>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
             {/* Match Log Summary */}
             <div className="h-[300px]">
-              <MatchLog events={filteredMatchEvents} homeTeam={homeTeam} awayTeam={awayTeam} />
+              <MatchLog events={filteredMatchEvents} teamName={teamName} />
             </div>
           </div>
         </div>
       </div>
     ) : (
           <IPOView 
-            homeTeam={homeTeam}
+            teamName={teamName}
+            teamColor={teamColor}
             awayTeam={awayTeam}
-            homeColor={homeColor}
             awayColor={awayColor}
-            ipoEventsHome={ipoEventsHome}
-            setIpoEventsHome={setIpoEventsHome}
+            ipoEvents={ipoEvents}
+            setIpoEvents={setIpoEvents}
             ipoEventsAway={ipoEventsAway}
             setIpoEventsAway={setIpoEventsAway}
-            goalsHome={goalsHome}
-            setGoalsHome={setGoalsHome}
+            goals={goals}
+            setGoals={setGoals}
             goalsAway={goalsAway}
             setGoalsAway={setGoalsAway}
-            ipoHome={ipoHome}
+            ipo={ipo}
             ipoAway={ipoAway}
-            prevIpoHome={prevIpoHome}
+            prevIpo={prevIpo}
             prevIpoAway={prevIpoAway}
-            possessionHomeSeconds={possessionHomeSeconds}
-            setPossessionHomeSeconds={setPossessionHomeSeconds}
+            possessionSeconds={possessionSeconds}
+            setPossessionSeconds={setPossessionSeconds}
             possessionAwaySeconds={possessionAwaySeconds}
             setPossessionAwaySeconds={setPossessionAwaySeconds}
+            possessionState={possessionState}
+            setPossessionState={setPossessionState}
             weights={weights}
             addMatchEvent={addMatchEvent}
           />
         )}
       </main>
+
+      {/* Match Settings Modal */}
+      <AnimatePresence>
+        {showMatchSettings && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowMatchSettings(false)}
+              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-md bg-[#121212] border border-white/10 rounded-3xl shadow-2xl overflow-hidden"
+            >
+              <div className="p-6 border-b border-white/10 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-blue-600/10 rounded-xl flex items-center justify-center">
+                    <Settings className="text-blue-500 w-5 h-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-black text-white">Impostazioni Partita</h2>
+                    <p className="text-xs text-gray-500 font-medium">Configura le squadre</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setShowMatchSettings(false)}
+                  className="w-10 h-10 bg-white/5 hover:bg-white/10 rounded-xl flex items-center justify-center text-gray-400 hover:text-white transition-all"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-6">
+                {/* Home Team */}
+                <div className="space-y-4">
+                  <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Squadra Casa</h3>
+                  <div className="space-y-3">
+                    <input 
+                      type="text"
+                      value={teamName}
+                      onChange={(e) => setTeamName(e.target.value)}
+                      placeholder="Nome Squadra Casa"
+                      className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-white"
+                    />
+                    <div className="flex items-center gap-3">
+                      <input 
+                        type="color"
+                        value={teamColor}
+                        onChange={(e) => setTeamColor(e.target.value)}
+                        className="w-10 h-10 rounded-lg bg-transparent border-none cursor-pointer"
+                      />
+                      <span className="text-xs font-bold text-gray-400 uppercase">Colore Principale</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="h-px bg-white/5" />
+
+                {/* Away Team */}
+                <div className="space-y-4">
+                  <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Squadra Ospite</h3>
+                  <div className="space-y-3">
+                    <input 
+                      type="text"
+                      value={awayTeam}
+                      onChange={(e) => setAwayTeam(e.target.value)}
+                      placeholder="Nome Squadra Ospite"
+                      className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-white"
+                    />
+                    <div className="flex items-center gap-3">
+                      <input 
+                        type="color"
+                        value={awayColor}
+                        onChange={(e) => setAwayColor(e.target.value)}
+                        className="w-10 h-10 rounded-lg bg-transparent border-none cursor-pointer"
+                      />
+                      <span className="text-xs font-bold text-gray-400 uppercase">Colore Principale</span>
+                    </div>
+                  </div>
+                </div>
+
+                <button 
+                  onClick={() => setShowMatchSettings(false)}
+                  className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl transition-all shadow-lg shadow-blue-500/20 uppercase tracking-widest text-xs"
+                >
+                  Salva Impostazioni
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Match List Modal */}
       <AnimatePresence>
@@ -1914,14 +1922,11 @@ export default function App() {
                       >
                         <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 mb-1">
                           <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: match.homeColor || '#eab308' }} />
-                            <span className="text-xs sm:text-sm font-black text-white truncate">{match.homeTeam}</span>
-                            <span className="text-[10px] text-gray-500">vs</span>
-                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: match.awayColor || '#3b82f6' }} />
-                            <span className="text-xs sm:text-sm font-black text-white truncate">{match.awayTeam}</span>
+                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: match.teamColor || '#eab308' }} />
+                            <span className="text-xs sm:text-sm font-black text-white truncate">{match.teamName}</span>
                           </div>
                           <span className="text-[8px] sm:text-[10px] font-bold bg-blue-600/10 text-blue-500 px-2 py-0.5 rounded-full w-fit">
-                            {match.totalGoals} Gol • {match.totalXG.toFixed(2)} xG
+                            {match.goals} Gol • {match.totalXG.toFixed(2)} xG
                           </span>
                         </div>
                         <p className="text-[8px] sm:text-[10px] text-gray-500 font-medium uppercase tracking-widest">
@@ -2039,39 +2044,44 @@ export default function App() {
 }
 
 function IPOView({ 
-  homeTeam, 
-  awayTeam, 
-  homeColor,
+  teamName, 
+  teamColor,
+  awayTeam,
   awayColor,
-  ipoEventsHome, 
-  setIpoEventsHome, 
-  ipoEventsAway, 
+  ipoEvents, 
+  setIpoEvents, 
+  ipoEventsAway,
   setIpoEventsAway,
-  goalsHome,
-  setGoalsHome,
+  goals,
+  setGoals,
   goalsAway,
   setGoalsAway,
-  ipoHome,
+  ipo,
   ipoAway,
-  prevIpoHome,
+  prevIpo,
   prevIpoAway,
-  possessionHomeSeconds,
-  setPossessionHomeSeconds,
+  possessionSeconds,
+  setPossessionSeconds,
   possessionAwaySeconds,
   setPossessionAwaySeconds,
+  possessionState,
+  setPossessionState,
   weights,
   addMatchEvent
 }: any) {
-  const [selectedTeam, setSelectedTeam] = useState<'home' | 'away'>('home');
+  const [ipoActiveTeam, setIpoActiveTeam] = useState<'home' | 'away'>('home');
+  const efficiency = ipoActiveTeam === 'home' 
+    ? (ipo > 0 ? goals / ipo : 0)
+    : (ipoAway > 0 ? goalsAway / ipoAway : 0);
 
-  const efficiencyHome = ipoHome > 0 ? goalsHome / ipoHome : 0;
-  const efficiencyAway = ipoAway > 0 ? goalsAway / ipoAway : 0;
-
-  const renderEventRow = (team: 'home' | 'away', key: string, label: string, weight: number, icon: any) => {
-    const events = team === 'home' ? ipoEventsHome : ipoEventsAway;
-    const setEvents = team === 'home' ? setIpoEventsHome : setIpoEventsAway;
-    const count = events[key as keyof typeof events];
-    const teamColorStyle = { color: team === 'home' ? homeColor : awayColor };
+  const renderEventRow = (key: string, label: string, weight: number, icon: any, activeTeam: 'home' | 'away') => {
+    const currentIpoEvents = activeTeam === 'home' ? ipoEvents : ipoEventsAway;
+    const setIpoEventsFn = activeTeam === 'home' ? setIpoEvents : setIpoEventsAway;
+    const currentTeamName = activeTeam === 'home' ? teamName : awayTeam;
+    const currentTeamColor = activeTeam === 'home' ? teamColor : awayColor;
+    
+    const count = currentIpoEvents[key as keyof typeof ipoEvents];
+    const teamColorStyle = { color: currentTeamColor };
 
     return (
       <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 transition-all group">
@@ -2094,11 +2104,10 @@ function IPOView({
               whileTap={{ scale: 0.9 }}
               onClick={() => {
                 if (count > 0) {
-                  setEvents((prev: any) => ({ ...prev, [key]: prev[key] - 1 }));
+                  setIpoEventsFn((prev: any) => ({ ...prev, [key]: prev[key] - 1 }));
                   addMatchEvent({
                     type: 'ipo_event',
-                    team,
-                    description: `Rimosso ${label} per ${team === 'home' ? homeTeam : awayTeam}`
+                    description: `Rimosso ${label} per ${currentTeamName}`
                   });
                 }
               }}
@@ -2113,11 +2122,10 @@ function IPOView({
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               onClick={() => {
-                setEvents((prev: any) => ({ ...prev, [key]: prev[key] + 1 }));
+                setIpoEventsFn((prev: any) => ({ ...prev, [key]: prev[key] + 1 }));
                 addMatchEvent({
                   type: 'ipo_event',
-                  team,
-                  description: `Aggiunto ${label} per ${team === 'home' ? homeTeam : awayTeam}`
+                  description: `Aggiunto ${label} per ${currentTeamName}`
                 });
               }}
               className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-white transition-colors"
@@ -2140,33 +2148,32 @@ function IPOView({
     <div className="max-w-[1600px] mx-auto p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
       {/* Left Column */}
       <div className="lg:col-span-5 space-y-6">
-        {/* Home Team Card */}
-        <motion.button 
-          onClick={() => setSelectedTeam('home')}
-          animate={{ 
-            scale: selectedTeam === 'home' ? 1 : 0.98,
-            borderColor: selectedTeam === 'home' ? homeColor : 'transparent',
-            boxShadow: (prevIpoHome !== undefined && ipoHome > prevIpoHome) 
-              ? [`0px 0px 0px ${homeColor}00`, `0px 0px 30px ${homeColor}66`, `0px 0px 0px ${homeColor}00`] 
-              : "none"
-          }}
-          whileHover={{ scale: 1.01 }}
-          whileTap={{ scale: 0.97 }}
+        {/* Team Card */}
+        <motion.div 
           className={cn(
             "w-full text-left relative overflow-hidden bg-[#121212] border-l-4 rounded-2xl p-6 shadow-2xl transition-all",
-            selectedTeam === 'home' ? "ring-2 ring-white/10" : "opacity-60 hover:opacity-100"
+            "ring-2 ring-white/10"
           )}
-          style={{ borderLeftColor: homeColor }}
+          animate={{ 
+            boxShadow: (ipoActiveTeam === 'home' ? (prevIpo !== undefined && ipo > prevIpo) : (prevIpoAway !== undefined && ipoAway > prevIpoAway))
+              ? [`0px 0px 0px ${ipoActiveTeam === 'home' ? teamColor : awayColor}00`, `0px 0px 30px ${ipoActiveTeam === 'home' ? teamColor : awayColor}66`, `0px 0px 0px ${ipoActiveTeam === 'home' ? teamColor : awayColor}00`] 
+              : "0px 0px 0px rgba(0,0,0,0)"
+          }}
+          style={{ 
+            borderLeftColor: ipoActiveTeam === 'home' ? teamColor : awayColor,
+          }}
         >
           <div className="flex justify-between items-start mb-8">
             <div>
-              <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Squadra Casa</span>
-              <h2 className="text-3xl font-black text-white uppercase tracking-tighter mt-1">{homeTeam}</h2>
+              <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Squadra</span>
+              <h2 className="text-3xl font-black text-white uppercase tracking-tighter mt-1">
+                {ipoActiveTeam === 'home' ? teamName : awayTeam}
+              </h2>
             </div>
             <div className="text-right">
               <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">IPO</span>
-              <div className="text-4xl font-black tracking-tighter" style={{ color: homeColor }}>
-                <AnimatedCounter value={ipoHome} />
+              <div className="text-4xl font-black tracking-tighter" style={{ color: ipoActiveTeam === 'home' ? teamColor : awayColor }}>
+                <AnimatedCounter value={ipoActiveTeam === 'home' ? ipo : ipoAway} />
               </div>
             </div>
           </div>
@@ -2174,216 +2181,115 @@ function IPOView({
             <div className="bg-white/5 rounded-xl p-4 border border-white/5">
               <span className="text-[10px] font-bold text-gray-500 uppercase block mb-2">Gol</span>
               <div className="flex items-center justify-between">
-                <motion.div 
+                <motion.button 
                   whileHover={{ scale: 1.2 }}
                   whileTap={{ scale: 0.8 }}
-                  onClick={(e) => { 
-                    e.stopPropagation(); 
-                    if (goalsHome > 0) {
-                      setGoalsHome(goalsHome - 1);
-                      addMatchEvent({ type: 'ipo_event', team: 'home', description: `Annullato GOL per ${homeTeam}` });
+                  onClick={() => { 
+                    if (ipoActiveTeam === 'home') {
+                      if (goals > 0) {
+                        setGoals(goals - 1);
+                        addMatchEvent({ type: 'ipo_event', description: `Annullato GOL per ${teamName}` });
+                      }
+                    } else {
+                      if (goalsAway > 0) {
+                        setGoalsAway(goalsAway - 1);
+                        addMatchEvent({ type: 'ipo_event', description: `Annullato GOL per ${awayTeam}` });
+                      }
                     }
                   }}
                   className="text-gray-500 hover:text-white cursor-pointer"
                 >
                   <Minus className="w-4 h-4" />
-                </motion.div>
+                </motion.button>
                 <span className="text-2xl font-black text-white">
-                  <AnimatedCounter value={goalsHome} decimals={0} />
+                  <AnimatedCounter value={ipoActiveTeam === 'home' ? goals : goalsAway} decimals={0} />
                 </span>
-                <motion.div 
+                <motion.button 
                   whileHover={{ scale: 1.2 }}
                   whileTap={{ scale: 0.8 }}
-                  onClick={(e) => { 
-                    e.stopPropagation(); 
-                    setGoalsHome(goalsHome + 1);
-                    addMatchEvent({ type: 'goal', team: 'home', description: `GOL segnato da ${homeTeam}` });
-                  }}
-                  className="text-gray-500 hover:text-white cursor-pointer"
-                >
-                  <Plus className="w-4 h-4" />
-                </motion.div>
-              </div>
-            </div>
-            <div className="bg-white/5 rounded-xl p-4 border border-white/5">
-              <span className="text-[10px] font-bold text-gray-500 uppercase block mb-2">Efficienza</span>
-              <div className="text-2xl font-black text-white">
-                <AnimatedCounter value={efficiencyHome} decimals={2} />
-              </div>
-            </div>
-          </div>
-        </motion.button>
-
-        {/* Away Team Card */}
-        <motion.button 
-          onClick={() => setSelectedTeam('away')}
-          animate={{ 
-            scale: selectedTeam === 'away' ? 1 : 0.98,
-            borderColor: selectedTeam === 'away' ? awayColor : 'transparent',
-            boxShadow: (prevIpoAway !== undefined && ipoAway > prevIpoAway) 
-              ? [`0px 0px 0px ${awayColor}00`, `0px 0px 30px ${awayColor}66`, `0px 0px 0px ${awayColor}00`] 
-              : "none"
-          }}
-          whileHover={{ scale: 1.01 }}
-          whileTap={{ scale: 0.97 }}
-          className={cn(
-            "w-full text-left relative overflow-hidden bg-[#121212] border-l-4 rounded-2xl p-6 shadow-2xl transition-all",
-            selectedTeam === 'away' ? "ring-2 ring-white/10" : "opacity-60 hover:opacity-100"
-          )}
-          style={{ borderLeftColor: awayColor }}
-        >
-          <div className="flex justify-between items-start mb-8">
-            <div>
-              <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Squadra Ospite</span>
-              <h2 className="text-3xl font-black text-white uppercase tracking-tighter mt-1">{awayTeam}</h2>
-            </div>
-            <div className="text-right">
-              <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">IPO</span>
-              <div className="text-4xl font-black tracking-tighter" style={{ color: awayColor }}>
-                <AnimatedCounter value={ipoAway} />
-              </div>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-white/5 rounded-xl p-4 border border-white/5">
-              <span className="text-[10px] font-bold text-gray-500 uppercase block mb-2">Gol</span>
-              <div className="flex items-center justify-between">
-                <motion.div 
-                  whileHover={{ scale: 1.2 }}
-                  whileTap={{ scale: 0.8 }}
-                  onClick={(e) => { 
-                    e.stopPropagation(); 
-                    if (goalsAway > 0) {
-                      setGoalsAway(goalsAway - 1);
-                      addMatchEvent({ type: 'ipo_event', team: 'away', description: `Annullato GOL per ${awayTeam}` });
+                  onClick={() => { 
+                    if (ipoActiveTeam === 'home') {
+                      setGoals(goals + 1);
+                      addMatchEvent({ type: 'goal', description: `GOL segnato da ${teamName}` });
+                    } else {
+                      setGoalsAway(goalsAway + 1);
+                      addMatchEvent({ type: 'goal', description: `GOL segnato da ${awayTeam}` });
                     }
                   }}
                   className="text-gray-500 hover:text-white cursor-pointer"
                 >
-                  <Minus className="w-4 h-4" />
-                </motion.div>
-                <span className="text-2xl font-black text-white">
-                  <AnimatedCounter value={goalsAway} decimals={0} />
-                </span>
-                <motion.div 
-                  whileHover={{ scale: 1.2 }}
-                  whileTap={{ scale: 0.8 }}
-                  onClick={(e) => { 
-                    e.stopPropagation(); 
-                    setGoalsAway(goalsAway + 1);
-                    addMatchEvent({ type: 'goal', team: 'away', description: `GOL segnato da ${awayTeam}` });
-                  }}
-                  className="text-gray-500 hover:text-white cursor-pointer"
-                >
                   <Plus className="w-4 h-4" />
-                </motion.div>
+                </motion.button>
               </div>
             </div>
             <div className="bg-white/5 rounded-xl p-4 border border-white/5">
               <span className="text-[10px] font-bold text-gray-500 uppercase block mb-2">Efficienza</span>
               <div className="text-2xl font-black text-white">
-                <AnimatedCounter value={efficiencyAway} decimals={2} />
+                <AnimatedCounter value={efficiency} decimals={2} />
               </div>
             </div>
           </div>
-        </motion.button>
+        </motion.div>
 
-        {/* Comparison Card */}
+        {/* Possession Card */}
         <div className="bg-[#121212] border border-white/5 rounded-2xl p-6">
-          <div className="flex items-center gap-2 mb-6">
-            <Activity className="w-4 h-4 text-gray-500" />
-            <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Confronto IPO</span>
-          </div>
-          <div className="space-y-6">
-            <div>
-              <div className="flex justify-between text-[10px] font-bold uppercase mb-2">
-                <span className="text-white">{homeTeam}</span>
-                <span style={{ color: homeColor }}>
-                  <AnimatedCounter value={ipoHome} />
-                </span>
-              </div>
-              <div className="h-2 bg-white/5 rounded-full overflow-hidden">
-                <motion.div 
-                  initial={{ width: 0 }}
-                  animate={{ width: `${Math.min(100, (ipoHome / (ipoHome + ipoAway || 1)) * 100)}%` }}
-                  className="h-full" 
-                  style={{ backgroundColor: homeColor }}
-                  transition={{ type: "spring", stiffness: 100, damping: 20 }}
-                />
-              </div>
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4 text-gray-500" />
+              <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Possesso Palla</span>
             </div>
-            <div>
-              <div className="flex justify-between text-[10px] font-bold uppercase mb-2">
-                <span className="text-white">{awayTeam}</span>
-                <span style={{ color: awayColor }}>
-                  <AnimatedCounter value={ipoAway} />
-                </span>
-              </div>
-              <div className="h-2 bg-white/5 rounded-full overflow-hidden">
-                <motion.div 
-                  initial={{ width: 0 }}
-                  animate={{ width: `${Math.min(100, (ipoAway / (ipoHome + ipoAway || 1)) * 100)}%` }}
-                  className="h-full" 
-                  style={{ backgroundColor: awayColor }}
-                  transition={{ type: "spring", stiffness: 100, damping: 20 }}
-                />
-              </div>
+            <div className="flex p-1 bg-black/40 rounded-xl border border-white/5">
+              <button 
+                onClick={() => setPossessionState(possessionState === 'home' ? 'none' : 'home')}
+                className={cn(
+                  "px-3 py-1 rounded-lg text-[8px] font-black uppercase transition-all",
+                  possessionState === 'home' ? "bg-emerald-500 text-white" : "text-gray-500"
+                )}
+              >
+                {teamName}
+              </button>
+              <button 
+                onClick={() => setPossessionState(possessionState === 'away' ? 'none' : 'away')}
+                className={cn(
+                  "px-3 py-1 rounded-lg text-[8px] font-black uppercase transition-all",
+                  possessionState === 'away' ? "bg-emerald-500 text-white" : "text-gray-500"
+                )}
+              >
+                {awayTeam}
+              </button>
             </div>
           </div>
-          <div className="mt-8 pt-6 border-t border-white/5 flex justify-between items-center">
-            <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Gap</span>
-            <div className="text-2xl font-black text-yellow-500">
-              {Math.abs(ipoHome - ipoAway).toFixed(1)} <span className="text-[10px] text-gray-500">PTS</span>
+          <div className="space-y-4">
+            <div className="flex justify-between items-end">
+              <div>
+                <span className="text-[10px] font-black text-gray-500 uppercase block mb-1">Tempo {ipoActiveTeam === 'home' ? teamName : awayTeam}</span>
+                <div className="text-2xl font-black text-white">
+                  {Math.floor((ipoActiveTeam === 'home' ? possessionSeconds : possessionAwaySeconds) / 60)}' {String((ipoActiveTeam === 'home' ? possessionSeconds : possessionAwaySeconds) % 60).padStart(2, '0')}"
+                </div>
+              </div>
+              <button 
+                onClick={() => {
+                  if (ipoActiveTeam === 'home') setPossessionSeconds(0);
+                  else setPossessionAwaySeconds(0);
+                }}
+                className="text-[10px] font-bold text-gray-600 hover:text-red-500 transition-colors uppercase"
+              >
+                Reset
+              </button>
             </div>
-          </div>
-        </div>
-
-        {/* Possession Comparison Card */}
-        <div className="bg-[#121212] border border-white/5 rounded-2xl p-6">
-          <div className="flex items-center gap-2 mb-6">
-            <Clock className="w-4 h-4 text-gray-500" />
-            <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Possesso Palla</span>
-          </div>
-          <div className="space-y-6">
-            <div>
-              <div className="flex justify-between text-[10px] font-bold uppercase mb-2">
-                <span className="text-white">{homeTeam}</span>
-                <span style={{ color: homeColor }}>
-                  {possessionHomeSeconds + possessionAwaySeconds > 0 ? Math.round((possessionHomeSeconds / (possessionHomeSeconds + possessionAwaySeconds)) * 100) : 50}%
-                </span>
-              </div>
-              <div className="h-2 bg-white/5 rounded-full overflow-hidden">
-                <div 
-                  className="h-full transition-all duration-500" 
-                  style={{ 
-                    width: `${possessionHomeSeconds + possessionAwaySeconds > 0 ? (possessionHomeSeconds / (possessionHomeSeconds + possessionAwaySeconds)) * 100 : 50}%`,
-                    backgroundColor: homeColor
-                  }}
-                />
-              </div>
-            </div>
-            <div>
-              <div className="flex justify-between text-[10px] font-bold uppercase mb-2">
-                <span className="text-white">{awayTeam}</span>
-                <span style={{ color: awayColor }}>
-                  {possessionHomeSeconds + possessionAwaySeconds > 0 ? Math.round((possessionAwaySeconds / (possessionHomeSeconds + possessionAwaySeconds)) * 100) : 50}%
-                </span>
-              </div>
-              <div className="h-2 bg-white/5 rounded-full overflow-hidden">
-                <div 
-                  className="h-full transition-all duration-500" 
-                  style={{ 
-                    width: `${possessionHomeSeconds + possessionAwaySeconds > 0 ? (possessionAwaySeconds / (possessionHomeSeconds + possessionAwaySeconds)) * 100 : 50}%`,
-                    backgroundColor: awayColor
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-          <div className="mt-8 pt-6 border-t border-white/5 flex justify-between items-center">
-            <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Tempo Effettivo</span>
-            <div className="text-xl font-black text-white">
-              {Math.floor((possessionHomeSeconds + possessionAwaySeconds) / 60)}' {String((possessionHomeSeconds + possessionAwaySeconds) % 60).padStart(2, '0')}"
+            <div className="h-2 bg-white/5 rounded-full overflow-hidden flex">
+              <motion.div 
+                className="h-full bg-blue-500"
+                initial={{ width: 0 }}
+                animate={{ width: `${(possessionSeconds + possessionAwaySeconds) > 0 ? (possessionSeconds / (possessionSeconds + possessionAwaySeconds)) * 100 : 50}%` }}
+                style={{ backgroundColor: teamColor }}
+              />
+              <motion.div 
+                className="h-full bg-red-500"
+                initial={{ width: 0 }}
+                animate={{ width: `${(possessionSeconds + possessionAwaySeconds) > 0 ? (possessionAwaySeconds / (possessionSeconds + possessionAwaySeconds)) * 100 : 50}%` }}
+                style={{ backgroundColor: awayColor }}
+              />
             </div>
           </div>
         </div>
@@ -2391,60 +2297,80 @@ function IPOView({
 
       {/* Right Column: Events */}
       <div className="lg:col-span-7 bg-[#121212] border border-white/5 rounded-3xl overflow-hidden flex flex-col">
-        <div className="p-6 border-b border-white/5 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div 
-              className="w-10 h-10 rounded-xl flex items-center justify-center transition-colors"
-              style={{ 
-                backgroundColor: selectedTeam === 'home' ? `${homeColor}1a` : `${awayColor}1a`,
-                color: selectedTeam === 'home' ? homeColor : awayColor
-              }}
-            >
-              <Target className="w-5 h-5" />
+        <div className="p-6 border-b border-white/5 flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div 
+                className="w-10 h-10 rounded-xl flex items-center justify-center bg-blue-500/10 text-blue-500"
+              >
+                <Target className="w-5 h-5" />
+              </div>
+              <h3 className="text-lg font-black text-white uppercase tracking-tight">
+                Eventi IPO
+              </h3>
             </div>
-            <h3 className="text-lg font-black text-white uppercase tracking-tight">
-              Eventi <span style={{ color: selectedTeam === 'home' ? homeColor : awayColor }}>
-                {selectedTeam === 'home' ? homeTeam : awayTeam}
-              </span>
-            </h3>
+            <button 
+              onClick={() => {
+                if (ipoActiveTeam === 'home') {
+                  setIpoEvents({ shotsIn: 0, shotsOut: 0, penalties: 0, freeKicks: 0, corners: 0, crosses: 0 });
+                  setGoals(0);
+                  setPossessionSeconds(0);
+                } else {
+                  setIpoEventsAway({ shotsIn: 0, shotsOut: 0, penalties: 0, freeKicks: 0, corners: 0, crosses: 0 });
+                  setGoalsAway(0);
+                  setPossessionAwaySeconds(0);
+                }
+                addMatchEvent({ type: 'match_reset', description: `Reset totale ${ipoActiveTeam === 'home' ? teamName : awayTeam}` });
+              }}
+              className="p-2 text-gray-500 hover:text-white transition-colors"
+              title="Resetta statistiche"
+            >
+              <RotateCcw className="w-5 h-5" />
+            </button>
           </div>
-          <button 
-            onClick={() => {
-              if (selectedTeam === 'home') {
-                setIpoEventsHome({ shotsIn: 0, shotsOut: 0, penalties: 0, freeKicks: 0, corners: 0, crosses: 0 });
-                setGoalsHome(0);
-                setPossessionHomeSeconds(0);
-                addMatchEvent({ type: 'match_reset', team: 'home', description: `Reset totale ${homeTeam}` });
-              } else {
-                setIpoEventsAway({ shotsIn: 0, shotsOut: 0, penalties: 0, freeKicks: 0, corners: 0, crosses: 0 });
-                setGoalsAway(0);
-                setPossessionAwaySeconds(0);
-                addMatchEvent({ type: 'match_reset', team: 'away', description: `Reset totale ${awayTeam}` });
-              }
-            }}
-            className="p-2 text-gray-500 hover:text-white transition-colors"
-            title="Resetta statistiche squadra"
-          >
-            <RotateCcw className="w-5 h-5" />
-          </button>
+
+          {/* Team Selector Tabs */}
+          <div className="flex p-1 bg-black/40 rounded-xl border border-white/5">
+            <button
+              onClick={() => setIpoActiveTeam('home')}
+              className={cn(
+                "flex-1 py-2 px-4 rounded-lg text-xs font-black uppercase transition-all",
+                ipoActiveTeam === 'home' 
+                  ? "bg-white/10 text-white shadow-lg" 
+                  : "text-gray-500 hover:text-gray-300"
+              )}
+              style={ipoActiveTeam === 'home' ? { borderBottom: `2px solid ${teamColor}` } : {}}
+            >
+              {teamName}
+            </button>
+            <button
+              onClick={() => setIpoActiveTeam('away')}
+              className={cn(
+                "flex-1 py-2 px-4 rounded-lg text-xs font-black uppercase transition-all",
+                ipoActiveTeam === 'away' 
+                  ? "bg-white/10 text-white shadow-lg" 
+                  : "text-gray-500 hover:text-gray-300"
+              )}
+              style={ipoActiveTeam === 'away' ? { borderBottom: `2px solid ${awayColor}` } : {}}
+            >
+              {awayTeam}
+            </button>
+          </div>
         </div>
 
         <div className="flex-1 p-6 space-y-3 overflow-y-auto custom-scrollbar">
-          {renderEventRow(selectedTeam, 'shotsIn', 'Tiro in area', weights.shotsIn, <Target className="w-5 h-5" />)}
-          {renderEventRow(selectedTeam, 'shotsOut', 'Tiro fuori', weights.shotsOut, <Zap className="w-5 h-5" />)}
-          {renderEventRow(selectedTeam, 'penalties', 'Rigore', weights.penalties, <CheckCircle2 className="w-5 h-5" />)}
-          {renderEventRow(selectedTeam, 'freeKicks', 'Punizione', weights.freeKicks, <MousePointer2 className="w-4 h-4 rotate-45" />)}
-          {renderEventRow(selectedTeam, 'corners', 'Corner', weights.corners, <Trophy className="w-5 h-5" />)}
-          {renderEventRow(selectedTeam, 'crosses', 'Cross/Traversone', weights.crosses, <Activity className="w-5 h-5" />)}
+          {renderEventRow('shotsIn', 'Tiro in area', weights.shotsIn, <Target className="w-5 h-5" />, ipoActiveTeam)}
+          {renderEventRow('shotsOut', 'Tiro fuori', weights.shotsOut, <Zap className="w-5 h-5" />, ipoActiveTeam)}
+          {renderEventRow('penalties', 'Rigore', weights.penalties, <CheckCircle2 className="w-5 h-5" />, ipoActiveTeam)}
+          {renderEventRow('freeKicks', 'Punizione', weights.freeKicks, <MousePointer2 className="w-4 h-4 rotate-45" />, ipoActiveTeam)}
+          {renderEventRow('corners', 'Corner', weights.corners, <Trophy className="w-5 h-5" />, ipoActiveTeam)}
+          {renderEventRow('crosses', 'Cross/Traversone', weights.crosses, <Activity className="w-5 h-5" />, ipoActiveTeam)}
         </div>
 
         <div className="p-6 bg-black/40 border-t border-white/5 flex justify-between items-center">
-          <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Totale IPO Team</span>
-          <div className={cn(
-            "text-3xl font-black",
-            selectedTeam === 'home' ? "text-yellow-500" : "text-blue-500"
-          )}>
-            {(selectedTeam === 'home' ? ipoHome : ipoAway).toFixed(1)}
+          <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Totale IPO {ipoActiveTeam === 'home' ? teamName : awayTeam}</span>
+          <div className="text-3xl font-black text-blue-500">
+            {(ipoActiveTeam === 'home' ? ipo : ipoAway).toFixed(1)}
           </div>
         </div>
       </div>
@@ -2452,7 +2378,7 @@ function IPOView({
   );
 }
 
-function MatchLog({ events, homeTeam, awayTeam }: { events: MatchEvent[], homeTeam: string, awayTeam: string }) {
+function MatchLog({ events, teamName }: { events: MatchEvent[], teamName: string }) {
   return (
     <div className="bg-[#121212] border border-white/5 rounded-2xl overflow-hidden flex flex-col h-full">
       <div className="p-4 border-b border-white/5 flex items-center justify-between bg-white/5">
@@ -2488,11 +2414,8 @@ function MatchLog({ events, homeTeam, awayTeam }: { events: MatchEvent[], homeTe
                   "bg-white/5 border-white/5"
                 )}>
                   <div className="flex items-center justify-between mb-1">
-                    <span className={cn(
-                      "text-[8px] font-black uppercase tracking-widest",
-                      event.team === 'home' ? "text-yellow-500" : event.team === 'away' ? "text-blue-500" : "text-gray-500"
-                    )}>
-                      {event.team === 'home' ? homeTeam : event.team === 'away' ? awayTeam : 'Match'}
+                    <span className="text-[8px] font-black uppercase tracking-widest text-blue-500">
+                      {teamName}
                     </span>
                     <span className="text-[8px] font-bold text-gray-600">
                       {new Date(event.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
