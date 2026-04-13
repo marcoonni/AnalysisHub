@@ -2,7 +2,7 @@
   "entities": {
     "Match": {
       "title": "Match",
-      "description": "A football match with xG and dangerzone data",
+      "description": "A football match with xG and IPO data",
       "type": "object",
       "properties": {
         "userId": { "type": "string" },
@@ -12,8 +12,8 @@
         "createdAt": { "type": "string", "format": "date-time" },
         "totalXG": { "type": "number" },
         "totalGoals": { "type": "number" },
-        "dangerEventsHome": { "type": "object" },
-        "dangerEventsAway": { "type": "object" },
+        "ipoEventsHome": { "type": "object" },
+        "ipoEventsAway": { "type": "object" },
         "goalsHome": { "type": "number" },
         "goalsAway": { "type": "number" },
         "possessionHomeSeconds": { "type": "number" },

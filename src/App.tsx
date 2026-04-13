@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo, useEffect } from 'react';
+import React, { useState, useRef, useMemo, useEffect, Component } from 'react';
 import { 
   Plus, 
   Minus,
@@ -23,6 +23,7 @@ import {
   Play,
   Pause,
   RotateCcw,
+  Undo2,
   Clock,
   FileSpreadsheet,
   Save,
@@ -30,7 +31,9 @@ import {
   LogOut,
   LogIn,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  ChevronDown,
+  Shield
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Papa from 'papaparse';
@@ -78,23 +81,26 @@ interface Match {
   userId: string;
   homeTeam: string;
   awayTeam: string;
+  homeColor?: string;
+  awayColor?: string;
   date: string;
   createdAt: any;
   totalXG: number;
   totalGoals: number;
-  dangerEventsHome?: any;
-  dangerEventsAway?: any;
+  ipoEventsHome?: any;
+  ipoEventsAway?: any;
   goalsHome?: number;
   goalsAway?: number;
   possessionHomeSeconds?: number;
   possessionAwaySeconds?: number;
+  myTeamSide?: 'home' | 'away';
   matchEvents?: MatchEvent[];
 }
 
 interface MatchEvent {
   id: string;
   minute: number;
-  type: 'shot' | 'goal' | 'danger_event' | 'possession_change' | 'match_start' | 'match_pause' | 'match_reset';
+  type: 'shot' | 'goal' | 'ipo_event' | 'possession_change' | 'match_start' | 'match_pause' | 'match_reset';
   team: 'home' | 'away' | 'none';
   description: string;
   timestamp: number;
@@ -106,11 +112,111 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+const PREDEFINED_PLAYERS = [
+  "ANASTASIO", "AURELI", "BRIGUGLIO", "BUIKUS", "DATTILO", "DE PACE", 
+  "DELLA ROCCA", "IGBINIGUN", "ITALIANO", "KUJRAKOVIC", "LIBRA", 
+  "LO MONACO", "MIOLI", "OSTI", "PANTALEONI", "ROMAGNOLI", "ROSSITTO", 
+  "SOBOLEWSKI", "STRAFORINI", "TOMBA", "TUPEC", "UGOLOTTI", "ZUCCHINI", 
+  "CAPECE", "ZONTA", "MAZZETTI"
+];
+
+// Custom hook to track previous value
+function usePrevious<T>(value: T): T | undefined {
+  const ref = useRef<T>(undefined);
+  useEffect(() => {
+    ref.current = value;
+  }, [value]);
+  return ref.current;
+}
+
+// Animated Counter Component
+function AnimatedCounter({ value, decimals = 1 }: { value: number, decimals?: number }) {
+  return (
+    <motion.span
+      key={value}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+    >
+      {value.toFixed(decimals)}
+    </motion.span>
+  );
+}
+
+interface ErrorBoundaryProps {
+  children: React.ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+// Error Boundary Component
+export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error("ErrorBoundary caught an error", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      let errorMessage = "Si è verificato un errore imprevisto.";
+      try {
+        const parsedError = JSON.parse(this.state.error?.message || "");
+        if (parsedError.error) {
+          errorMessage = `Errore Firestore (${parsedError.operationType}): ${parsedError.error}`;
+        }
+      } catch (e) {
+        errorMessage = this.state.error?.message || errorMessage;
+      }
+
+      return (
+        <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4">
+          <div className="bg-white/5 border border-white/10 p-8 rounded-3xl max-w-md w-full text-center backdrop-blur-xl">
+            <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
+              <AlertCircle className="w-8 h-8 text-red-500" />
+            </div>
+            <h2 className="text-2xl font-black text-white mb-4">Ops! Qualcosa è andato storto</h2>
+            <p className="text-gray-400 text-sm mb-8 leading-relaxed">
+              {errorMessage}
+            </p>
+            <button 
+              onClick={() => window.location.reload()}
+              className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-2xl transition-all shadow-lg shadow-blue-500/20"
+            >
+              Ricarica Applicazione
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 export default function App() {
   const [shots, setShots] = useState<Shot[]>([]);
   const [showHeatmap, setShowHeatmap] = useState(false);
   const [showGridValues, setShowGridValues] = useState(false);
   const [selectedShot, setSelectedShot] = useState<Shot | null>(null);
+  const [playerList, setPlayerList] = useState<string[]>([]);
+  const [isAddingNewPlayer, setIsAddingNewPlayer] = useState(false);
+
+  // Update player list whenever shots change
+  useEffect(() => {
+    const players = Array.from(new Set(shots.map(s => s.playerName))).filter(Boolean).sort();
+    setPlayerList(players);
+  }, [shots]);
   
   // Auth & Database States
   const [user, setUser] = useState<User | null>(null);
@@ -119,21 +225,33 @@ export default function App() {
   const [currentMatchId, setCurrentMatchId] = useState<string | null>(null);
   const [homeTeam, setHomeTeam] = useState('Bologna U18');
   const [awayTeam, setAwayTeam] = useState('Avversario');
+  const [homeColor, setHomeColor] = useState('#eab308'); // Yellow-500
+  const [awayColor, setAwayColor] = useState('#3b82f6'); // Blue-500
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [loadingMatchId, setLoadingMatchId] = useState<string | null>(null);
 
   // UI States
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [matchToDelete, setMatchToDelete] = useState<string | null>(null);
   const [showToast, setShowToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
-  const [activeTab, setActiveTab] = useState<'xg' | 'dangerzone'>('xg');
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [activeTab, setActiveTab] = useState<'xg' | 'ipo'>('xg');
+  const [teamFilter, setTeamFilter] = useState<'all' | 'home' | 'away'>('home');
+  const [myTeamSide, setMyTeamSide] = useState<'home' | 'away'>('home');
 
   // Timer state
   const [timerSeconds, setTimerSeconds] = useState(0);
+  const lastTickRef = useRef<number>(Date.now());
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [possessionState, setPossessionState] = useState<'home' | 'away' | 'none'>('none');
   const [possessionHomeSeconds, setPossessionHomeSeconds] = useState(0);
   const [possessionAwaySeconds, setPossessionAwaySeconds] = useState(0);
   const [matchEvents, setMatchEvents] = useState<MatchEvent[]>([]);
+  const [ripples, setRipples] = useState<{ id: string, x: number, y: number }[]>([]);
+  const [heatmapOpacity, setHeatmapOpacity] = useState(0.4);
+  const [heatmapSaturation, setHeatmapSaturation] = useState(100);
+  const [hoveredCell, setHoveredCell] = useState<{ r: number, c: number, xg: number } | null>(null);
 
   const addMatchEvent = (event: Omit<MatchEvent, 'id' | 'timestamp' | 'minute'>) => {
     const newEvent: MatchEvent = {
@@ -145,8 +263,8 @@ export default function App() {
     setMatchEvents(prev => [newEvent, ...prev]);
   };
 
-  // Dangerzone State
-  const [dangerEventsHome, setDangerEventsHome] = useState({
+  // IPO State
+  const [ipoEventsHome, setIpoEventsHome] = useState({
     shotsIn: 0,
     shotsOut: 0,
     penalties: 0,
@@ -155,7 +273,7 @@ export default function App() {
     crosses: 0
   });
 
-  const [dangerEventsAway, setDangerEventsAway] = useState({
+  const [ipoEventsAway, setIpoEventsAway] = useState({
     shotsIn: 0,
     shotsOut: 0,
     penalties: 0,
@@ -167,6 +285,11 @@ export default function App() {
   const [goalsHome, setGoalsHome] = useState(0);
   const [goalsAway, setGoalsAway] = useState(0);
 
+  // Dynamic Theme Logic
+  const scoreDiff = goalsHome - goalsAway;
+  const possessionDiff = (possessionHomeSeconds - possessionAwaySeconds) / 60;
+  const matchDominance = Math.max(-1, Math.min(1, (scoreDiff * 0.4) + (possessionDiff * 0.05)));
+  
   const weights = {
     shotsIn: 1.3,
     shotsOut: 0.7,
@@ -176,22 +299,27 @@ export default function App() {
     crosses: 0.2
   };
 
-  const calculateIPO = (events: typeof dangerEventsHome) => {
+  const calculateIPO = (events: any) => {
     return Object.entries(events).reduce((sum: number, [key, count]) => {
       return sum + (Number(count) * weights[key as keyof typeof weights]);
     }, 0);
   };
 
-  const ipoHome = useMemo(() => calculateIPO(dangerEventsHome), [dangerEventsHome]);
-  const ipoAway = useMemo(() => calculateIPO(dangerEventsAway), [dangerEventsAway]);
+  const ipoHome = useMemo(() => calculateIPO(ipoEventsHome), [ipoEventsHome]);
+  const ipoAway = useMemo(() => calculateIPO(ipoEventsAway), [ipoEventsAway]);
+
+  const prevIpoHome = usePrevious(ipoHome);
+  const prevIpoAway = usePrevious(ipoAway);
 
   const [newShotConfig, setNewShotConfig] = useState<{
+    team: 'home' | 'away';
     bodyPart: BodyPart;
     assistType: AssistType;
     isGoal: boolean;
     playerName: string;
     minute: number;
   }>({
+    team: 'home',
     bodyPart: 'foot',
     assistType: 'none',
     isGoal: false,
@@ -203,20 +331,43 @@ export default function App() {
   const dashboardRef = useRef<HTMLDivElement>(null);
   const xgGrid = useMemo(() => generateXGGrid(), []);
 
+  // Online status effect
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
   // Timer effect
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (isTimerRunning) {
+      lastTickRef.current = Date.now();
       interval = setInterval(() => {
-        setTimerSeconds(prev => prev + 1);
+        const now = Date.now();
+        const deltaMs = now - lastTickRef.current;
+        const deltaSec = Math.floor(deltaMs / 1000);
         
-        // Track possession
-        if (possessionState === 'home') {
-          setPossessionHomeSeconds(prev => prev + 1);
-        } else if (possessionState === 'away') {
-          setPossessionAwaySeconds(prev => prev + 1);
+        if (deltaSec >= 1) {
+          setTimerSeconds(prev => prev + deltaSec);
+          
+          // Track possession
+          if (possessionState === 'home') {
+            setPossessionHomeSeconds(prev => prev + deltaSec);
+          } else if (possessionState === 'away') {
+            setPossessionAwaySeconds(prev => prev + deltaSec);
+          }
+          
+          lastTickRef.current = now - (deltaMs % 1000);
         }
-      }, 1000);
+      }, 500); // Check more frequently to be responsive
     }
     return () => clearInterval(interval);
   }, [isTimerRunning, possessionState]);
@@ -252,15 +403,34 @@ export default function App() {
   const currentMinute = Math.floor(timerSeconds / 60);
 
   // Stats
+  const filteredShots = useMemo(() => {
+    if (teamFilter === 'all') return shots;
+    return shots.filter(s => s.team === teamFilter);
+  }, [shots, teamFilter]);
+
+  // Dynamic Stats for the main cards
+  const displayShots = useMemo(() => {
+    if (teamFilter === 'all') return shots.filter(s => s.team === myTeamSide);
+    return filteredShots;
+  }, [shots, filteredShots, teamFilter, myTeamSide]);
+
+  const displayXG = useMemo(() => displayShots.reduce((sum, s) => sum + s.xg, 0), [displayShots]);
+  const displayGoals = useMemo(() => displayShots.filter(s => s.isGoal).length, [displayShots]);
+  const displayXGPerShot = useMemo(() => displayShots.length > 0 ? displayXG / displayShots.length : 0, [displayShots, displayXG]);
+
   const totalXG = useMemo(() => shots.reduce((sum, s) => sum + s.xg, 0), [shots]);
   const totalGoals = useMemo(() => shots.filter(s => s.isGoal).length, [shots]);
-  const xgPerShot = useMemo(() => shots.length > 0 ? totalXG / shots.length : 0, [shots, totalXG]);
 
   // Chart Data
   const chartData = useMemo(() => [
-    { name: 'Expected Goals (xG)', value: totalXG, color: '#10b981' },
-    { name: 'Gol Reali', value: totalGoals, color: '#eab308' },
-  ], [totalXG, totalGoals]);
+    { name: 'Expected Goals (xG)', value: displayXG, color: '#10b981' },
+    { name: 'Gol Reali', value: displayGoals, color: '#eab308' },
+  ], [displayXG, displayGoals]);
+
+  const filteredMatchEvents = useMemo(() => {
+    if (teamFilter === 'all') return matchEvents;
+    return matchEvents.filter(e => e.team === teamFilter || e.team === 'none');
+  }, [matchEvents, teamFilter]);
 
   const handlePitchClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!pitchRef.current) return;
@@ -274,6 +444,8 @@ export default function App() {
 
     const xg = calculateXG(mX, mY, newShotConfig.bodyPart, newShotConfig.assistType);
 
+    const shotTeam = teamFilter === 'all' ? myTeamSide : teamFilter;
+
     const newShot: Shot = {
       id: Math.random().toString(36).substr(2, 9),
       x: mX,
@@ -285,15 +457,23 @@ export default function App() {
       timestamp: Date.now(),
       minute: currentMinute,
       playerName: newShotConfig.playerName || 'Giocatore',
+      team: shotTeam,
     };
 
     setShots(prev => [...prev, newShot]);
     setSelectedShot(newShot);
 
+    // Add ripple effect
+    const rippleId = Math.random().toString(36).substr(2, 9);
+    setRipples(prev => [...prev, { id: rippleId, x: (clickX / rect.width) * 100, y: (clickY / rect.height) * 100 }]);
+    setTimeout(() => {
+      setRipples(prev => prev.filter(r => r.id !== rippleId));
+    }, 1000);
+
     // Record match event
     addMatchEvent({
       type: newShot.isGoal ? 'goal' : 'shot',
-      team: 'home', // Assuming home team for now, or we can add team selection to shot config
+      team: newShotConfig.team,
       description: `${newShot.isGoal ? 'GOL!' : 'Tiro'} - xG: ${newShot.xg.toFixed(2)} (${newShot.playerName})`,
       value: newShot.xg
     });
@@ -322,48 +502,55 @@ export default function App() {
     if (selectedShot?.id === id) setSelectedShot(null);
   };
 
-  const exportToPDF = async () => {
-    if (!dashboardRef.current) {
-      setShowToast({ message: 'Dashboard non trovata', type: 'error' });
-      return;
-    }
-
-    setIsSaving(true);
+  const exportToExcel = () => {
     try {
-      // Scroll to top to ensure html2canvas captures correctly
-      window.scrollTo(0, 0);
+      if (shots.length === 0 && matchEvents.length === 0) {
+        setShowToast({ message: "Nessun dato da esportare.", type: 'error' });
+        return;
+      }
 
-      const element = dashboardRef.current;
+      // 1. Shots Data
+      const shotsData = shots.map(s => ({
+        Giocatore: s.playerName,
+        Minuto: s.minute,
+        xG: s.xg.toFixed(3),
+        Risultato: s.isGoal ? 'Gol' : 'No Gol',
+        ParteCorpo: s.bodyPart,
+        TipoAssist: s.assistType,
+        CoordinataX: s.x.toFixed(2),
+        CoordinataY: s.y.toFixed(2)
+      }));
+
+      // 2. IPO Stats
+      const ipoStats = [
+        { Team: homeTeam, ...ipoEventsHome, Goals: goalsHome, Possession: `${Math.floor(possessionHomeSeconds / 60)}:${(possessionHomeSeconds % 60).toString().padStart(2, '0')}` },
+        { Team: awayTeam, ...ipoEventsAway, Goals: goalsAway, Possession: `${Math.floor(possessionAwaySeconds / 60)}:${(possessionAwaySeconds % 60).toString().padStart(2, '0')}` }
+      ];
+
+      // 3. Match Events Log
+      const eventsLog = matchEvents.map(e => ({
+        Minuto: e.minute,
+        Squadra: e.team === 'home' ? homeTeam : e.team === 'away' ? awayTeam : 'N/A',
+        Evento: e.type,
+        Descrizione: e.description
+      }));
+
+      const workbook = XLSX.utils.book_new();
       
-      // Wait a bit for any pending animations
-      await new Promise(resolve => setTimeout(resolve, 500));
+      const shotsSheet = XLSX.utils.json_to_sheet(shotsData);
+      XLSX.utils.book_append_sheet(workbook, shotsSheet, "Analisi Tiri");
 
-      const canvas = await html2canvas(element, {
-        scale: 1.5,
-        useCORS: true,
-        backgroundColor: '#0a0a0a',
-        logging: false,
-        allowTaint: true,
-        windowWidth: element.scrollWidth,
-        windowHeight: element.scrollHeight
-      });
+      const statsSheet = XLSX.utils.json_to_sheet(ipoStats);
+      XLSX.utils.book_append_sheet(workbook, statsSheet, "Statistiche IPO");
 
-      const imgData = canvas.toDataURL('image/jpeg', 0.7);
-      const pdf = new jsPDF({
-        orientation: canvas.width > canvas.height ? 'landscape' : 'portrait',
-        unit: 'px',
-        format: [canvas.width, canvas.height]
-      });
+      const logSheet = XLSX.utils.json_to_sheet(eventsLog);
+      XLSX.utils.book_append_sheet(workbook, logSheet, "Log Partita");
 
-      pdf.addImage(imgData, 'JPEG', 0, 0, canvas.width, canvas.height);
-      pdf.save(`MatchReport_${homeTeam}_vs_${awayTeam}_${new Date().toISOString().split('T')[0]}.pdf`);
-      
-      setShowToast({ message: 'Report PDF generato con successo!', type: 'success' });
+      XLSX.writeFile(workbook, `MatchReport_${homeTeam}_vs_${awayTeam}_${new Date().toISOString().split('T')[0]}.xlsx`);
+      setShowToast({ message: 'File Excel generato con successo!', type: 'success' });
     } catch (error) {
-      console.error('Errore PDF:', error);
-      setShowToast({ message: 'Errore durante la generazione del PDF. Assicurati che non ci siano blocchi nel browser.', type: 'error' });
-    } finally {
-      setIsSaving(false);
+      console.error("Excel Export Error:", error);
+      setShowToast({ message: "Errore durante la generazione del file Excel.", type: 'error' });
     }
   };
 
@@ -399,10 +586,26 @@ export default function App() {
   }, []);
 
   const login = async () => {
+    if (isLoggingIn) return;
+    setIsLoggingIn(true);
+    console.log("Attempting login...");
     try {
-      await signInWithPopup(auth, googleProvider);
-    } catch (error) {
+      const result = await signInWithPopup(auth, googleProvider);
+      console.log("Login successful:", result.user.email);
+      setShowToast({ message: `Benvenuto, ${result.user.displayName}!`, type: 'success' });
+    } catch (error: any) {
       console.error("Errore login:", error);
+      let errorMessage = "Errore durante l'accesso.";
+      if (error.code === 'auth/popup-blocked') {
+        errorMessage = "Il popup di accesso è stato bloccato dal browser. Per favore, abilita i popup per questo sito.";
+      } else if (error.code === 'auth/cancelled-popup-request') {
+        errorMessage = "Accesso annullato.";
+      } else if (error.message) {
+        errorMessage = `Errore: ${error.message}`;
+      }
+      setShowToast({ message: errorMessage, type: 'error' });
+    } finally {
+      setIsLoggingIn(false);
     }
   };
 
@@ -435,16 +638,19 @@ export default function App() {
         userId: user.uid,
         homeTeam,
         awayTeam,
+        homeColor,
+        awayColor,
         date: new Date().toISOString(),
         createdAt: serverTimestamp(),
         totalXG: totalXG,
         totalGoals: totalGoals,
-        dangerEventsHome,
-        dangerEventsAway,
+        ipoEventsHome,
+        ipoEventsAway,
         goalsHome,
         goalsAway,
         possessionHomeSeconds,
-        possessionAwaySeconds
+        possessionAwaySeconds,
+        myTeamSide
       };
 
       let matchId = currentMatchId;
@@ -456,52 +662,103 @@ export default function App() {
         setCurrentMatchId(matchId);
       }
 
-      // Save shots
+      // Save shots - Delete existing shots first to avoid duplicates/stale data
       if (matchId) {
-        const shotsSnapshot = await getDocs(collection(db, 'matches', matchId, 'shots'));
-        for (const shotDoc of shotsSnapshot.docs) {
-          await deleteDoc(doc(db, 'matches', matchId, 'shots', shotDoc.id));
+        try {
+          const shotsSnapshot = await getDocs(collection(db, 'matches', matchId, 'shots'));
+          const deletePromises = shotsSnapshot.docs.map(shotDoc => 
+            deleteDoc(doc(db, 'matches', matchId, 'shots', shotDoc.id))
+          );
+          await Promise.all(deletePromises);
+        } catch (err) {
+          console.warn("Could not clear existing shots, continuing anyway:", err);
         }
       }
 
-      for (const shot of shots) {
-        await addDoc(collection(db, 'matches', matchId, 'shots'), {
-          ...shot,
-          matchId,
-          timestamp: new Date().toISOString()
-        });
+      // Add current shots in batches or chunks if needed, but here we just use Promise.all
+      if (shots.length > 0) {
+        const shotPromises = shots.map(shot => 
+          addDoc(collection(db, 'matches', matchId!, 'shots'), {
+            ...shot,
+            matchId,
+            timestamp: new Date().toISOString()
+          })
+        );
+        await Promise.all(shotPromises);
       }
 
       setShowToast({ message: "Partita salvata con successo!", type: 'success' });
     } catch (error) {
+      console.error("Save Match Error:", error);
       handleFirestoreError(error, OperationType.WRITE, 'matches');
-      setShowToast({ message: "Errore durante il salvataggio", type: 'error' });
+      setShowToast({ message: "Errore durante il salvataggio della partita.", type: 'error' });
     } finally {
       setIsSaving(false);
     }
   };
 
   const loadMatch = async (match: Match) => {
+    setLoadingMatchId(match.id);
     try {
       setCurrentMatchId(match.id);
       setHomeTeam(match.homeTeam);
       setAwayTeam(match.awayTeam);
-      setDangerEventsHome(match.dangerEventsHome || { shotsIn: 0, shotsOut: 0, penalties: 0, freeKicks: 0, corners: 0, crosses: 0 });
-      setDangerEventsAway(match.dangerEventsAway || { shotsIn: 0, shotsOut: 0, penalties: 0, freeKicks: 0, corners: 0, crosses: 0 });
+      setHomeColor(match.homeColor || '#eab308');
+      setAwayColor(match.awayColor || '#3b82f6');
+      setIpoEventsHome(match.ipoEventsHome || { shotsIn: 0, shotsOut: 0, penalties: 0, freeKicks: 0, corners: 0, crosses: 0 });
+      setIpoEventsAway(match.ipoEventsAway || { shotsIn: 0, shotsOut: 0, penalties: 0, freeKicks: 0, corners: 0, crosses: 0 });
       setGoalsHome(match.goalsHome || 0);
       setGoalsAway(match.goalsAway || 0);
       setPossessionHomeSeconds(match.possessionHomeSeconds || 0);
       setPossessionAwaySeconds(match.possessionAwaySeconds || 0);
+      setMyTeamSide(match.myTeamSide || 'home');
+      setTeamFilter('all');
       setPossessionState('none');
       
       const shotsSnapshot = await getDocs(collection(db, 'matches', match.id, 'shots'));
-      const shotsData = shotsSnapshot.docs.map(doc => doc.data() as Shot);
+      const shotsData = shotsSnapshot.docs.map(doc => ({
+        ...doc.data(),
+        id: doc.id
+      }) as Shot);
+      
       setShots(shotsData);
       setShowMatchList(false);
       setSelectedShot(null);
+      setShowToast({ message: "Partita caricata con successo!", type: 'success' });
     } catch (error) {
+      console.error("Load Match Error:", error);
       handleFirestoreError(error, OperationType.GET, `matches/${match.id}/shots`);
+      setShowToast({ message: "Errore durante il caricamento della partita.", type: 'error' });
+    } finally {
+      setLoadingMatchId(null);
     }
+  };
+
+  const undoLastShot = () => {
+    if (shots.length === 0) return;
+    
+    const lastShot = shots[shots.length - 1];
+    setShots(prev => prev.slice(0, -1));
+    setSelectedShot(null);
+    
+    // Remove the corresponding match event
+    setMatchEvents(prev => {
+      // Find the most recent event that matches this shot
+      const index = prev.findIndex(e => 
+        (e.type === 'shot' || e.type === 'goal') && 
+        e.description.includes(lastShot.playerName) &&
+        Math.abs(e.timestamp - lastShot.timestamp) < 5000 // Within 5 seconds
+      );
+      
+      if (index !== -1) {
+        const newEvents = [...prev];
+        newEvents.splice(index, 1);
+        return newEvents;
+      }
+      return prev;
+    });
+    
+    setShowToast({ message: 'Ultimo tiro annullato', type: 'success' });
   };
 
   const deleteMatch = async (matchId: string) => {
@@ -537,8 +794,8 @@ export default function App() {
     setCurrentMatchId(null);
     setTimerSeconds(0);
     setIsTimerRunning(false);
-    setDangerEventsHome({ shotsIn: 0, shotsOut: 0, penalties: 0, freeKicks: 0, corners: 0, crosses: 0 });
-    setDangerEventsAway({ shotsIn: 0, shotsOut: 0, penalties: 0, freeKicks: 0, corners: 0, crosses: 0 });
+    setIpoEventsHome({ shotsIn: 0, shotsOut: 0, penalties: 0, freeKicks: 0, corners: 0, crosses: 0 });
+    setIpoEventsAway({ shotsIn: 0, shotsOut: 0, penalties: 0, freeKicks: 0, corners: 0, crosses: 0 });
     setGoalsHome(0);
     setGoalsAway(0);
     setPossessionHomeSeconds(0);
@@ -547,67 +804,14 @@ export default function App() {
     setMatchEvents([]);
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    Papa.parse(file, {
-      header: true,
-      skipEmptyLines: true,
-      complete: (results) => {
-        const parsedShots: Shot[] = results.data.map((row: any) => {
-          const x = parseFloat(row.x);
-          const y = parseFloat(row.y);
-          const bodyPart = (row.bodyPart as BodyPart) || 'foot';
-          const assistType = (row.assistType as AssistType) || 'none';
-          const minute = parseInt(row.minute) || 0;
-          return {
-            id: Math.random().toString(36).substr(2, 9),
-            x,
-            y,
-            isGoal: row.isGoal === 'true' || row.isGoal === '1',
-            bodyPart,
-            assistType,
-            xg: calculateXG(x, y, bodyPart, assistType),
-            timestamp: Date.now(),
-            minute,
-            playerName: row.playerName || 'Giocatore',
-          };
-        });
-        setShots(prev => [...prev, ...parsedShots]);
-      },
-    });
-  };
-
-  const exportToExcel = () => {
-    const worksheet = XLSX.utils.json_to_sheet(shots);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Match Analysis");
-    XLSX.writeFile(workbook, `xg_analysis_${Date.now()}.xlsx`);
-  };
-
-  const downloadTemplate = () => {
-    const template = [
-      { playerName: 'Esempio', x: 10, y: 34, isGoal: 'true', bodyPart: 'foot', assistType: 'pass', minute: 15 },
-      { playerName: 'Esempio 2', x: 25, y: 20, isGoal: 'false', bodyPart: 'head', assistType: 'cross', minute: 42 },
-    ];
-    const csv = Papa.unparse(template);
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `xg_template.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
   const getXGColor = (val: number) => {
-    if (val < 0.1) return 'rgba(16, 185, 129, 0.4)'; // Emerald/Green
-    if (val < 0.3) return 'rgba(234, 179, 8, 0.4)'; // Yellow
-    if (val < 0.6) return 'rgba(249, 115, 22, 0.4)'; // Orange
-    return 'rgba(220, 38, 38, 0.4)'; // Red
+    let h = 0;
+    if (val < 0.1) h = 158; // Green
+    else if (val < 0.3) h = 45; // Yellow
+    else if (val < 0.6) h = 25; // Orange
+    else h = 0; // Red
+
+    return `hsla(${h}, ${heatmapSaturation}%, 50%, ${heatmapOpacity})`;
   };
 
   return (
@@ -615,26 +819,19 @@ export default function App() {
       {/* Header */}
       <header className="bg-black/40 border-b border-white/10 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 h-auto min-h-[80px] py-4 flex flex-col md:flex-row items-center justify-between gap-4">
-          
           <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-start">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 rounded-xl sm:rounded-2xl overflow-hidden">
-                <svg viewBox="0 0 680 680" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
-                  <rect x="90" y="90" width="500" height="500" rx="100" fill="#0f1729"/>
-                  <rect x="185" y="440" width="80" height="120" rx="12" fill="#3b6fd4"/>
-                  <rect x="290" y="340" width="80" height="220" rx="12" fill="#4a7fe8"/>
-                  <rect x="395" y="260" width="80" height="300" rx="12" fill="#5a8ff5"/>
-                  <rect x="500" y="310" width="80" height="250" rx="12" fill="#4a7fe8"/>
-                  <polyline points="185,420 270,310 375,240 455,265 545,230" fill="none" stroke="#4ecdc4" strokeWidth="14" strokeLinecap="round" strokeLinejoin="round"/>
-                  <circle cx="185" cy="420" r="14" fill="#4ecdc4"/>
-                  <circle cx="270" cy="310" r="14" fill="#4ecdc4"/>
-                  <circle cx="375" cy="240" r="14" fill="#4ecdc4"/>
-                  <circle cx="455" cy="265" r="14" fill="#4ecdc4"/>
-                  <circle cx="545" cy="230" r="14" fill="#4ecdc4"/> 
-                </svg>
+              <div className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 flex items-center justify-center bg-white/5 border border-white/10 rounded-xl sm:rounded-2xl shadow-2xl group hover:border-blue-500/50 transition-all duration-500">
+                <Activity className="w-6 h-6 text-blue-500 group-hover:scale-110 transition-transform duration-500" />
               </div>
               <div>
                 <h1 className="font-black text-xl sm:text-2xl tracking-tighter text-white leading-none uppercase">Analysis <span className="text-blue-500">Hub</span></h1>
+                {!isOnline && (
+                  <div className="flex items-center gap-1 mt-1">
+                    <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                    <span className="text-[8px] font-bold text-red-500 uppercase tracking-widest">Offline Mode</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -651,9 +848,10 @@ export default function App() {
               ) : (
                 <button 
                   onClick={login}
-                  className="p-2 rounded-lg bg-blue-600 text-white"
+                  disabled={isLoggingIn}
+                  className="p-2 rounded-lg bg-blue-600 text-white disabled:opacity-50"
                 >
-                  <LogIn className="w-4 h-4" />
+                  {isLoggingIn ? <RefreshCw className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
                 </button>
               )}
             </div>
@@ -665,12 +863,18 @@ export default function App() {
               <div className="flex flex-col gap-1">
                 <div className="h-1.5 w-24 sm:w-32 bg-white/10 rounded-full overflow-hidden flex">
                   <div 
-                    className="h-full bg-yellow-500 transition-all duration-500" 
-                    style={{ width: `${possessionHomeSeconds + possessionAwaySeconds > 0 ? (possessionHomeSeconds / (possessionHomeSeconds + possessionAwaySeconds)) * 100 : 50}%` }}
+                    className="h-full transition-all duration-500" 
+                    style={{ 
+                      width: `${possessionHomeSeconds + possessionAwaySeconds > 0 ? (possessionHomeSeconds / (possessionHomeSeconds + possessionAwaySeconds)) * 100 : 50}%`,
+                      backgroundColor: homeColor
+                    }}
                   />
                   <div 
-                    className="h-full bg-blue-500 transition-all duration-500" 
-                    style={{ width: `${possessionHomeSeconds + possessionAwaySeconds > 0 ? (possessionAwaySeconds / (possessionHomeSeconds + possessionAwaySeconds)) * 100 : 50}%` }}
+                    className="h-full transition-all duration-500" 
+                    style={{ 
+                      width: `${possessionHomeSeconds + possessionAwaySeconds > 0 ? (possessionAwaySeconds / (possessionHomeSeconds + possessionAwaySeconds)) * 100 : 50}%`,
+                      backgroundColor: awayColor
+                    }}
                   />
                 </div>
                 <div className="flex justify-between items-center w-24 sm:w-32">
@@ -687,8 +891,13 @@ export default function App() {
                   onClick={() => setPossessionState(possessionState === 'home' ? 'none' : 'home')}
                   className={cn(
                     "w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center transition-all border",
-                    possessionState === 'home' ? "bg-yellow-500 border-yellow-400 text-black shadow-lg shadow-yellow-500/20" : "bg-white/5 border-white/10 text-gray-400 hover:text-white"
+                    possessionState === 'home' ? "text-white shadow-lg" : "bg-white/5 border-white/10 text-gray-400 hover:text-white"
                   )}
+                  style={{ 
+                    backgroundColor: possessionState === 'home' ? homeColor : undefined,
+                    borderColor: possessionState === 'home' ? homeColor : undefined,
+                    boxShadow: possessionState === 'home' ? `0 10px 15px -3px ${homeColor}33` : undefined
+                  }}
                 >
                   <div className="font-black text-[9px]">H</div>
                 </button>
@@ -705,8 +914,13 @@ export default function App() {
                   onClick={() => setPossessionState(possessionState === 'away' ? 'none' : 'away')}
                   className={cn(
                     "w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center transition-all border",
-                    possessionState === 'away' ? "bg-blue-500 border-blue-400 text-white shadow-lg shadow-blue-500/20" : "bg-white/5 border-white/10 text-gray-400 hover:text-white"
+                    possessionState === 'away' ? "text-white shadow-lg" : "bg-white/5 border-white/10 text-gray-400 hover:text-white"
                   )}
+                  style={{ 
+                    backgroundColor: possessionState === 'away' ? awayColor : undefined,
+                    borderColor: possessionState === 'away' ? awayColor : undefined,
+                    boxShadow: possessionState === 'away' ? `0 10px 15px -3px ${awayColor}33` : undefined
+                  }}
                 >
                   <div className="font-black text-[9px]">A</div>
                 </button>
@@ -721,7 +935,9 @@ export default function App() {
                 {String(Math.floor(timerSeconds / 60)).padStart(2, '0')}:{String(timerSeconds % 60).padStart(2, '0')}
               </span>
               <div className="flex gap-1">
-                <button 
+                <motion.button 
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
                   onClick={() => setIsTimerRunning(!isTimerRunning)}
                   className={cn(
                     "w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center transition-all",
@@ -729,8 +945,10 @@ export default function App() {
                   )}
                 >
                   {isTimerRunning ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-                </button>
-                <button 
+                </motion.button>
+                <motion.button 
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
                   onClick={() => {
                     setTimerSeconds(0);
                     setIsTimerRunning(false);
@@ -741,14 +959,41 @@ export default function App() {
                   className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 flex items-center justify-center transition-all"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
-                </button>
+                </motion.button>
+              </div>
+            </div>
+
+            <div className="h-8 w-px bg-white/10 shrink-0" />
+
+            {/* Dominance Indicator */}
+            <div className="hidden md:flex items-center gap-3 bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 shrink-0">
+              <div className="flex items-center gap-2">
+                <Activity 
+                  className="w-3.5 h-3.5 transition-colors"
+                  style={{ color: matchDominance > 0.2 ? homeColor : matchDominance < -0.2 ? awayColor : '#6b7280' }}
+                />
+                <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Dominio</span>
+              </div>
+              <div className="flex items-center gap-1 w-24 h-1.5 bg-white/5 rounded-full overflow-hidden">
+                <motion.div 
+                  animate={{ 
+                    width: `${Math.abs(matchDominance) * 100}%`,
+                    backgroundColor: matchDominance > 0 ? homeColor : awayColor,
+                    x: matchDominance > 0 ? '50%' : '-50%'
+                  }}
+                  className="h-full rounded-full"
+                  style={{ marginLeft: '50%' }}
+                  transition={{ type: "spring", stiffness: 100, damping: 20 }}
+                />
               </div>
             </div>
 
             <div className="h-8 w-px bg-white/10 shrink-0" />
 
             <div className="flex items-center bg-white/5 rounded-xl p-1 border border-white/10 shrink-0">
-              <button 
+              <motion.button 
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={() => setActiveTab('xg')}
                 className={cn(
                   "px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-bold transition-all flex items-center gap-1.5",
@@ -757,80 +1002,150 @@ export default function App() {
               >
                 <Target className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Match</span>
-              </button>
-              <button 
-                onClick={() => setActiveTab('dangerzone')}
+              </motion.button>
+              <motion.button 
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setActiveTab('ipo')}
                 className={cn(
                   "px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-bold transition-all flex items-center gap-1.5",
-                  activeTab === 'dangerzone' ? "bg-yellow-500 text-black shadow-lg" : "text-gray-400 hover:text-white"
+                  activeTab === 'ipo' ? "bg-yellow-500 text-black shadow-lg" : "text-gray-400 hover:text-white"
                 )}
               >
                 <Zap className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Danger</span>
-              </button>
+                <span className="hidden sm:inline">IPO</span>
+              </motion.button>
             </div>
 
             <div className="hidden sm:block h-8 w-px bg-white/10" />
 
             {activeTab === 'xg' && (
-              <div className="flex items-center bg-white/5 rounded-lg p-1 border border-white/10">
-                <button 
-                  onClick={() => setShowHeatmap(!showHeatmap)}
-                  className={cn(
-                    "px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-[10px] sm:text-xs font-medium transition-all flex items-center gap-1.5 sm:gap-2",
-                    showHeatmap ? "bg-blue-600 text-white shadow-lg" : "text-gray-400 hover:text-white"
-                  )}
-                >
-                  <Flame className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                  <span className="hidden xs:inline">Heat Map</span>
-                </button>
-                <button 
-                  onClick={() => setShowGridValues(!showGridValues)}
-                  className={cn(
-                    "px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-[10px] sm:text-xs font-medium transition-all flex items-center gap-1.5 sm:gap-2",
-                    showGridValues ? "bg-blue-600 text-white shadow-lg" : "text-gray-400 hover:text-white"
-                  )}
-                >
-                  <Hash className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                  <span className="hidden xs:inline">Grid</span>
-                </button>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center bg-white/5 rounded-lg p-1 border border-white/10">
+                  <button 
+                    onClick={() => setShowHeatmap(!showHeatmap)}
+                    className={cn(
+                      "px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-[10px] sm:text-xs font-medium transition-all flex items-center gap-1.5 sm:gap-2",
+                      showHeatmap ? "bg-blue-600 text-white shadow-lg" : "text-gray-400 hover:text-white"
+                    )}
+                  >
+                    <Flame className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                    <span className="hidden xs:inline">Heat Map</span>
+                  </button>
+                  <button 
+                    onClick={() => setShowGridValues(!showGridValues)}
+                    className={cn(
+                      "px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-[10px] sm:text-xs font-medium transition-all flex items-center gap-1.5 sm:gap-2",
+                      showGridValues ? "bg-blue-600 text-white shadow-lg" : "text-gray-400 hover:text-white"
+                    )}
+                  >
+                    <Hash className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                    <span className="hidden xs:inline">Grid</span>
+                  </button>
+                </div>
+
+                <div className="hidden xl:flex items-center gap-2 mr-2">
+                </div>
+                <div className="flex items-center bg-white/5 rounded-lg p-1 border border-white/10">
+                  <button 
+                    onClick={() => setTeamFilter('all')}
+                    className={cn(
+                      "px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-[10px] sm:text-xs font-medium transition-all",
+                      teamFilter === 'all' ? "bg-white/20 text-white shadow-lg" : "text-gray-400 hover:text-white"
+                    )}
+                  >
+                    Tutti
+                  </button>
+                  <button 
+                    onClick={() => setTeamFilter('home')}
+                    className={cn(
+                      "px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-[10px] sm:text-xs font-medium transition-all",
+                      teamFilter === 'home' ? "text-white shadow-lg" : "text-gray-400 hover:text-white"
+                    )}
+                    style={{ backgroundColor: teamFilter === 'home' ? homeColor : undefined }}
+                  >
+                    Casa
+                  </button>
+                  <button 
+                    onClick={() => setTeamFilter('away')}
+                    className={cn(
+                      "px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-[10px] sm:text-xs font-medium transition-all",
+                      teamFilter === 'away' ? "text-white shadow-lg" : "text-gray-400 hover:text-white"
+                    )}
+                    style={{ backgroundColor: teamFilter === 'away' ? awayColor : undefined }}
+                  >
+                    Ospite
+                  </button>
+                </div>
+
+                {showHeatmap && (
+                  <div className="hidden lg:flex items-center gap-4 bg-white/5 border border-white/10 rounded-xl px-3 py-1.5">
+                    <div className="flex flex-col gap-1">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[8px] font-black text-gray-500 uppercase">Opacità</span>
+                        <span className="text-[8px] font-bold text-blue-500">{Math.round(heatmapOpacity * 100)}%</span>
+                      </div>
+                      <input 
+                        type="range" 
+                        min="0" 
+                        max="1" 
+                        step="0.1" 
+                        value={heatmapOpacity}
+                        onChange={(e) => setHeatmapOpacity(parseFloat(e.target.value))}
+                        className="w-20 h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                      />
+                    </div>
+                    <div className="w-px h-6 bg-white/10" />
+                    <div className="flex flex-col gap-1">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[8px] font-black text-gray-500 uppercase">Saturazione</span>
+                        <span className="text-[8px] font-bold text-blue-500">{heatmapSaturation}%</span>
+                      </div>
+                      <input 
+                        type="range" 
+                        min="0" 
+                        max="100" 
+                        step="10" 
+                        value={heatmapSaturation}
+                        onChange={(e) => setHeatmapSaturation(parseInt(e.target.value))}
+                        className="w-20 h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
-            <div className="hidden md:flex items-center gap-2">
-              <button 
-                onClick={exportToExcel}
-                className="p-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white transition-all shadow-lg shadow-blue-500/20 flex items-center gap-2"
-                title="Esporta Excel"
-              >
-                <FileSpreadsheet className="w-4 h-4" />
-                <span className="hidden xl:inline text-xs font-bold">Excel</span>
-              </button>
-            </div>
+              <div className="hidden md:flex items-center gap-2">
+                <motion.button 
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={exportToExcel}
+                  disabled={isSaving}
+                  className="p-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white transition-all shadow-lg shadow-emerald-500/20 flex items-center gap-2 disabled:opacity-50"
+                  title="Esporta Excel"
+                >
+                  <FileSpreadsheet className="w-4 h-4" />
+                  <span className="hidden xl:inline text-xs font-bold">Report Excel</span>
+                </motion.button>
 
-            <div className="hidden md:block h-8 w-px bg-white/10" />
+              <div className="h-8 w-px bg-white/10 mx-1" />
 
-            <div className="hidden md:flex items-center gap-2">
               {user ? (
                 <>
-                  <button 
+                  <motion.button 
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                     onClick={() => setShowMatchList(true)}
                     className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all border border-white/10 flex items-center gap-2"
                     title="Le mie partite"
                   >
                     <List className="w-4 h-4" />
                     <span className="hidden xl:inline text-xs font-bold">Partite</span>
-                  </button>
-                  <button 
-                    onClick={exportToPDF}
-                    disabled={isSaving}
-                    className="p-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white transition-all shadow-lg shadow-emerald-500/20 flex items-center gap-2 disabled:opacity-50"
-                    title="Esporta PDF"
-                  >
-                    <FileDown className="w-4 h-4" />
-                    <span className="hidden xl:inline text-xs font-bold">Report PDF</span>
-                  </button>
-                  <button 
+                  </motion.button>
+                  <motion.button 
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                     onClick={saveMatch}
                     disabled={isSaving}
                     className="p-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white transition-all shadow-lg shadow-blue-500/20 flex items-center gap-2 disabled:opacity-50"
@@ -838,23 +1153,28 @@ export default function App() {
                   >
                     {isSaving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                     <span className="hidden xl:inline text-xs font-bold">Salva</span>
-                  </button>
-                  <button 
+                  </motion.button>
+                  <motion.button 
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                     onClick={logout}
                     className="p-2.5 rounded-xl bg-white/5 hover:bg-red-500/20 text-gray-400 hover:text-red-500 transition-all border border-white/10"
                     title="Logout"
                   >
                     <LogOut className="w-4 h-4" />
-                  </button>
+                  </motion.button>
                 </>
               ) : (
-                <button 
+                <motion.button 
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                   onClick={login}
-                  className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs transition-all flex items-center gap-2 shadow-lg shadow-blue-500/20"
+                  disabled={isLoggingIn}
+                  className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs transition-all flex items-center gap-2 shadow-lg shadow-blue-500/20 disabled:opacity-50"
                 >
-                  <LogIn className="w-4 h-4" />
-                  Accedi
-                </button>
+                  {isLoggingIn ? <RefreshCw className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
+                  {isLoggingIn ? 'Accesso...' : 'Accedi'}
+                </motion.button>
               )}
             </div>
           </div>
@@ -866,29 +1186,7 @@ export default function App() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             {/* Left Column: Pitch & Controls */}
             <div className="lg:col-span-8 space-y-6">
-              {/* Team Names Input */}
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col sm:flex-row items-center gap-4">
-            <div className="flex-1 w-full">
-              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 block">Casa</label>
-              <input 
-                type="text" 
-                value={homeTeam}
-                onChange={(e) => setHomeTeam(e.target.value)}
-                className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm font-bold text-white focus:outline-none focus:border-blue-500/50"
-              />
-            </div>
-            <div className="text-gray-600 font-black italic px-2 hidden sm:block text-xl">VS</div>
-            <div className="flex-1 w-full">
-              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 block">Trasferta</label>
-              <input 
-                type="text" 
-                value={awayTeam}
-                onChange={(e) => setAwayTeam(e.target.value)}
-                className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm font-bold text-white focus:outline-none focus:border-blue-500/50"
-              />
-            </div>
-          </div>
-          {/* Stats Row */}
+              {/* Stats Row */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
@@ -904,12 +1202,14 @@ export default function App() {
                 </div>
               </div>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-widest">Total xG</span>
+                <span className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-widest">xG</span>
                 <Activity className="w-4 h-4 text-emerald-500" />
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="text-2xl sm:text-3xl font-black text-white">{totalXG.toFixed(2)}</span>
-                <span className="text-[10px] sm:text-xs text-emerald-500 font-bold">+{((totalXG / (totalGoals || 1)) * 10).toFixed(1)}%</span>
+                <span className="text-2xl sm:text-3xl font-black text-white">
+                  <AnimatedCounter value={displayXG} decimals={2} />
+                </span>
+                <span className="text-[10px] sm:text-xs text-emerald-500 font-bold">+{((displayXG / (displayGoals || 1)) * 10).toFixed(1)}%</span>
               </div>
             </motion.div>
 
@@ -924,8 +1224,10 @@ export default function App() {
                 <Trophy className="w-4 h-4 text-yellow-500" />
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="text-2xl sm:text-3xl font-black text-white">{totalGoals}</span>
-                <span className="text-[10px] sm:text-xs text-gray-400 font-medium">vs {totalXG.toFixed(1)} xG</span>
+                <span className="text-2xl sm:text-3xl font-black text-white">
+                  <AnimatedCounter value={displayGoals} decimals={0} />
+                </span>
+                <span className="text-[10px] sm:text-xs text-gray-400 font-medium">vs {displayXG.toFixed(1)} xG</span>
               </div>
             </motion.div>
 
@@ -940,14 +1242,26 @@ export default function App() {
                 <Zap className="w-4 h-4 text-emerald-500" />
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="text-2xl sm:text-3xl font-black text-white">{xgPerShot.toFixed(2)}</span>
-                <span className="text-[10px] sm:text-xs text-emerald-500 font-bold">{shots.length} tiri tot.</span>
+                <span className="text-2xl sm:text-3xl font-black text-white">
+                  <AnimatedCounter value={displayXGPerShot} decimals={2} />
+                </span>
+                <span className="text-[10px] sm:text-xs text-emerald-500 font-bold">{displayShots.length} tiri</span>
               </div>
             </motion.div>
           </div>
 
           {/* Pitch Container */}
-          <div className="relative bg-black/40 border border-white/10 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl">
+          <motion.div 
+            animate={{ 
+              borderColor: possessionState === 'home' ? 'rgba(59, 130, 246, 0.5)' : 
+                          possessionState === 'away' ? 'rgba(239, 68, 68, 0.5)' : 
+                          'rgba(255, 255, 255, 0.1)',
+              boxShadow: possessionState === 'home' ? '0 0 30px rgba(59, 130, 246, 0.15)' : 
+                         possessionState === 'away' ? '0 0 30px rgba(239, 68, 68, 0.15)' : 
+                         '0 0 0px rgba(0,0,0,0)'
+            }}
+            className="relative bg-black/40 border rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl transition-all duration-700"
+          >
             <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-10 flex gap-2">
               <div className="bg-black/60 backdrop-blur-md border border-white/10 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full flex items-center gap-1.5 sm:gap-2 text-[8px] sm:text-[10px] font-bold uppercase tracking-wider text-gray-400">
                 <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-blue-600 animate-pulse" />
@@ -956,6 +1270,16 @@ export default function App() {
             </div>
 
             <div className="absolute top-3 right-3 sm:top-4 sm:right-4 z-10 flex gap-2">
+              <button 
+                onClick={undoLastShot}
+                disabled={shots.length === 0}
+                className="bg-white/10 hover:bg-white/20 text-white border border-white/10 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[8px] sm:text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 sm:gap-2 disabled:opacity-30 disabled:cursor-not-allowed"
+                title="Annulla ultimo tiro"
+              >
+                <Undo2 className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                Undo
+              </button>
+
               <AnimatePresence>
                 {showResetConfirm ? (
                   <motion.div 
@@ -1010,6 +1334,21 @@ export default function App() {
                 <rect x="30.34" y="-1" width="7.32" height="1" fill="none" stroke="white" strokeWidth="0.4" />
               </svg>
 
+              {/* Ripples */}
+              <AnimatePresence>
+                {ripples.map(ripple => (
+                  <motion.div
+                    key={ripple.id}
+                    initial={{ scale: 0, opacity: 0.8 }}
+                    animate={{ scale: 4, opacity: 0 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.8, ease: "easeOut" }}
+                    className="absolute w-8 h-8 -ml-4 -mt-4 rounded-full border-2 border-blue-500 pointer-events-none z-30"
+                    style={{ left: `${ripple.x}%`, top: `${ripple.y}%` }}
+                  />
+                ))}
+              </AnimatePresence>
+
               {/* Heatmap Overlay */}
               <AnimatePresence>
                 {showHeatmap && (
@@ -1017,13 +1356,15 @@ export default function App() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="absolute inset-0 grid grid-cols-[repeat(34,1fr)] grid-rows-[repeat(17,1fr)] pointer-events-none"
+                    className="absolute inset-0 grid grid-cols-[repeat(34,1fr)] grid-rows-[repeat(17,1fr)]"
                   >
                     {xgGrid.map((row, r) => 
                       row.map((val, c) => (
                         <div 
                           key={`${r}-${c}`}
-                          className="flex items-center justify-center border-[0.5px] border-white/5 transition-colors duration-500"
+                          onMouseEnter={() => setHoveredCell({ r, c, xg: val })}
+                          onMouseLeave={() => setHoveredCell(null)}
+                          className="flex items-center justify-center border-[0.5px] border-white/5 transition-colors duration-500 relative group/cell"
                           style={{ backgroundColor: getXGColor(val) }}
                         >
                           {showGridValues && (
@@ -1036,22 +1377,53 @@ export default function App() {
                 )}
               </AnimatePresence>
 
+              {/* Hover Tooltip */}
+              <AnimatePresence>
+                {hoveredCell && showHeatmap && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    className="absolute pointer-events-none z-50 bg-black/90 backdrop-blur-md border border-white/20 p-2 rounded-lg shadow-2xl flex flex-col gap-1 min-w-[80px]"
+                    style={{
+                      left: `${(hoveredCell.c / 34) * 100}%`,
+                      top: `${(hoveredCell.r / 17) * 100}%`,
+                      transform: 'translate(-50%, -120%)'
+                    }}
+                  >
+                    <div className="flex justify-between items-center gap-4">
+                      <span className="text-[8px] font-black text-gray-500 uppercase">xG Value</span>
+                      <span className="text-[10px] font-black text-emerald-500">{hoveredCell.xg.toFixed(3)}</span>
+                    </div>
+                    <div className="flex justify-between items-center gap-4">
+                      <span className="text-[8px] font-black text-gray-500 uppercase">Posizione</span>
+                      <span className="text-[8px] font-bold text-white">{hoveredCell.r}, {hoveredCell.c}</span>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
               {/* Shots */}
-              {shots.map((shot) => (
+              {filteredShots.map((shot) => (
                 <motion.button
                   key={shot.id}
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
+                  initial={{ scale: 0, opacity: 0, rotate: -45 }}
+                  animate={{ scale: 1, opacity: 1, rotate: 0 }}
+                  whileHover={{ scale: 1.4, zIndex: 30 }}
+                  whileTap={{ scale: 0.9 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 17 }}
                   onClick={(e) => {
                     e.stopPropagation();
                     setSelectedShot(shot);
                   }}
                   className={cn(
-                    "absolute w-3 h-3 sm:w-4 sm:h-4 -ml-1.5 -mt-1.5 sm:-ml-2 sm:-mt-2 rounded-full border-[1.5px] sm:border-2 flex items-center justify-center transition-all hover:scale-150 z-20",
+                    "absolute w-3 h-3 sm:w-4 sm:h-4 -ml-1.5 -mt-1.5 sm:-ml-2 sm:-mt-2 rounded-full border-[1.5px] sm:border-2 flex items-center justify-center transition-all z-20",
                     shot.isGoal 
                       ? "bg-yellow-500 border-white shadow-[0_0_15px_rgba(234,179,8,0.5)]" 
                       : "bg-emerald-500 border-black shadow-[0_0_10px_rgba(16,185,129,0.3)]",
-                    selectedShot?.id === shot.id && "ring-2 sm:ring-4 ring-white scale-150"
+                    selectedShot?.id === shot.id ? "ring-2 sm:ring-4 ring-white scale-150" : 
+                    matchDominance > 0.2 ? "ring-1 sm:ring-2 ring-blue-500/50" :
+                    matchDominance < -0.2 ? "ring-1 sm:ring-2 ring-red-500/50" : ""
                   )}
                   style={{
                     left: `${(shot.y / DEFAULT_PITCH.width) * 100}%`,
@@ -1074,7 +1446,7 @@ export default function App() {
                 </div>
               )}
             </div>
-          </div>
+          </motion.div>
 
           {/* Chart Section */}
           <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
@@ -1111,6 +1483,23 @@ export default function App() {
 
         {/* Right Column: Sidebar */}
         <div className="lg:col-span-4 space-y-6">
+          {/* Opponent Input */}
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-4 sm:p-6 backdrop-blur-sm">
+            <div className="flex items-center gap-2 mb-4">
+              <Shield className="w-4 h-4 text-red-500" />
+              <h2 className="font-bold text-xs sm:text-sm uppercase tracking-widest text-gray-400">
+                Avversario
+              </h2>
+            </div>
+            <input 
+              type="text" 
+              value={awayTeam}
+              onChange={(e) => setAwayTeam(e.target.value)}
+              placeholder="Nome Avversario"
+              className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-red-500/50 transition-all"
+            />
+          </div>
+
           {/* Configuration Card */}
           <div className="bg-white/5 border border-white/10 rounded-2xl p-4 sm:p-6 backdrop-blur-sm">
             <div className="flex items-center gap-2 mb-4 sm:mb-6">
@@ -1122,27 +1511,88 @@ export default function App() {
 
             <div className="space-y-4 sm:space-y-6">
               <div>
+                <label className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-2 sm:mb-3 block">Squadra</label>
+                <div className="bg-black/40 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl border border-white/10 text-sm font-bold text-white">
+                  { (selectedShot ? selectedShot.team : (teamFilter === 'all' ? myTeamSide : teamFilter)) === 'home' ? homeTeam : awayTeam }
+                </div>
+              </div>
+              <div>
                 <label className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-2 sm:mb-3 block">Nome Giocatore</label>
-                <input 
-                  type="text"
-                  value={selectedShot ? selectedShot.playerName : newShotConfig.playerName}
-                  onChange={(e) => {
-                    if (selectedShot) {
-                      updateShot(selectedShot.id, { playerName: e.target.value });
-                    } else {
-                      setNewShotConfig(prev => ({ ...prev, playerName: e.target.value }));
-                    }
-                  }}
-                  placeholder="Es. Lautaro Martinez"
-                  className="w-full bg-black/40 border border-white/10 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
-                />
+                {!isAddingNewPlayer ? (
+                  <div className="relative">
+                    <select 
+                      value={selectedShot ? selectedShot.playerName : newShotConfig.playerName}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === "ADD_NEW") {
+                          setIsAddingNewPlayer(true);
+                        } else {
+                          if (selectedShot) {
+                            updateShot(selectedShot.id, { playerName: val });
+                          } else {
+                            setNewShotConfig(prev => ({ ...prev, playerName: val }));
+                          }
+                        }
+                      }}
+                      className="w-full bg-black/40 border border-white/10 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all appearance-none text-white"
+                    >
+                      <option value="">Seleziona giocatore...</option>
+                      {playerList.length > 0 && (
+                        <optgroup label="In questa partita">
+                          {playerList.map(p => <option key={p} value={p}>{p}</option>)}
+                        </optgroup>
+                      )}
+                      <optgroup label="Squadra / Suggeriti">
+                        {PREDEFINED_PLAYERS.map(p => <option key={p} value={p}>{p}</option>)}
+                      </optgroup>
+                      <option value="ADD_NEW">+ Aggiungi nuovo...</option>
+                    </select>
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">
+                      <ChevronDown className="w-4 h-4" />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <input 
+                      autoFocus
+                      type="text"
+                      placeholder="Nome nuovo giocatore"
+                      className="flex-1 bg-black/40 border border-white/10 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-white"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          const val = (e.target as HTMLInputElement).value;
+                          if (val) {
+                            if (selectedShot) {
+                              updateShot(selectedShot.id, { playerName: val });
+                            } else {
+                              setNewShotConfig(prev => ({ ...prev, playerName: val }));
+                            }
+                            setIsAddingNewPlayer(false);
+                          }
+                        }
+                        if (e.key === 'Escape') setIsAddingNewPlayer(false);
+                      }}
+                    />
+                    <motion.button 
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={() => setIsAddingNewPlayer(false)}
+                      className="p-3 bg-white/5 border border-white/10 rounded-xl text-gray-400 hover:text-white transition-all"
+                      title="Annulla"
+                    >
+                      <X className="w-4 h-4" />
+                    </motion.button>
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <label className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-2 sm:mb-3 block">Parte Corpo</label>
                   <div className="flex bg-black/40 p-1 rounded-xl border border-white/10">
-                    <button 
+                    <motion.button 
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
                       onClick={() => {
                         if (selectedShot) {
                           updateShot(selectedShot.id, { bodyPart: 'foot' });
@@ -1157,8 +1607,10 @@ export default function App() {
                     >
                       <Footprints className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                       Piede
-                    </button>
-                    <button 
+                    </motion.button>
+                    <motion.button 
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
                       onClick={() => {
                         if (selectedShot) {
                           updateShot(selectedShot.id, { bodyPart: 'head' });
@@ -1173,13 +1625,15 @@ export default function App() {
                     >
                       <UserIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                       Testa
-                    </button>
+                    </motion.button>
                   </div>
                 </div>
 
                 <div>
                   <label className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-2 sm:mb-3 block">Risultato</label>
-                  <button 
+                  <motion.button 
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={() => {
                       if (selectedShot) {
                         updateShot(selectedShot.id, { isGoal: !selectedShot.isGoal });
@@ -1195,7 +1649,7 @@ export default function App() {
                     )}
                   >
                     {(selectedShot ? selectedShot.isGoal : newShotConfig.isGoal) ? 'GOL' : 'NO GOL'}
-                  </button>
+                  </motion.button>
                 </div>
               </div>
 
@@ -1240,8 +1694,10 @@ export default function App() {
                 <label className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-2 sm:mb-3 block">Tipo Assist</label>
                 <div className="grid grid-cols-2 gap-2">
                   {(['none', 'pass', 'cross', 'rebound'] as AssistType[]).map((type) => (
-                    <button
+                    <motion.button
                       key={type}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
                       onClick={() => {
                         if (selectedShot) {
                           updateShot(selectedShot.id, { assistType: type });
@@ -1257,7 +1713,7 @@ export default function App() {
                       )}
                     >
                       {type === 'none' ? 'Nessuno' : type === 'pass' ? 'Passaggio' : type === 'cross' ? 'Cross' : 'Rimpallo'}
-                    </button>
+                    </motion.button>
                   ))}
                 </div>
               </div>
@@ -1320,14 +1776,14 @@ export default function App() {
             <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
               <div className="p-3 sm:p-4 border-b border-white/10 flex items-center justify-between">
                 <h3 className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-gray-400">Ultimi Tiri</h3>
-                <span className="bg-emerald-500 text-black text-[10px] font-black px-2 py-0.5 rounded-full">{shots.length}</span>
+                <span className="bg-emerald-500 text-black text-[10px] font-black px-2 py-0.5 rounded-full">{filteredShots.length}</span>
               </div>
               <div className="max-h-[200px] overflow-y-auto custom-scrollbar">
-                {shots.length === 0 ? (
+                {filteredShots.length === 0 ? (
                   <div className="p-6 text-center text-gray-600 text-[10px] italic">Nessun tiro registrato</div>
                 ) : (
                   <div className="divide-y divide-white/5">
-                    {shots.slice().reverse().map((shot) => (
+                    {filteredShots.slice().reverse().map((shot) => (
                       <button 
                         key={shot.id}
                         onClick={() => setSelectedShot(shot)}
@@ -1360,27 +1816,33 @@ export default function App() {
 
             {/* Match Log Summary */}
             <div className="h-[300px]">
-              <MatchLog events={matchEvents} homeTeam={homeTeam} awayTeam={awayTeam} />
+              <MatchLog events={filteredMatchEvents} homeTeam={homeTeam} awayTeam={awayTeam} />
             </div>
           </div>
         </div>
       </div>
     ) : (
-          <DangerzoneView 
+          <IPOView 
             homeTeam={homeTeam}
             awayTeam={awayTeam}
-            dangerEventsHome={dangerEventsHome}
-            setDangerEventsHome={setDangerEventsHome}
-            dangerEventsAway={dangerEventsAway}
-            setDangerEventsAway={setDangerEventsAway}
+            homeColor={homeColor}
+            awayColor={awayColor}
+            ipoEventsHome={ipoEventsHome}
+            setIpoEventsHome={setIpoEventsHome}
+            ipoEventsAway={ipoEventsAway}
+            setIpoEventsAway={setIpoEventsAway}
             goalsHome={goalsHome}
             setGoalsHome={setGoalsHome}
             goalsAway={goalsAway}
             setGoalsAway={setGoalsAway}
             ipoHome={ipoHome}
             ipoAway={ipoAway}
+            prevIpoHome={prevIpoHome}
+            prevIpoAway={prevIpoAway}
             possessionHomeSeconds={possessionHomeSeconds}
+            setPossessionHomeSeconds={setPossessionHomeSeconds}
             possessionAwaySeconds={possessionAwaySeconds}
+            setPossessionAwaySeconds={setPossessionAwaySeconds}
             weights={weights}
             addMatchEvent={addMatchEvent}
           />
@@ -1436,9 +1898,21 @@ export default function App() {
                       key={match.id}
                       className="group bg-white/5 border border-white/10 hover:border-blue-500/30 rounded-xl sm:rounded-2xl p-3 sm:p-4 flex items-center justify-between transition-all"
                     >
-                      <div className="flex-1 cursor-pointer overflow-hidden" onClick={() => loadMatch(match)}>
+                      <div 
+                        className={cn(
+                          "flex-1 overflow-hidden",
+                          loadingMatchId ? "cursor-not-allowed opacity-50" : "cursor-pointer"
+                        )} 
+                        onClick={() => !loadingMatchId && loadMatch(match)}
+                      >
                         <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 mb-1">
-                          <span className="text-xs sm:text-sm font-black text-white truncate">{match.homeTeam} vs {match.awayTeam}</span>
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: match.homeColor || '#eab308' }} />
+                            <span className="text-xs sm:text-sm font-black text-white truncate">{match.homeTeam}</span>
+                            <span className="text-[10px] text-gray-500">vs</span>
+                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: match.awayColor || '#3b82f6' }} />
+                            <span className="text-xs sm:text-sm font-black text-white truncate">{match.awayTeam}</span>
+                          </div>
                           <span className="text-[8px] sm:text-[10px] font-bold bg-blue-600/10 text-blue-500 px-2 py-0.5 rounded-full w-fit">
                             {match.totalGoals} Gol • {match.totalXG.toFixed(2)} xG
                           </span>
@@ -1450,9 +1924,17 @@ export default function App() {
                       <div className="flex items-center gap-1.5 sm:gap-2 ml-2">
                         <button 
                           onClick={() => loadMatch(match)}
-                          className="px-3 sm:px-4 py-1.5 sm:py-2 bg-blue-600 hover:bg-blue-500 text-white text-[10px] sm:text-xs font-black rounded-lg transition-all"
+                          disabled={loadingMatchId !== null}
+                          className="px-3 sm:px-4 py-1.5 sm:py-2 bg-blue-600 hover:bg-blue-500 text-white text-[10px] sm:text-xs font-black rounded-lg transition-all disabled:opacity-50 flex items-center gap-2"
                         >
-                          Carica
+                          {loadingMatchId === match.id ? (
+                            <>
+                              <RefreshCw className="w-3 h-3 animate-spin" />
+                              <span>Caricamento...</span>
+                            </>
+                          ) : (
+                            'Carica'
+                          )}
                         </button>
                         <button 
                           onClick={() => setMatchToDelete(match.id)}
@@ -1549,21 +2031,27 @@ export default function App() {
   );
 }
 
-function DangerzoneView({ 
+function IPOView({ 
   homeTeam, 
   awayTeam, 
-  dangerEventsHome, 
-  setDangerEventsHome, 
-  dangerEventsAway, 
-  setDangerEventsAway,
+  homeColor,
+  awayColor,
+  ipoEventsHome, 
+  setIpoEventsHome, 
+  ipoEventsAway, 
+  setIpoEventsAway,
   goalsHome,
   setGoalsHome,
   goalsAway,
   setGoalsAway,
   ipoHome,
   ipoAway,
+  prevIpoHome,
+  prevIpoAway,
   possessionHomeSeconds,
+  setPossessionHomeSeconds,
   possessionAwaySeconds,
+  setPossessionAwaySeconds,
   weights,
   addMatchEvent
 }: any) {
@@ -1573,18 +2061,18 @@ function DangerzoneView({
   const efficiencyAway = ipoAway > 0 ? goalsAway / ipoAway : 0;
 
   const renderEventRow = (team: 'home' | 'away', key: string, label: string, weight: number, icon: any) => {
-    const events = team === 'home' ? dangerEventsHome : dangerEventsAway;
-    const setEvents = team === 'home' ? setDangerEventsHome : setDangerEventsAway;
+    const events = team === 'home' ? ipoEventsHome : ipoEventsAway;
+    const setEvents = team === 'home' ? setIpoEventsHome : setIpoEventsAway;
     const count = events[key as keyof typeof events];
-    const teamColor = team === 'home' ? 'group-hover:text-yellow-500' : 'group-hover:text-blue-500';
+    const teamColorStyle = { color: team === 'home' ? homeColor : awayColor };
 
     return (
       <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 transition-all group">
         <div className="flex items-center gap-3">
-          <div className={cn(
-            "w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center text-gray-400 transition-colors",
-            teamColor
-          )}>
+          <div 
+            className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center text-gray-400 transition-colors"
+            style={teamColorStyle}
+          >
             {icon}
           </div>
           <div>
@@ -1594,12 +2082,14 @@ function DangerzoneView({
         </div>
         <div className="flex items-center gap-4">
           <div className="flex items-center bg-black/40 rounded-lg p-1 border border-white/5">
-            <button 
+            <motion.button 
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
               onClick={() => {
                 if (count > 0) {
                   setEvents((prev: any) => ({ ...prev, [key]: prev[key] - 1 }));
                   addMatchEvent({
-                    type: 'danger_event',
+                    type: 'ipo_event',
                     team,
                     description: `Rimosso ${label} per ${team === 'home' ? homeTeam : awayTeam}`
                   });
@@ -1608,13 +2098,17 @@ function DangerzoneView({
               className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-white transition-colors"
             >
               <Minus className="w-4 h-4" />
-            </button>
-            <div className="w-10 text-center font-black text-white text-lg">{count}</div>
-            <button 
+            </motion.button>
+            <div className="w-10 text-center font-black text-white text-lg">
+              <AnimatedCounter value={count} decimals={0} />
+            </div>
+            <motion.button 
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
               onClick={() => {
                 setEvents((prev: any) => ({ ...prev, [key]: prev[key] + 1 }));
                 addMatchEvent({
-                  type: 'danger_event',
+                  type: 'ipo_event',
                   team,
                   description: `Aggiunto ${label} per ${team === 'home' ? homeTeam : awayTeam}`
                 });
@@ -1622,12 +2116,12 @@ function DangerzoneView({
               className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-white transition-colors"
             >
               <Plus className="w-4 h-4" />
-            </button>
+            </motion.button>
           </div>
-          <div className={cn(
-            "w-12 text-right font-black text-gray-400 transition-colors",
-            teamColor
-          )}>
+          <div 
+            className="w-12 text-right font-black text-gray-400 transition-colors"
+            style={teamColorStyle}
+          >
             {(count * weight).toFixed(1)}
           </div>
         </div>
@@ -1640,12 +2134,22 @@ function DangerzoneView({
       {/* Left Column */}
       <div className="lg:col-span-5 space-y-6">
         {/* Home Team Card */}
-        <button 
+        <motion.button 
           onClick={() => setSelectedTeam('home')}
+          animate={{ 
+            scale: selectedTeam === 'home' ? 1 : 0.98,
+            borderColor: selectedTeam === 'home' ? homeColor : 'transparent',
+            boxShadow: (prevIpoHome !== undefined && ipoHome > prevIpoHome) 
+              ? [`0px 0px 0px ${homeColor}00`, `0px 0px 30px ${homeColor}66`, `0px 0px 0px ${homeColor}00`] 
+              : "none"
+          }}
+          whileHover={{ scale: 1.01 }}
+          whileTap={{ scale: 0.97 }}
           className={cn(
             "w-full text-left relative overflow-hidden bg-[#121212] border-l-4 rounded-2xl p-6 shadow-2xl transition-all",
-            selectedTeam === 'home' ? "border-yellow-500 ring-2 ring-yellow-500/20" : "border-transparent opacity-60 hover:opacity-100"
+            selectedTeam === 'home' ? "ring-2 ring-white/10" : "opacity-60 hover:opacity-100"
           )}
+          style={{ borderLeftColor: homeColor }}
         >
           <div className="flex justify-between items-start mb-8">
             <div>
@@ -1654,27 +2158,35 @@ function DangerzoneView({
             </div>
             <div className="text-right">
               <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">IPO</span>
-              <div className="text-4xl font-black text-yellow-500 tracking-tighter">{ipoHome.toFixed(1)}</div>
+              <div className="text-4xl font-black tracking-tighter" style={{ color: homeColor }}>
+                <AnimatedCounter value={ipoHome} />
+              </div>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-white/5 rounded-xl p-4 border border-white/5">
               <span className="text-[10px] font-bold text-gray-500 uppercase block mb-2">Gol</span>
               <div className="flex items-center justify-between">
-                <div 
+                <motion.div 
+                  whileHover={{ scale: 1.2 }}
+                  whileTap={{ scale: 0.8 }}
                   onClick={(e) => { 
                     e.stopPropagation(); 
                     if (goalsHome > 0) {
                       setGoalsHome(goalsHome - 1);
-                      addMatchEvent({ type: 'danger_event', team: 'home', description: `Annullato GOL per ${homeTeam}` });
+                      addMatchEvent({ type: 'ipo_event', team: 'home', description: `Annullato GOL per ${homeTeam}` });
                     }
                   }}
                   className="text-gray-500 hover:text-white cursor-pointer"
                 >
                   <Minus className="w-4 h-4" />
-                </div>
-                <span className="text-2xl font-black text-white">{goalsHome}</span>
-                <div 
+                </motion.div>
+                <span className="text-2xl font-black text-white">
+                  <AnimatedCounter value={goalsHome} decimals={0} />
+                </span>
+                <motion.div 
+                  whileHover={{ scale: 1.2 }}
+                  whileTap={{ scale: 0.8 }}
                   onClick={(e) => { 
                     e.stopPropagation(); 
                     setGoalsHome(goalsHome + 1);
@@ -1683,23 +2195,35 @@ function DangerzoneView({
                   className="text-gray-500 hover:text-white cursor-pointer"
                 >
                   <Plus className="w-4 h-4" />
-                </div>
+                </motion.div>
               </div>
             </div>
             <div className="bg-white/5 rounded-xl p-4 border border-white/5">
               <span className="text-[10px] font-bold text-gray-500 uppercase block mb-2">Efficienza</span>
-              <div className="text-2xl font-black text-white">{efficiencyHome.toFixed(2)}</div>
+              <div className="text-2xl font-black text-white">
+                <AnimatedCounter value={efficiencyHome} decimals={2} />
+              </div>
             </div>
           </div>
-        </button>
+        </motion.button>
 
         {/* Away Team Card */}
-        <button 
+        <motion.button 
           onClick={() => setSelectedTeam('away')}
+          animate={{ 
+            scale: selectedTeam === 'away' ? 1 : 0.98,
+            borderColor: selectedTeam === 'away' ? awayColor : 'transparent',
+            boxShadow: (prevIpoAway !== undefined && ipoAway > prevIpoAway) 
+              ? [`0px 0px 0px ${awayColor}00`, `0px 0px 30px ${awayColor}66`, `0px 0px 0px ${awayColor}00`] 
+              : "none"
+          }}
+          whileHover={{ scale: 1.01 }}
+          whileTap={{ scale: 0.97 }}
           className={cn(
             "w-full text-left relative overflow-hidden bg-[#121212] border-l-4 rounded-2xl p-6 shadow-2xl transition-all",
-            selectedTeam === 'away' ? "border-blue-500 ring-2 ring-blue-500/20" : "border-transparent opacity-60 hover:opacity-100"
+            selectedTeam === 'away' ? "ring-2 ring-white/10" : "opacity-60 hover:opacity-100"
           )}
+          style={{ borderLeftColor: awayColor }}
         >
           <div className="flex justify-between items-start mb-8">
             <div>
@@ -1708,27 +2232,35 @@ function DangerzoneView({
             </div>
             <div className="text-right">
               <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">IPO</span>
-              <div className="text-4xl font-black text-blue-500 tracking-tighter">{ipoAway.toFixed(1)}</div>
+              <div className="text-4xl font-black tracking-tighter" style={{ color: awayColor }}>
+                <AnimatedCounter value={ipoAway} />
+              </div>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-white/5 rounded-xl p-4 border border-white/5">
               <span className="text-[10px] font-bold text-gray-500 uppercase block mb-2">Gol</span>
               <div className="flex items-center justify-between">
-                <div 
+                <motion.div 
+                  whileHover={{ scale: 1.2 }}
+                  whileTap={{ scale: 0.8 }}
                   onClick={(e) => { 
                     e.stopPropagation(); 
                     if (goalsAway > 0) {
                       setGoalsAway(goalsAway - 1);
-                      addMatchEvent({ type: 'danger_event', team: 'away', description: `Annullato GOL per ${awayTeam}` });
+                      addMatchEvent({ type: 'ipo_event', team: 'away', description: `Annullato GOL per ${awayTeam}` });
                     }
                   }}
                   className="text-gray-500 hover:text-white cursor-pointer"
                 >
                   <Minus className="w-4 h-4" />
-                </div>
-                <span className="text-2xl font-black text-white">{goalsAway}</span>
-                <div 
+                </motion.div>
+                <span className="text-2xl font-black text-white">
+                  <AnimatedCounter value={goalsAway} decimals={0} />
+                </span>
+                <motion.div 
+                  whileHover={{ scale: 1.2 }}
+                  whileTap={{ scale: 0.8 }}
                   onClick={(e) => { 
                     e.stopPropagation(); 
                     setGoalsAway(goalsAway + 1);
@@ -1737,44 +2269,56 @@ function DangerzoneView({
                   className="text-gray-500 hover:text-white cursor-pointer"
                 >
                   <Plus className="w-4 h-4" />
-                </div>
+                </motion.div>
               </div>
             </div>
             <div className="bg-white/5 rounded-xl p-4 border border-white/5">
               <span className="text-[10px] font-bold text-gray-500 uppercase block mb-2">Efficienza</span>
-              <div className="text-2xl font-black text-white">{efficiencyAway.toFixed(2)}</div>
+              <div className="text-2xl font-black text-white">
+                <AnimatedCounter value={efficiencyAway} decimals={2} />
+              </div>
             </div>
           </div>
-        </button>
+        </motion.button>
 
         {/* Comparison Card */}
         <div className="bg-[#121212] border border-white/5 rounded-2xl p-6">
           <div className="flex items-center gap-2 mb-6">
             <Activity className="w-4 h-4 text-gray-500" />
-            <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Confronto Pericolosità</span>
+            <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Confronto IPO</span>
           </div>
           <div className="space-y-6">
             <div>
               <div className="flex justify-between text-[10px] font-bold uppercase mb-2">
                 <span className="text-white">{homeTeam}</span>
-                <span className="text-yellow-500">{ipoHome.toFixed(1)}</span>
+                <span style={{ color: homeColor }}>
+                  <AnimatedCounter value={ipoHome} />
+                </span>
               </div>
               <div className="h-2 bg-white/5 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-yellow-500 transition-all duration-500" 
-                  style={{ width: `${Math.min(100, (ipoHome / (ipoHome + ipoAway || 1)) * 100)}%` }}
+                <motion.div 
+                  initial={{ width: 0 }}
+                  animate={{ width: `${Math.min(100, (ipoHome / (ipoHome + ipoAway || 1)) * 100)}%` }}
+                  className="h-full" 
+                  style={{ backgroundColor: homeColor }}
+                  transition={{ type: "spring", stiffness: 100, damping: 20 }}
                 />
               </div>
             </div>
             <div>
               <div className="flex justify-between text-[10px] font-bold uppercase mb-2">
                 <span className="text-white">{awayTeam}</span>
-                <span className="text-blue-500">{ipoAway.toFixed(1)}</span>
+                <span style={{ color: awayColor }}>
+                  <AnimatedCounter value={ipoAway} />
+                </span>
               </div>
               <div className="h-2 bg-white/5 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-blue-500 transition-all duration-500" 
-                  style={{ width: `${Math.min(100, (ipoAway / (ipoHome + ipoAway || 1)) * 100)}%` }}
+                <motion.div 
+                  initial={{ width: 0 }}
+                  animate={{ width: `${Math.min(100, (ipoAway / (ipoHome + ipoAway || 1)) * 100)}%` }}
+                  className="h-full" 
+                  style={{ backgroundColor: awayColor }}
+                  transition={{ type: "spring", stiffness: 100, damping: 20 }}
                 />
               </div>
             </div>
@@ -1797,28 +2341,34 @@ function DangerzoneView({
             <div>
               <div className="flex justify-between text-[10px] font-bold uppercase mb-2">
                 <span className="text-white">{homeTeam}</span>
-                <span className="text-yellow-500">
+                <span style={{ color: homeColor }}>
                   {possessionHomeSeconds + possessionAwaySeconds > 0 ? Math.round((possessionHomeSeconds / (possessionHomeSeconds + possessionAwaySeconds)) * 100) : 50}%
                 </span>
               </div>
               <div className="h-2 bg-white/5 rounded-full overflow-hidden">
                 <div 
-                  className="h-full bg-yellow-500 transition-all duration-500" 
-                  style={{ width: `${possessionHomeSeconds + possessionAwaySeconds > 0 ? (possessionHomeSeconds / (possessionHomeSeconds + possessionAwaySeconds)) * 100 : 50}%` }}
+                  className="h-full transition-all duration-500" 
+                  style={{ 
+                    width: `${possessionHomeSeconds + possessionAwaySeconds > 0 ? (possessionHomeSeconds / (possessionHomeSeconds + possessionAwaySeconds)) * 100 : 50}%`,
+                    backgroundColor: homeColor
+                  }}
                 />
               </div>
             </div>
             <div>
               <div className="flex justify-between text-[10px] font-bold uppercase mb-2">
                 <span className="text-white">{awayTeam}</span>
-                <span className="text-blue-500">
+                <span style={{ color: awayColor }}>
                   {possessionHomeSeconds + possessionAwaySeconds > 0 ? Math.round((possessionAwaySeconds / (possessionHomeSeconds + possessionAwaySeconds)) * 100) : 50}%
                 </span>
               </div>
               <div className="h-2 bg-white/5 rounded-full overflow-hidden">
                 <div 
-                  className="h-full bg-blue-500 transition-all duration-500" 
-                  style={{ width: `${possessionHomeSeconds + possessionAwaySeconds > 0 ? (possessionAwaySeconds / (possessionHomeSeconds + possessionAwaySeconds)) * 100 : 50}%` }}
+                  className="h-full transition-all duration-500" 
+                  style={{ 
+                    width: `${possessionHomeSeconds + possessionAwaySeconds > 0 ? (possessionAwaySeconds / (possessionHomeSeconds + possessionAwaySeconds)) * 100 : 50}%`,
+                    backgroundColor: awayColor
+                  }}
                 />
               </div>
             </div>
@@ -1836,14 +2386,17 @@ function DangerzoneView({
       <div className="lg:col-span-7 bg-[#121212] border border-white/5 rounded-3xl overflow-hidden flex flex-col">
         <div className="p-6 border-b border-white/5 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className={cn(
-              "w-10 h-10 rounded-xl flex items-center justify-center transition-colors",
-              selectedTeam === 'home' ? "bg-yellow-500/10 text-yellow-500" : "bg-blue-500/10 text-blue-500"
-            )}>
+            <div 
+              className="w-10 h-10 rounded-xl flex items-center justify-center transition-colors"
+              style={{ 
+                backgroundColor: selectedTeam === 'home' ? `${homeColor}1a` : `${awayColor}1a`,
+                color: selectedTeam === 'home' ? homeColor : awayColor
+              }}
+            >
               <Target className="w-5 h-5" />
             </div>
             <h3 className="text-lg font-black text-white uppercase tracking-tight">
-              Eventi <span className={selectedTeam === 'home' ? "text-yellow-500" : "text-blue-500"}>
+              Eventi <span style={{ color: selectedTeam === 'home' ? homeColor : awayColor }}>
                 {selectedTeam === 'home' ? homeTeam : awayTeam}
               </span>
             </h3>
@@ -1851,14 +2404,19 @@ function DangerzoneView({
           <button 
             onClick={() => {
               if (selectedTeam === 'home') {
-                setDangerEventsHome({ shotsIn: 0, shotsOut: 0, penalties: 0, freeKicks: 0, corners: 0, crosses: 0 });
-                addMatchEvent({ type: 'match_reset', team: 'home', description: `Reset eventi ${homeTeam}` });
+                setIpoEventsHome({ shotsIn: 0, shotsOut: 0, penalties: 0, freeKicks: 0, corners: 0, crosses: 0 });
+                setGoalsHome(0);
+                setPossessionHomeSeconds(0);
+                addMatchEvent({ type: 'match_reset', team: 'home', description: `Reset totale ${homeTeam}` });
               } else {
-                setDangerEventsAway({ shotsIn: 0, shotsOut: 0, penalties: 0, freeKicks: 0, corners: 0, crosses: 0 });
-                addMatchEvent({ type: 'match_reset', team: 'away', description: `Reset eventi ${awayTeam}` });
+                setIpoEventsAway({ shotsIn: 0, shotsOut: 0, penalties: 0, freeKicks: 0, corners: 0, crosses: 0 });
+                setGoalsAway(0);
+                setPossessionAwaySeconds(0);
+                addMatchEvent({ type: 'match_reset', team: 'away', description: `Reset totale ${awayTeam}` });
               }
             }}
             className="p-2 text-gray-500 hover:text-white transition-colors"
+            title="Resetta statistiche squadra"
           >
             <RotateCcw className="w-5 h-5" />
           </button>

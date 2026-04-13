@@ -43,7 +43,7 @@ service cloud.firestore {
     function isValidMatch(data) {
       let allowedFields = [
         'userId', 'homeTeam', 'awayTeam', 'date', 'createdAt', 
-        'totalXG', 'totalGoals', 'dangerEventsHome', 'dangerEventsAway', 
+        'totalXG', 'totalGoals', 'ipoEventsHome', 'ipoEventsAway', 
         'goalsHome', 'goalsAway', 'possessionHomeSeconds', 'possessionAwaySeconds'
       ];
       return hasRequiredFields(data, ['userId', 'homeTeam', 'awayTeam', 'date']) &&
