@@ -153,6 +153,13 @@ interface ErrorBoundaryState {
 }
 
 // Error Boundary Component
+const AppLogo = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 512 512" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M136 376 L256 136 L376 376" stroke="currentColor" strokeWidth="40" strokeLinecap="round" strokeLinejoin="round"/>
+    <circle cx="256" cy="216" r="40" fill="currentColor" className="animate-pulse"/>
+  </svg>
+);
+
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
     super(props);
@@ -822,7 +829,7 @@ export default function App() {
           <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-start">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 flex items-center justify-center bg-white/5 border border-white/10 rounded-xl sm:rounded-2xl shadow-2xl group hover:border-blue-500/50 transition-all duration-500">
-                <Activity className="w-6 h-6 text-blue-500 group-hover:scale-110 transition-transform duration-500" />
+                <AppLogo className="w-7 h-7 text-blue-500 group-hover:scale-110 transition-transform duration-500" />
               </div>
               <div>
                 <h1 className="font-black text-xl sm:text-2xl tracking-tighter text-white leading-none uppercase">Analysis <span className="text-blue-500">Hub</span></h1>
