@@ -239,7 +239,27 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 }
 
+function useOnlineStatus() {
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  return isOnline;
+}
+
 export default function App() {
+  const isOnline = useOnlineStatus();
   const [shots, setShots] = useState<Shot[]>([]);
   const [showHeatmap, setShowHeatmap] = useState(false);
   const [showGridValues, setShowGridValues] = useState(false);
@@ -271,13 +291,21 @@ export default function App() {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [matchToDelete, setMatchToDelete] = useState<string | null>(null);
   const [showToast, setShowToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [activeTab, setActiveTab] = useState<'xg' | 'ipo'>('xg');
   const [isPWAReady, setIsPWAReady] = useState(false);
   const [ipoActiveTeam, setIpoActiveTeam] = useState<'home' | 'away'>('home');
   const [isReadOnly, setIsReadOnly] = useState(false);
   const [xgCoeffs, setXgCoeffs] = useState<XGCoefficients>(DEFAULT_XG_COEFFICIENTS);
   const [showXGTuning, setShowXGTuning] = useState(false);
+
+  // Check for Service Worker readiness
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.ready.then(() => {
+        setIsPWAReady(true);
+      });
+    }
+  }, []);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -425,20 +453,6 @@ export default function App() {
   const pitchRef = useRef<HTMLDivElement>(null);
   const dashboardRef = useRef<HTMLDivElement>(null);
   const xgGrid = useMemo(() => generateXGGrid(17, 34, xgCoeffs), [xgCoeffs]);
-
-  // Online status effect
-  useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
 
   // Timer effect
   useEffect(() => {
@@ -1557,38 +1571,6 @@ export default function App() {
               )}
             </div>
           </motion.div>
-
-          {/* Chart Section */}
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
-            <div className="flex items-center gap-2 mb-6">
-              <BarChart3 className="w-4 h-4 text-blue-500" />
-              <h2 className="font-bold text-sm uppercase tracking-widest text-gray-400">Performance: xG vs Gol</h2>
-            </div>
-            <div className="h-[200px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} layout="vertical" margin={{ left: 20, right: 40 }}>
-                  <XAxis type="number" hide />
-                  <YAxis 
-                    dataKey="name" 
-                    type="category" 
-                    axisLine={false} 
-                    tickLine={false} 
-                    tick={{ fill: '#9ca3af', fontSize: 10, fontWeight: 700 }}
-                    width={120}
-                  />
-                  <Tooltip 
-                    cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-                    contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', fontSize: '12px' }}
-                  />
-                  <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={30}>
-                    {chartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
         </div>
 
         {/* Right Column: Sidebar */}
@@ -1864,13 +1846,6 @@ export default function App() {
               </motion.div>
             )}
           </AnimatePresence>
-
-          <div className="space-y-6">
-            {/* Match Log Summary */}
-            <div className="h-[300px]">
-              <MatchLog events={filteredMatchEvents} teamName={teamName} />
-            </div>
-          </div>
         </div>
       </div>
     ) : (
@@ -2715,56 +2690,3 @@ function IPOView({
   );
 }
 
-function MatchLog({ events, teamName }: { events: MatchEvent[], teamName: string }) {
-  return (
-    <div className="bg-[#121212] border border-white/5 rounded-2xl overflow-hidden flex flex-col h-full">
-      <div className="p-4 border-b border-white/5 flex items-center justify-between bg-white/5">
-        <div className="flex items-center gap-2">
-          <List className="w-4 h-4 text-emerald-500" />
-          <h3 className="text-xs font-black text-white uppercase tracking-widest">Cronologia Eventi</h3>
-        </div>
-        <span className="text-[10px] font-bold text-gray-500 uppercase">{events.length} Eventi</span>
-      </div>
-      <div className="flex-1 overflow-y-auto p-4 custom-scrollbar space-y-3">
-        {events.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-gray-600 py-12">
-            <Clock className="w-8 h-8 mb-2 opacity-20" />
-            <p className="text-[10px] font-bold uppercase tracking-widest">Nessun evento registrato</p>
-          </div>
-        ) : (
-          events.map((event) => (
-            <motion.div 
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              key={event.id} 
-              className="flex gap-3 group"
-            >
-              <div className="flex flex-col items-center gap-1">
-                <div className="text-[10px] font-black text-emerald-500 w-8 text-right">{event.minute}'</div>
-                <div className="w-px flex-1 bg-white/5 group-last:hidden" />
-              </div>
-              <div className="flex-1 pb-4">
-                <div className={cn(
-                  "p-3 rounded-xl border transition-all",
-                  event.type === 'goal' ? "bg-emerald-500/10 border-emerald-500/20" : 
-                  event.type === 'shot' ? "bg-blue-500/10 border-blue-500/20" :
-                  "bg-white/5 border-white/5"
-                )}>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-[8px] font-black uppercase tracking-widest text-blue-500">
-                      {teamName}
-                    </span>
-                    <span className="text-[8px] font-bold text-gray-600">
-                      {new Date(event.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </div>
-                  <p className="text-[11px] font-bold text-white leading-tight">{event.description}</p>
-                </div>
-              </div>
-            </motion.div>
-          ))
-        )}
-      </div>
-    </div>
-  );
-}
