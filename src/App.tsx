@@ -314,8 +314,24 @@ export default function App() {
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-  }, []);
+    
+    // Listen for URL changes (e.g. when clicking a link while app is open)
+    const handleLocationChange = () => {
+      const params = new URLSearchParams(window.location.search);
+      const sharedMatchId = params.get('matchId');
+      if (sharedMatchId && sharedMatchId !== currentMatchId) {
+        loadSharedMatch(sharedMatchId);
+      }
+    };
+
+    window.addEventListener('popstate', handleLocationChange);
+    handleLocationChange();
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('popstate', handleLocationChange);
+    };
+  }, [currentMatchId, user]); // Re-run if user changes to re-check ownership of shared match
 
   const installPWA = async () => {
     if (!deferredPrompt) return;
@@ -326,25 +342,26 @@ export default function App() {
     }
   };
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const sharedMatchId = params.get('matchId');
-    if (sharedMatchId) {
-      loadSharedMatch(sharedMatchId);
-    }
-  }, []);
-
   const loadSharedMatch = async (matchId: string) => {
+    if (loadingMatchId === matchId) return;
     setLoadingMatchId(matchId);
     setIsReadOnly(true);
+    
     try {
       const matchDoc = await getDoc(doc(db, 'matches', matchId));
       if (!matchDoc.exists()) {
-        setShowToast({ message: "Partita non trovata.", type: 'error' });
+        setShowToast({ message: "Partita non trovata o link scaduto.", type: 'error' });
         setIsReadOnly(false);
+        setLoadingMatchId(null);
         return;
       }
+      
       const matchData = { ...matchDoc.data(), id: matchDoc.id } as Match;
+      
+      // If user is the owner, allow editing
+      if (user && matchData.userId === user.uid) {
+        setIsReadOnly(false);
+      }
       
       setCurrentMatchId(matchData.id);
       setTeamName(matchData.teamName || 'Bologna U18');
@@ -366,10 +383,13 @@ export default function App() {
       
       setShots(shotsData);
       setSelectedShot(null);
-      setShowToast({ message: "Partita condivisa caricata!", type: 'success' });
+      setShowToast({ 
+        message: user && matchData.userId === user.uid ? "La tua partita è stata caricata!" : "Partita condivisa caricata (sola lettura)", 
+        type: 'success' 
+      });
     } catch (error) {
       console.error("Load Shared Match Error:", error);
-      setShowToast({ message: "Errore durante il caricamento della partita condivisa.", type: 'error' });
+      setShowToast({ message: "Errore nel caricamento della partita. Controlla la connessione.", type: 'error' });
       setIsReadOnly(false);
     } finally {
       setLoadingMatchId(null);
@@ -701,6 +721,25 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
+  // Re-check ownership when user logs in
+  useEffect(() => {
+    if (currentMatchId && user && isReadOnly) {
+      // We check if the current match belongs to the newly logged in user
+      const checkOwnership = async () => {
+        try {
+          const matchDoc = await getDoc(doc(db, 'matches', currentMatchId));
+          if (matchDoc.exists() && matchDoc.data().userId === user.uid) {
+            setIsReadOnly(false);
+            setShowToast({ message: "Bentornato! Ora puoi modificare questa partita.", type: 'success' });
+          }
+        } catch (e) {
+          console.error("Error checking ownership:", e);
+        }
+      };
+      checkOwnership();
+    }
+  }, [user, currentMatchId]);
+
   const login = async () => {
     if (isLoggingIn) return;
     setIsLoggingIn(true);
@@ -963,7 +1002,28 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-gray-100 font-sans selection:bg-blue-500/30">
+    <div className="relative min-h-screen bg-[#0a0a0a] text-gray-100 font-sans selection:bg-blue-500/30 overflow-x-hidden">
+      {/* Global Loading Overlay */}
+      <AnimatePresence>
+        {loadingMatchId && !showMatchList && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-xl flex flex-col items-center justify-center gap-6"
+          >
+            <div className="relative">
+              <div className="w-20 h-20 border-4 border-blue-500/20 rounded-full" />
+              <div className="absolute inset-0 w-20 h-20 border-4 border-t-blue-500 rounded-full animate-spin" />
+              <Target className="absolute inset-0 m-auto w-8 h-8 text-blue-500 animate-pulse" />
+            </div>
+            <div className="flex flex-col items-center gap-2">
+              <h3 className="text-xl font-black uppercase tracking-widest text-white">Caricamento Partita</h3>
+              <p className="text-gray-400 text-sm font-medium animate-pulse">Recupero dati dal campo...</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       {/* Header */}
       <header className="bg-black/40 border-b border-white/10 backdrop-blur-md sticky top-0 z-50">
         {isReadOnly && (
@@ -986,18 +1046,28 @@ export default function App() {
               </div>
               <div>
                 <h1 className="font-black text-xl sm:text-2xl tracking-tighter text-white leading-none uppercase">Analysis <span className="text-blue-500">Hub</span></h1>
-                {!isOnline && (
-                  <div className="flex items-center gap-1 mt-1">
-                    <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                    <span className="text-[8px] font-bold text-red-500 uppercase tracking-widest">Offline Mode</span>
-                  </div>
-                )}
-                {isOnline && isPWAReady && (
-                  <div className="flex items-center gap-1 mt-1">
-                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                    <span className="text-[8px] font-bold text-emerald-500 uppercase tracking-widest">Ready Offline</span>
-                  </div>
-                )}
+                <div className="flex items-center gap-2 mt-1">
+                  {!isOnline && (
+                    <div className="flex items-center gap-1">
+                      <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                      <span className="text-[8px] font-bold text-red-500 uppercase tracking-widest">Offline</span>
+                    </div>
+                  )}
+                  {isOnline && isPWAReady && (
+                    <div className="flex items-center gap-1">
+                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                      <span className="text-[8px] font-bold text-emerald-500 uppercase tracking-widest">Ready</span>
+                    </div>
+                  )}
+                  <div className="w-px h-2 bg-white/10 mx-1" />
+                  <button 
+                    onClick={() => setShowMatchSettings(true)}
+                    className="flex items-center gap-1.5 hover:text-blue-400 transition-colors group/matchinfo"
+                  >
+                    <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest group-hover/matchinfo:text-blue-400/70 transition-colors">{teamName} vs {awayTeam || 'Avversario'}</span>
+                    <Settings className="w-2 h-2 text-gray-600 group-hover/matchinfo:text-blue-400 transition-colors" />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -1329,6 +1399,49 @@ export default function App() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             {/* Left Column: Pitch & Controls */}
             <div className="lg:col-span-8 space-y-6">
+              {/* Match Info Card */}
+              <motion.div 
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center justify-between backdrop-blur-sm"
+              >
+                <div className="flex items-center gap-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center border border-white/10" style={{ backgroundColor: `${teamColor}20`, borderColor: `${teamColor}40` }}>
+                      <span className="text-lg font-black" style={{ color: teamColor }}>{teamName.substring(0, 1)}</span>
+                    </div>
+                    <div>
+                      <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-0.5">Casa</p>
+                      <h3 className="text-sm font-black text-white uppercase">{teamName}</h3>
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-col items-center">
+                    <div className="h-4 w-px bg-white/10 mb-1" />
+                    <span className="text-[10px] font-black text-gray-600 italic">VS</span>
+                    <div className="h-4 w-px bg-white/10 mt-1" />
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center border border-white/10" style={{ backgroundColor: `${awayColor}20`, borderColor: `${awayColor}40` }}>
+                      <span className="text-lg font-black" style={{ color: awayColor }}>{awayTeam ? awayTeam.substring(0, 1) : 'A'}</span>
+                    </div>
+                    <div>
+                      <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-0.5">Ospite</p>
+                      <h3 className="text-sm font-black text-white uppercase">{awayTeam || 'Avversario'}</h3>
+                    </div>
+                  </div>
+                </div>
+
+                <button 
+                  onClick={() => setShowMatchSettings(true)}
+                  disabled={isReadOnly}
+                  className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all border border-white/10 disabled:opacity-30"
+                >
+                  <Settings className="w-4 h-4" />
+                </button>
+              </motion.div>
+
               {/* Stats Row */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <motion.div 
@@ -2197,9 +2310,16 @@ export default function App() {
                         onClick={() => !loadingMatchId && loadMatch(match)}
                       >
                         <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 mb-1">
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: match.teamColor || '#eab308' }} />
-                            <span className="text-xs sm:text-sm font-black text-white truncate">{match.teamName}</span>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <div className="flex items-center gap-1.5">
+                              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: match.teamColor || '#eab308' }} />
+                              <span className="text-xs sm:text-sm font-black text-white truncate">{match.teamName}</span>
+                            </div>
+                            <span className="text-[10px] font-bold text-gray-600">vs</span>
+                            <div className="flex items-center gap-1.5">
+                              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: match.awayColor || '#3b82f6' }} />
+                              <span className="text-xs sm:text-sm font-black text-white truncate">{match.awayTeam || 'Avversario'}</span>
+                            </div>
                           </div>
                           <span className="text-[8px] sm:text-[10px] font-bold bg-blue-600/10 text-blue-500 px-2 py-0.5 rounded-full w-fit">
                             {match.goals} Gol • {match.totalXG.toFixed(2)} xG
