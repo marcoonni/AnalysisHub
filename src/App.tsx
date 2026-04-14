@@ -155,36 +155,27 @@ interface ErrorBoundaryState {
 
 // Error Boundary Component
 const AppLogo = ({ className }: { className?: string }) => (
-  <svg viewBox="0 0 512 512" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <radialGradient id="logoGlow" cx="50%" cy="50%" r="50%">
-        <stop offset="0%" stopColor="#00ffff" stopOpacity="1" />
-        <stop offset="70%" stopColor="#0066ff" stopOpacity="0.4" />
-        <stop offset="100%" stopColor="#0066ff" stopOpacity="0" />
-      </radialGradient>
-      <filter id="logoNeon">
-        <feGaussianBlur stdDeviation="8" result="blur" />
-        <feComposite in="SourceGraphic" in2="blur" operator="over" />
-      </filter>
-    </defs>
+  <svg viewBox="0 0 100 100" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
+    {/* Bars (Teal) */}
+    <rect x="10" y="55" width="8" height="35" rx="1.5" fill="#12b5b0" />
+    <rect x="22" y="45" width="8" height="45" rx="1.5" fill="#12b5b0" />
+    <rect x="34" y="35" width="8" height="55" rx="1.5" fill="#12b5b0" />
+    <rect x="46" y="48" width="8" height="42" rx="1.5" fill="#12b5b0" />
+    <rect x="58" y="52" width="8" height="38" rx="1.5" fill="#12b5b0" />
+    <rect x="70" y="70" width="8" height="20" rx="1.5" fill="#12b5b0" />
+    <rect x="82" y="55" width="8" height="35" rx="1.5" fill="#12b5b0" />
     
-    {/* Outer Rings */}
-    <circle cx="256" cy="256" r="200" stroke="#00d4ff" strokeWidth="4" opacity="0.2"/>
-    <circle cx="256" cy="256" r="150" stroke="#00d4ff" strokeWidth="6" opacity="0.4"/>
-    <circle cx="256" cy="256" r="100" stroke="#00d4ff" strokeWidth="10" opacity="0.6"/>
+    {/* Line Chart (Grey) */}
+    <path d="M10 45 L22 35 L34 25 L46 38 L58 48 L70 60 L82 50" stroke="#808080" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     
-    {/* Crosshair */}
-    <path d="M256 20 V492 M20 256 H492" stroke="#00d4ff" strokeWidth="12" opacity="0.8" strokeLinecap="round" filter="url(#logoNeon)"/>
-    
-    {/* The "Hit" */}
-    <g transform="translate(100, -100)">
-      <circle cx="256" cy="256" r="80" fill="url(#logoGlow)" opacity="0.8" />
-      <circle cx="256" cy="256" r="35" fill="#00ffff" filter="url(#logoNeon)" />
-      <circle cx="256" cy="256" r="15" fill="white" filter="url(#logoNeon)" />
-      <path d="M226 226 L240 240 M286 286 L272 272 M226 286 L240 272 M286 226 L272 240" stroke="white" strokeWidth="10" strokeLinecap="round" />
-    </g>
-    
-    <circle cx="256" cy="256" r="15" fill="white" filter="url(#logoNeon)"/>
+    {/* Dots on Line */}
+    <circle cx="10" cy="45" r="2.5" fill="#808080" />
+    <circle cx="22" cy="35" r="2.5" fill="#808080" />
+    <circle cx="34" cy="25" r="2.5" fill="#808080" />
+    <circle cx="46" cy="38" r="2.5" fill="#808080" />
+    <circle cx="58" cy="48" r="2.5" fill="#808080" />
+    <circle cx="70" cy="60" r="2.5" fill="#808080" />
+    <circle cx="82" cy="50" r="2.5" fill="#808080" />
   </svg>
 );
 
@@ -1045,7 +1036,7 @@ export default function App() {
                 <AppLogo className="w-7 h-7 text-blue-500 group-hover:scale-110 transition-transform duration-500" />
               </div>
               <div>
-                <h1 className="font-black text-xl sm:text-2xl tracking-tighter text-white leading-none uppercase">Analysis <span className="text-blue-500">Hub</span></h1>
+                <h1 className="font-black text-xl sm:text-2xl tracking-tighter text-white leading-none uppercase">Analytic <span className="text-[#12b5b0]">Hub</span></h1>
                 <div className="flex items-center gap-2 mt-1">
                   {!isOnline && (
                     <div className="flex items-center gap-1">

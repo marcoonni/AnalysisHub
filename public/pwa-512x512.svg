@@ -1,46 +1,25 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
-  <defs>
-    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#0f172a;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#020617;stop-opacity:1" />
-    </linearGradient>
-    <radialGradient id="targetGlow" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" style="stop-color:#00ffff;stop-opacity:1" />
-      <stop offset="70%" style="stop-color:#0066ff;stop-opacity:0.4" />
-      <stop offset="100%" style="stop-color:#0066ff;stop-opacity:0" />
-    </radialGradient>
-    <filter id="neon" x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur stdDeviation="12" result="blur" />
-      <feComposite in="SourceGraphic" in2="blur" operator="over" />
-    </filter>
-  </defs>
-  
-  <!-- Background -->
-  <rect width="512" height="512" rx="114" fill="url(#bgGrad)"/>
-  
-  <!-- High Visibility Target -->
-  <g transform="translate(256, 256)">
-    <!-- Outer Rings - Electric Blue -->
-    <circle r="200" fill="none" stroke="#00d4ff" stroke-width="4" opacity="0.2"/>
-    <circle r="150" fill="none" stroke="#00d4ff" stroke-width="6" opacity="0.4"/>
-    <circle r="100" fill="none" stroke="#00d4ff" stroke-width="10" opacity="0.6"/>
+<svg width="512" height="512" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="100" height="100" rx="20" fill="#0a0a0a"/>
+  <g transform="translate(0, 5)">
+    <!-- Bars (Teal) -->
+    <rect x="10" y="55" width="8" height="35" rx="1.5" fill="#12b5b0" />
+    <rect x="22" y="45" width="8" height="45" rx="1.5" fill="#12b5b0" />
+    <rect x="34" y="35" width="8" height="55" rx="1.5" fill="#12b5b0" />
+    <rect x="46" y="48" width="8" height="42" rx="1.5" fill="#12b5b0" />
+    <rect x="58" y="52" width="8" height="38" rx="1.5" fill="#12b5b0" />
+    <rect x="70" y="70" width="8" height="20" rx="1.5" fill="#12b5b0" />
+    <rect x="82" y="55" width="8" height="35" rx="1.5" fill="#12b5b0" />
     
-    <!-- Crosshair - Bold Electric Blue -->
-    <path d="M-236 0 L236 0 M0 -236 L0 236" stroke="#00d4ff" stroke-width="12" opacity="0.8" stroke-linecap="round" filter="url(#neon)"/>
+    <!-- Line Chart (Grey) -->
+    <path d="M10 45 L22 35 L34 25 L46 38 L58 48 L70 60 L82 50" stroke="#808080" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
     
-    <!-- The "Hit" - Cyan/Electric Blue Glow -->
-    <g transform="translate(100, -100)">
-      <!-- Outer Glow -->
-      <circle r="80" fill="url(#targetGlow)" opacity="0.8"/>
-      <!-- Core -->
-      <circle r="35" fill="#00ffff" filter="url(#neon)"/>
-      <circle r="15" fill="white" filter="url(#neon)"/>
-      
-      <!-- Impact Lines -->
-      <path d="M-30 -30 L-16 -16 M30 30 L16 16 M-30 30 L-16 16 M30 -30 L16 -16" stroke="white" stroke-width="10" stroke-linecap="round" opacity="1"/>
-    </g>
-    
-    <!-- Center Point -->
-    <circle r="15" fill="white" filter="url(#neon)"/>
+    <!-- Dots on Line -->
+    <circle cx="10" cy="45" r="2.5" fill="#808080" />
+    <circle cx="22" cy="35" r="2.5" fill="#808080" />
+    <circle cx="34" cy="25" r="2.5" fill="#808080" />
+    <circle cx="46" cy="38" r="2.5" fill="#808080" />
+    <circle cx="58" cy="48" r="2.5" fill="#808080" />
+    <circle cx="70" cy="60" r="2.5" fill="#808080" />
+    <circle cx="82" cy="50" r="2.5" fill="#808080" />
   </g>
 </svg>

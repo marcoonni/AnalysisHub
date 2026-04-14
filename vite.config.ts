@@ -18,8 +18,8 @@ export default defineConfig(({mode}) => {
         },
         includeAssets: ['pwa-512x512.svg'],
         manifest: {
-          name: 'Football Analysis Hub',
-          short_name: 'AnalysisHub',
+          name: 'Analytic Hub',
+          short_name: 'AnalyticHub',
           description: 'Advanced Football Match Analysis and xG Tracking',
           theme_color: '#0a0a0a',
           background_color: '#0a0a0a',
