@@ -985,33 +985,6 @@ export default function App() {
           </div>
 
           <div className="flex flex-nowrap items-center justify-end gap-2 sm:gap-3 w-full md:w-auto overflow-x-auto no-scrollbar">
-            {/* Scoreboard */}
-            <div className="flex items-center bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 gap-3 shrink-0 shadow-inner">
-              <div className="flex flex-col items-center min-w-[45px]">
-                <span className="text-[7px] font-black text-gray-500 uppercase tracking-widest truncate max-w-[45px]">{teamName}</span>
-                <motion.span 
-                  key={goals}
-                  initial={{ scale: 1 }}
-                  animate={goals > (prevGoals || 0) ? { scale: [1, 1.5, 1], color: ['#fff', teamColor, '#fff'] } : {}}
-                  className="text-base font-black text-white leading-none"
-                >
-                  {goals}
-                </motion.span>
-              </div>
-              <div className="text-gray-700 font-black text-xs">:</div>
-              <div className="flex flex-col items-center min-w-[45px]">
-                <span className="text-[7px] font-black text-gray-500 uppercase tracking-widest truncate max-w-[45px]">{awayTeam}</span>
-                <motion.span 
-                  key={goalsAway}
-                  initial={{ scale: 1 }}
-                  animate={goalsAway > (prevGoalsAway || 0) ? { scale: [1, 1.5, 1], color: ['#fff', awayColor, '#fff'] } : {}}
-                  className="text-base font-black text-white leading-none"
-                >
-                  {goalsAway}
-                </motion.span>
-              </div>
-            </div>
-
             {/* Possession UI */}
                 <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-2 sm:px-3 py-1.5 shrink-0">
                   <div className="flex flex-col gap-1">
@@ -1112,31 +1085,6 @@ export default function App() {
                 </motion.button>
               </div>
             </div>
-
-            <div className="h-8 w-px bg-white/10 shrink-0" />
-
-            {/* Dominance Indicator */}
-            <div className="hidden md:flex items-center gap-3 bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 shrink-0">
-              <div className="flex items-center gap-2">
-                <Activity 
-                  className="w-3.5 h-3.5 transition-colors"
-                  style={{ color: matchDominance > 0.2 ? teamColor : '#6b7280' }}
-                />
-                <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Dominio</span>
-              </div>
-              <div className="flex items-center gap-1 w-24 h-1.5 bg-white/5 rounded-full overflow-hidden">
-                <motion.div 
-                  animate={{ 
-                    width: `${Math.abs(matchDominance) * 100}%`,
-                    backgroundColor: teamColor,
-                  }}
-                  className="h-full rounded-full"
-                  transition={{ type: "spring", stiffness: 100, damping: 20 }}
-                />
-              </div>
-            </div>
-
-            <div className="h-8 w-px bg-white/10 shrink-0" />
 
             <div className="flex items-center bg-white/5 rounded-xl p-1 border border-white/10 shrink-0">
               <motion.button 
