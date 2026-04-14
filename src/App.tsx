@@ -473,6 +473,11 @@ export default function App() {
   const dashboardRef = useRef<HTMLDivElement>(null);
   const xgGrid = useMemo(() => generateXGGrid(17, 34, xgCoeffs), [xgCoeffs]);
 
+  const possessionStateRef = useRef(possessionState);
+  useEffect(() => {
+    possessionStateRef.current = possessionState;
+  }, [possessionState]);
+
   // Timer effect
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -486,19 +491,20 @@ export default function App() {
         if (deltaSec >= 1) {
           setTimerSeconds(prev => prev + deltaSec);
           
-          // Track possession
-          if (possessionState === 'home') {
+          // Track possession using ref to avoid effect re-runs
+          const currentPossession = possessionStateRef.current;
+          if (currentPossession === 'home') {
             setPossessionSeconds(prev => prev + deltaSec);
-          } else if (possessionState === 'away') {
+          } else if (currentPossession === 'away') {
             setPossessionAwaySeconds(prev => prev + deltaSec);
           }
           
           lastTickRef.current = now - (deltaMs % 1000);
         }
-      }, 500); // Check more frequently to be responsive
+      }, 100); // Check more frequently to be responsive
     }
     return () => clearInterval(interval);
-  }, [isTimerRunning, possessionState]);
+  }, [isTimerRunning]);
 
   // Record possession changes
   const prevPossessionState = useRef(possessionState);
@@ -994,27 +1000,6 @@ export default function App() {
                 )}
               </div>
             </div>
-
-            {/* Mobile Auth/Save Actions */}
-            <div className="flex md:hidden items-center gap-2">
-              {user ? (
-                <button 
-                  onClick={saveMatch}
-                  disabled={isSaving}
-                  className="p-2 rounded-lg bg-blue-600 text-white shadow-lg"
-                >
-                  {isSaving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                </button>
-              ) : (
-                <button 
-                  onClick={login}
-                  disabled={isLoggingIn}
-                  className="p-2 rounded-lg bg-blue-600 text-white disabled:opacity-50"
-                >
-                  {isLoggingIn ? <RefreshCw className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
-                </button>
-              )}
-            </div>
           </div>
 
           <div className="flex flex-nowrap items-center justify-end gap-2 sm:gap-3 w-full md:w-auto overflow-x-auto no-scrollbar">
@@ -1223,7 +1208,7 @@ export default function App() {
               </div>
             )}
 
-              <div className="hidden md:flex items-center gap-2">
+              <div className="flex items-center gap-2">
                 <motion.button 
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
