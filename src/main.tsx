@@ -6,6 +6,7 @@ import { registerSW } from 'virtual:pwa-register';
 
 // Register service worker
 const updateSW = registerSW({
+  immediate: true,
   onRegistered(r) {
     console.log('SW Registered:', r);
   },

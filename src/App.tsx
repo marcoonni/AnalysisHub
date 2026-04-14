@@ -298,14 +298,33 @@ export default function App() {
   const [xgCoeffs, setXgCoeffs] = useState<XGCoefficients>(DEFAULT_XG_COEFFICIENTS);
   const [showXGTuning, setShowXGTuning] = useState(false);
 
-  // Check for Service Worker readiness
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+
+  // Check for Service Worker readiness and Install Prompt
   useEffect(() => {
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.ready.then(() => {
         setIsPWAReady(true);
       });
     }
+
+    const handleBeforeInstallPrompt = (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
   }, []);
+
+  const installPWA = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setDeferredPrompt(null);
+    }
+  };
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -1247,6 +1266,18 @@ export default function App() {
                 </motion.button>
               )}
 
+              {deferredPrompt && (
+                <motion.button 
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={installPWA}
+                  className="p-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white flex items-center gap-2 transition-all shadow-lg shadow-blue-500/20"
+                >
+                  <Download className="w-4 h-4" />
+                  <span className="hidden sm:inline text-xs font-black uppercase tracking-widest">Installa</span>
+                </motion.button>
+              )}
+
               {user ? (
                 <>
                   <motion.button 
@@ -1961,6 +1992,19 @@ export default function App() {
                       <span className="text-xs font-bold text-gray-400 uppercase">Colore Principale</span>
                     </div>
                   </div>
+                </div>
+
+                <div className="h-px bg-white/5" />
+
+                {/* Offline Guide */}
+                <div className="bg-blue-600/10 border border-blue-500/20 rounded-2xl p-4 space-y-2">
+                  <div className="flex items-center gap-2 text-blue-400">
+                    <Shield className="w-4 h-4" />
+                    <h3 className="text-[10px] font-black uppercase tracking-widest">Guida Offline</h3>
+                  </div>
+                  <p className="text-[10px] text-gray-400 leading-relaxed">
+                    Per avviare l'app senza internet, aggiungila alla schermata Home (clicca "Installa" nell'header o usa il menu del browser). Una volta installata, l'app si caricherà istantaneamente anche offline.
+                  </p>
                 </div>
 
                 <button 

@@ -24,6 +24,7 @@ export default defineConfig(({mode}) => {
           theme_color: '#0a0a0a',
           background_color: '#0a0a0a',
           display: 'standalone',
+          display_override: ['standalone', 'window-controls-overlay'],
           orientation: 'landscape',
           categories: ['sports', 'productivity'],
           icons: [
@@ -47,6 +48,7 @@ export default defineConfig(({mode}) => {
           clientsClaim: true,
           skipWaiting: true,
           navigateFallback: 'index.html',
+          navigateFallbackAllowlist: [/^(?!\/__).*/], // Allow all except Firebase internals
           runtimeCaching: [
             {
               urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
