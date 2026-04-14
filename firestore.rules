@@ -42,15 +42,15 @@ service cloud.firestore {
     // ===============================================================
     function isValidMatch(data) {
       let allowedFields = [
-        'userId', 'homeTeam', 'awayTeam', 'date', 'createdAt', 
-        'totalXG', 'totalGoals', 'ipoEventsHome', 'ipoEventsAway', 
-        'goalsHome', 'goalsAway', 'possessionHomeSeconds', 'possessionAwaySeconds'
+        'userId', 'teamName', 'teamColor', 'awayTeam', 'awayColor', 'date', 'createdAt', 
+        'totalXG', 'totalGoals', 'ipoEvents', 'ipoEventsAway', 
+        'goals', 'goalsAway', 'possessionSeconds', 'possessionAwaySeconds'
       ];
-      return hasRequiredFields(data, ['userId', 'homeTeam', 'awayTeam', 'date']) &&
+      return hasRequiredFields(data, ['userId', 'teamName', 'date']) &&
              hasOnlyAllowedFields(data, allowedFields) &&
              data.userId == request.auth.uid &&
-             isValidString(data.homeTeam, 1, 100) &&
-             isValidString(data.awayTeam, 1, 100) &&
+             isValidString(data.teamName, 1, 100) &&
+             (!('awayTeam' in data) || isValidString(data.awayTeam, 1, 100)) &&
              isValidString(data.date, 1, 50);
     }
 
@@ -73,13 +73,13 @@ service cloud.firestore {
     // Rules
     // ===============================================================
     match /matches/{matchId} {
-      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow read: if true;
       allow create: if isAuthenticated() && isValidMatch(request.resource.data);
       allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin()) && isValidMatch(request.resource.data);
       allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
 
       match /shots/{shotId} {
-        allow read: if isAuthenticated() && (get(/databases/$(database)/documents/matches/$(matchId)).data.userId == request.auth.uid || isAdmin());
+        allow read: if true;
         allow create: if isAuthenticated() && (get(/databases/$(database)/documents/matches/$(matchId)).data.userId == request.auth.uid || isAdmin()) && isValidShot(request.resource.data);
         allow update: if isAuthenticated() && (get(/databases/$(database)/documents/matches/$(matchId)).data.userId == request.auth.uid || isAdmin()) && isValidShot(request.resource.data);
         allow delete: if isAuthenticated() && (get(/databases/$(database)/documents/matches/$(matchId)).data.userId == request.auth.uid || isAdmin());

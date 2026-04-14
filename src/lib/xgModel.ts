@@ -32,6 +32,26 @@ export const calculateAngle = (x: number, y: number): number => {
   return Math.acos(Math.max(-1, Math.min(1, cosTheta)));
 };
 
+export interface XGCoefficients {
+  beta0: number; // Intercept
+  beta1: number; // Distance penalty
+  beta2: number; // Angle bonus
+  beta3Foot: number; // Foot bonus
+  beta4Pass: number; // Pass bonus
+  beta4Cross: number; // Cross bonus
+  beta4Rebound: number; // Rebound bonus
+}
+
+export const DEFAULT_XG_COEFFICIENTS: XGCoefficients = {
+  beta0: -1.2,
+  beta1: -0.11,
+  beta2: 1.6,
+  beta3Foot: 0.8,
+  beta4Pass: 0.4,
+  beta4Cross: 0.2,
+  beta4Rebound: 0.6,
+};
+
 /**
  * Calculates the xG (Expected Goals) for a shot.
  * Based on a logistic regression model.
@@ -40,19 +60,18 @@ export const calculateXG = (
   x: number,
   y: number,
   bodyPart: BodyPart = 'foot',
-  assistType: AssistType = 'none'
+  assistType: AssistType = 'none',
+  coeffs: XGCoefficients = DEFAULT_XG_COEFFICIENTS
 ): number => {
   const dist = calculateDistance(x, y);
   const angle = calculateAngle(x, y);
 
-  // Coefficients (tuned to approximate the provided reference image)
-  const beta0 = -1.2;
-  const beta1 = -0.11; // Distance penalty
-  const beta2 = 1.6;   // Angle bonus
-  const beta3 = bodyPart === 'foot' ? 0.8 : 0; // Foot bonus
-  const beta4 = assistType === 'pass' ? 0.4 : assistType === 'rebound' ? 0.6 : assistType === 'cross' ? 0.2 : 0;
+  const beta3 = bodyPart === 'foot' ? coeffs.beta3Foot : 0;
+  const beta4 = assistType === 'pass' ? coeffs.beta4Pass : 
+                assistType === 'rebound' ? coeffs.beta4Rebound : 
+                assistType === 'cross' ? coeffs.beta4Cross : 0;
 
-  const logit = beta0 + beta1 * dist + beta2 * angle + beta3 + beta4;
+  const logit = coeffs.beta0 + coeffs.beta1 * dist + coeffs.beta2 * angle + beta3 + beta4;
   const xg = 1 / (1 + Math.exp(-logit));
 
   // Round to 2 decimal places
@@ -62,7 +81,11 @@ export const calculateXG = (
 /**
  * Generates a grid of xG values for the heat map.
  */
-export const generateXGGrid = (rows: number = 17, cols: number = 34) => {
+export const generateXGGrid = (
+  rows: number = 17, 
+  cols: number = 34, 
+  coeffs: XGCoefficients = DEFAULT_XG_COEFFICIENTS
+) => {
   const grid = [];
   const cellHeight = DEFAULT_PITCH.height / rows;
   const cellWidth = DEFAULT_PITCH.width / cols;
@@ -73,7 +96,7 @@ export const generateXGGrid = (rows: number = 17, cols: number = 34) => {
       // Calculate center of cell
       const x = (r + 0.5) * cellHeight;
       const y = (c + 0.5) * cellWidth;
-      row.push(calculateXG(x, y));
+      row.push(calculateXG(x, y, 'foot', 'none', coeffs));
     }
     grid.push(row);
   }
