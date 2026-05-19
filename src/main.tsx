@@ -5,6 +5,7 @@ import './index.css';
 import { registerSW } from 'virtual:pwa-register';
 
 // Register service worker
+/*
 const updateSW = registerSW({
   immediate: true,
   onRegistered(r) {
@@ -22,13 +23,12 @@ const updateSW = registerSW({
     }
   }
 });
+*/
 
 console.log('App booting...');
 
 createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <ErrorBoundary>
-      <App />
-    </ErrorBoundary>
-  </StrictMode>,
+  <ErrorBoundary>
+    <App />
+  </ErrorBoundary>,
 );

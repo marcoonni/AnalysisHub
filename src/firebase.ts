@@ -6,9 +6,10 @@ import firebaseConfig from '../firebase-applet-config.json';
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+export const db = getFirestore(app);
 
 // Enable offline persistence
+/*
 enableMultiTabIndexedDbPersistence(db).catch((err) => {
   if (err.code === 'failed-precondition') {
     // Multiple tabs open, persistence can only be enabled in one tab at a a time.
@@ -18,6 +19,7 @@ enableMultiTabIndexedDbPersistence(db).catch((err) => {
     console.warn('Firestore persistence failed: unimplemented');
   }
 });
+*/
 
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
