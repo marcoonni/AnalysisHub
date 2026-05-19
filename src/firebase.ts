@@ -74,8 +74,8 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   throw new Error(JSON.stringify(errInfo));
 }
 
-// Test connection
-async function testConnection() {
+// Test connection (Available but not auto-called to avoid potential module load blocks)
+export async function testConnection() {
   try {
     await getDocFromServer(doc(db, 'test', 'connection'));
   } catch (error) {
@@ -84,6 +84,5 @@ async function testConnection() {
     }
   }
 }
-testConnection();
 
 export { signInWithPopup, signOut };

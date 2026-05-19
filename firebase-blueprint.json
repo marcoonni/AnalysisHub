@@ -15,9 +15,7 @@
         "ipoEventsHome": { "type": "object" },
         "ipoEventsAway": { "type": "object" },
         "goalsHome": { "type": "number" },
-        "goalsAway": { "type": "number" },
-        "possessionHomeSeconds": { "type": "number" },
-        "possessionAwaySeconds": { "type": "number" }
+        "goalsAway": { "type": "number" }
       },
       "required": ["userId", "homeTeam", "awayTeam", "date"]
     },

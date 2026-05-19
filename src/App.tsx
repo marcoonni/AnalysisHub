@@ -94,15 +94,13 @@ interface Match {
   ipoEventsAway?: any;
   goals?: number;
   goalsAway?: number;
-  possessionSeconds?: number;
-  possessionAwaySeconds?: number;
   matchEvents?: MatchEvent[];
 }
 
 interface MatchEvent {
   id: string;
   minute: number;
-  type: 'shot' | 'goal' | 'ipo_event' | 'possession_change' | 'match_start' | 'match_pause' | 'match_reset';
+  type: 'shot' | 'goal' | 'ipo_event' | 'match_start' | 'match_pause' | 'match_reset';
   description: string;
   timestamp: number;
   value?: number;
@@ -306,8 +304,22 @@ export default function App() {
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     
-    // Listen for URL changes (e.g. when clicking a link while app is open)
-    const handleLocationChange = () => {
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  // Handle Shared Match Loading via URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const sharedMatchId = params.get('matchId');
+    if (sharedMatchId && sharedMatchId !== currentMatchId) {
+      loadSharedMatch(sharedMatchId);
+    }
+  }, [user, currentMatchId]);
+
+  useEffect(() => {
+    const checkUrl = () => {
       const params = new URLSearchParams(window.location.search);
       const sharedMatchId = params.get('matchId');
       if (sharedMatchId && sharedMatchId !== currentMatchId) {
@@ -315,14 +327,9 @@ export default function App() {
       }
     };
 
-    window.addEventListener('popstate', handleLocationChange);
-    handleLocationChange();
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-      window.removeEventListener('popstate', handleLocationChange);
-    };
-  }, [currentMatchId, user]); // Re-run if user changes to re-check ownership of shared match
+    window.addEventListener('popstate', checkUrl);
+    return () => window.removeEventListener('popstate', checkUrl);
+  }, [currentMatchId]); // Re-register if currentMatchId changes so checkUrl uses the right one
 
   const installPWA = async () => {
     if (!deferredPrompt) return;
@@ -363,8 +370,6 @@ export default function App() {
       setIpoEventsAway(matchData.ipoEventsAway || { shotsIn: 0, shotsOut: 0, penalties: 0, freeKicks: 0, corners: 0, crosses: 0 });
       setGoals(matchData.goals || 0);
       setGoalsAway(matchData.goalsAway || 0);
-      setPossessionSeconds(matchData.possessionSeconds || 0);
-      setPossessionAwaySeconds(matchData.possessionAwaySeconds || 0);
       
       const shotsSnapshot = await getDocs(collection(db, 'matches', matchData.id, 'shots'));
       const shotsData = shotsSnapshot.docs.map(doc => ({
@@ -399,9 +404,6 @@ export default function App() {
   const [timerSeconds, setTimerSeconds] = useState(0);
   const lastTickRef = useRef<number>(Date.now());
   const [isTimerRunning, setIsTimerRunning] = useState(false);
-  const [possessionState, setPossessionState] = useState<'none' | 'home' | 'away'>('none');
-  const [possessionSeconds, setPossessionSeconds] = useState(0);
-  const [possessionAwaySeconds, setPossessionAwaySeconds] = useState(0);
   const [matchEvents, setMatchEvents] = useState<MatchEvent[]>([]);
   const [ripples, setRipples] = useState<{ id: string, x: number, y: number }[]>([]);
   const [heatmapOpacity, setHeatmapOpacity] = useState(0.4);
@@ -444,7 +446,7 @@ export default function App() {
   const prevGoalsAway = usePrevious(goalsAway);
 
   // Dynamic Theme Logic
-  const matchDominance = Math.max(-1, Math.min(1, (goals * 0.4) + ((possessionSeconds / 60) * 0.05)));
+  const matchDominance = Math.max(-1, Math.min(1, goals * 0.4));
   
   const weights = {
     shotsIn: 1.3,
@@ -484,11 +486,6 @@ export default function App() {
   const dashboardRef = useRef<HTMLDivElement>(null);
   const xgGrid = useMemo(() => generateXGGrid(17, 34, xgCoeffs), [xgCoeffs]);
 
-  const possessionStateRef = useRef(possessionState);
-  useEffect(() => {
-    possessionStateRef.current = possessionState;
-  }, [possessionState]);
-
   // Timer effect
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -501,36 +498,12 @@ export default function App() {
         
         if (deltaSec >= 1) {
           setTimerSeconds(prev => prev + deltaSec);
-          
-          // Track possession using ref to avoid effect re-runs
-          const currentPossession = possessionStateRef.current;
-          if (currentPossession === 'home') {
-            setPossessionSeconds(prev => prev + deltaSec);
-          } else if (currentPossession === 'away') {
-            setPossessionAwaySeconds(prev => prev + deltaSec);
-          }
-          
           lastTickRef.current = now - (deltaMs % 1000);
         }
       }, 100); // Check more frequently to be responsive
     }
     return () => clearInterval(interval);
   }, [isTimerRunning]);
-
-  // Record possession changes
-  const prevPossessionState = useRef(possessionState);
-  useEffect(() => {
-    if (prevPossessionState.current !== possessionState) {
-      if (possessionState !== 'none') {
-        const activeTeam = possessionState === 'home' ? teamName : awayTeam;
-        addMatchEvent({
-          type: 'possession_change',
-          description: `Inizio possesso ${activeTeam}`
-        });
-      }
-      prevPossessionState.current = possessionState;
-    }
-  }, [possessionState, teamName, awayTeam]);
 
   // Record timer start/stop
   const prevIsTimerRunning = useRef(isTimerRunning);
@@ -651,7 +624,7 @@ export default function App() {
 
       // 2. IPO Stats
       const ipoStats = [
-        { Team: teamName, ...ipoEvents, Goals: goals, Possession: `${Math.floor(possessionSeconds / 60)}:${(possessionSeconds % 60).toString().padStart(2, '0')}` }
+        { Team: teamName, ...ipoEvents, Goals: goals }
       ];
 
       // 3. Match Events Log
@@ -703,7 +676,8 @@ export default function App() {
           handleFirestoreError(error, OperationType.LIST, 'matches');
         });
 
-        return () => unsubMatches();
+        // Store this in a way we can clean up if needed, but for now we'll just handle it
+        // Note: multiple logins without refresh might leak listeners if not handled correctly
       } else {
         setMatches([]);
         setShowMatchList(false);
@@ -793,9 +767,7 @@ export default function App() {
         ipoEvents,
         ipoEventsAway,
         goals,
-        goalsAway,
-        possessionSeconds,
-        possessionAwaySeconds
+        goalsAway
       };
 
       let matchId = currentMatchId;
@@ -858,8 +830,6 @@ export default function App() {
       setIpoEventsAway(match.ipoEventsAway || { shotsIn: 0, shotsOut: 0, penalties: 0, freeKicks: 0, corners: 0, crosses: 0 });
       setGoals(match.goals || 0);
       setGoalsAway(match.goalsAway || 0);
-      setPossessionSeconds(match.possessionSeconds || 0);
-      setPossessionAwaySeconds(match.possessionAwaySeconds || 0);
       
       const shotsSnapshot = await getDocs(collection(db, 'matches', match.id, 'shots'));
       const shotsData = shotsSnapshot.docs.map(doc => ({
@@ -944,9 +914,6 @@ export default function App() {
     setIpoEventsAway({ shotsIn: 0, shotsOut: 0, penalties: 0, freeKicks: 0, corners: 0, crosses: 0 });
     setGoals(0);
     setGoalsAway(0);
-    setPossessionSeconds(0);
-    setPossessionAwaySeconds(0);
-    setPossessionState('none');
     setMatchEvents([]);
     setIsReadOnly(false);
     // Clear URL params if any
@@ -1064,72 +1031,6 @@ export default function App() {
           </div>
 
           <div className="flex flex-nowrap items-center justify-end gap-2 sm:gap-3 w-full md:w-auto overflow-x-auto no-scrollbar">
-            {/* Possession UI */}
-                <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-2 sm:px-3 py-1.5 shrink-0">
-                  <div className="flex flex-col gap-1">
-                    <div className="h-1.5 w-24 sm:w-32 bg-white/10 rounded-full overflow-hidden flex">
-                      <motion.div 
-                        className="h-full"
-                        initial={{ width: '50%' }}
-                        animate={{ width: `${(possessionSeconds + possessionAwaySeconds) > 0 ? (possessionSeconds / (possessionSeconds + possessionAwaySeconds)) * 100 : 50}%` }}
-                        style={{ backgroundColor: teamColor }}
-                      />
-                      <motion.div 
-                        className="h-full"
-                        initial={{ width: '50%' }}
-                        animate={{ width: `${(possessionSeconds + possessionAwaySeconds) > 0 ? (possessionAwaySeconds / (possessionSeconds + possessionAwaySeconds)) * 100 : 50}%` }}
-                        style={{ backgroundColor: awayColor }}
-                      />
-                    </div>
-                    <div className="flex justify-between items-center w-24 sm:w-32">
-                      <span className="text-[7px] font-black text-gray-500 uppercase tracking-widest">
-                        {Math.round((possessionSeconds / (possessionSeconds + possessionAwaySeconds || 1)) * 100)}%
-                      </span>
-                      <span className="text-[9px] font-black text-white uppercase tracking-widest mx-1">Possesso</span>
-                      <span className="text-[7px] font-black text-gray-500 uppercase tracking-widest">
-                        {Math.round((possessionAwaySeconds / (possessionSeconds + possessionAwaySeconds || 1)) * 100)}%
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex gap-1">
-                    <button 
-                      onClick={() => setPossessionState('home')}
-                      disabled={isReadOnly}
-                      className={cn(
-                        "w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center transition-all border text-[10px] font-black disabled:opacity-50 disabled:cursor-not-allowed",
-                        possessionState === 'home' ? "text-white shadow-lg" : "bg-white/5 border-white/10 text-gray-400 hover:text-white"
-                      )}
-                      style={possessionState === 'home' ? { backgroundColor: teamColor, borderColor: teamColor } : {}}
-                    >
-                      {teamName.substring(0, 1)}
-                    </button>
-                    <button 
-                      onClick={() => setPossessionState('none')}
-                      disabled={isReadOnly}
-                      className={cn(
-                        "w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center transition-all border disabled:opacity-50 disabled:cursor-not-allowed",
-                        possessionState === 'none' ? "bg-white/20 border-white/30 text-white" : "bg-white/5 border-white/10 text-gray-500 hover:text-white"
-                      )}
-                    >
-                      <div className="w-1.5 h-1.5 rounded-full bg-current" />
-                    </button>
-                    <button 
-                      onClick={() => setPossessionState('away')}
-                      disabled={isReadOnly}
-                      className={cn(
-                        "w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center transition-all border text-[10px] font-black disabled:opacity-50 disabled:cursor-not-allowed",
-                        possessionState === 'away' ? "text-white shadow-lg" : "bg-white/5 border-white/10 text-gray-400 hover:text-white"
-                      )}
-                      style={possessionState === 'away' ? { backgroundColor: awayColor, borderColor: awayColor } : {}}
-                    >
-                      {awayTeam.substring(0, 1)}
-                    </button>
-                  </div>
-                </div>
-
-            <div className="h-8 w-px bg-white/10 shrink-0" />
-
-            {/* Timer UI */}
             <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-2 sm:px-3 py-1.5 shrink-0">
               <span className="text-xs sm:text-sm font-black font-mono tabular-nums text-white">
                 {String(Math.floor(timerSeconds / 60)).padStart(2, '0')}:{String(timerSeconds % 60).padStart(2, '0')}
@@ -1153,9 +1054,6 @@ export default function App() {
                   onClick={() => {
                     setTimerSeconds(0);
                     setIsTimerRunning(false);
-                    setPossessionSeconds(0);
-                    setPossessionAwaySeconds(0);
-                    setPossessionState('none');
                   }}
                   disabled={isReadOnly}
                   className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 flex items-center justify-center transition-all disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1499,11 +1397,7 @@ export default function App() {
 
           {/* Pitch Container */}
           <motion.div 
-            animate={{ 
-              borderColor: possessionState !== 'none' ? 'rgba(59, 130, 246, 0.5)' : 'rgba(255, 255, 255, 0.1)',
-              boxShadow: possessionState !== 'none' ? '0 0 30px rgba(59, 130, 246, 0.15)' : '0 0 0px rgba(0,0,0,0)'
-            }}
-            className="relative bg-black/40 border rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl transition-all duration-700"
+            className="relative bg-black/40 border border-white/10 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl transition-all duration-700"
           >
             <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-10 flex gap-2">
               <div className="bg-black/60 backdrop-blur-md border border-white/10 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full flex items-center gap-1.5 sm:gap-2 text-[8px] sm:text-[10px] font-bold uppercase tracking-wider text-gray-400">
@@ -1986,12 +1880,6 @@ export default function App() {
             ipoAway={ipoAway}
             prevIpo={prevIpo}
             prevIpoAway={prevIpoAway}
-            possessionSeconds={possessionSeconds}
-            setPossessionSeconds={setPossessionSeconds}
-            possessionAwaySeconds={possessionAwaySeconds}
-            setPossessionAwaySeconds={setPossessionAwaySeconds}
-            possessionState={possessionState}
-            setPossessionState={setPossessionState}
             weights={weights}
             addMatchEvent={addMatchEvent}
             isReadOnly={isReadOnly}
@@ -2458,12 +2346,6 @@ function IPOView({
   ipoAway,
   prevIpo,
   prevIpoAway,
-  possessionSeconds,
-  setPossessionSeconds,
-  possessionAwaySeconds,
-  setPossessionAwaySeconds,
-  possessionState,
-  setPossessionState,
   weights,
   addMatchEvent,
   isReadOnly
@@ -2637,114 +2519,6 @@ function IPOView({
             </div>
           </div>
         </motion.div>
-
-        {/* Possession Card */}
-        <div className="bg-[#121212] border border-white/5 rounded-2xl p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-gray-500" />
-              <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Possesso Palla</span>
-            </div>
-            <div className="flex p-1 bg-black/40 rounded-xl border border-white/5">
-              <button 
-                onClick={() => {
-                  if (isReadOnly) return;
-                  setPossessionState(possessionState === 'home' ? 'none' : 'home');
-                }}
-                disabled={isReadOnly}
-                className={cn(
-                  "px-3 py-1 rounded-lg text-[8px] font-black uppercase transition-all disabled:opacity-30 disabled:cursor-not-allowed",
-                  possessionState === 'home' ? "text-white shadow-lg" : "text-gray-500"
-                )}
-                style={possessionState === 'home' ? { backgroundColor: teamColor } : {}}
-              >
-                {teamName}
-              </button>
-              <button 
-                onClick={() => {
-                  if (isReadOnly) return;
-                  setPossessionState('none');
-                }}
-                disabled={isReadOnly}
-                className={cn(
-                  "px-2 py-1 rounded-lg text-[8px] font-black uppercase transition-all mx-1 disabled:opacity-30 disabled:cursor-not-allowed",
-                  possessionState === 'none' ? "bg-white/20 text-white" : "text-gray-600"
-                )}
-              >
-                OFF
-              </button>
-              <button 
-                onClick={() => {
-                  if (isReadOnly) return;
-                  setPossessionState(possessionState === 'away' ? 'none' : 'away');
-                }}
-                disabled={isReadOnly}
-                className={cn(
-                  "px-3 py-1 rounded-lg text-[8px] font-black uppercase transition-all disabled:opacity-30 disabled:cursor-not-allowed",
-                  possessionState === 'away' ? "text-white shadow-lg" : "text-gray-500"
-                )}
-                style={possessionState === 'away' ? { backgroundColor: awayColor } : {}}
-              >
-                {awayTeam}
-              </button>
-            </div>
-          </div>
-          
-          <div className="space-y-6">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-black text-gray-500 uppercase">{teamName}</span>
-                  <span className="text-[10px] font-black text-white">
-                    {Math.round((possessionSeconds / (possessionSeconds + possessionAwaySeconds || 1)) * 100)}%
-                  </span>
-                </div>
-                <div className="text-xl font-black text-white">
-                  {Math.floor(possessionSeconds / 60)}' {String(possessionSeconds % 60).padStart(2, '0')}"
-                </div>
-              </div>
-              <div className="space-y-1 text-right">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-black text-white">
-                    {Math.round((possessionAwaySeconds / (possessionSeconds + possessionAwaySeconds || 1)) * 100)}%
-                  </span>
-                  <span className="text-[10px] font-black text-gray-500 uppercase">{awayTeam}</span>
-                </div>
-                <div className="text-xl font-black text-white">
-                  {Math.floor(possessionAwaySeconds / 60)}' {String(possessionAwaySeconds % 60).padStart(2, '0')}"
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <div className="h-3 bg-white/5 rounded-full overflow-hidden flex border border-white/5">
-                <motion.div 
-                  className="h-full"
-                  initial={{ width: '50%' }}
-                  animate={{ width: `${(possessionSeconds + possessionAwaySeconds) > 0 ? (possessionSeconds / (possessionSeconds + possessionAwaySeconds)) * 100 : 50}%` }}
-                  style={{ backgroundColor: teamColor }}
-                />
-                <motion.div 
-                  className="h-full"
-                  initial={{ width: '50%' }}
-                  animate={{ width: `${(possessionSeconds + possessionAwaySeconds) > 0 ? (possessionAwaySeconds / (possessionSeconds + possessionAwaySeconds)) * 100 : 50}%` }}
-                  style={{ backgroundColor: awayColor }}
-                />
-              </div>
-              <div className="flex justify-center">
-                <button 
-                  onClick={() => {
-                    setPossessionSeconds(0);
-                    setPossessionAwaySeconds(0);
-                  }}
-                  className="text-[9px] font-black text-gray-600 hover:text-red-500 transition-colors uppercase tracking-widest"
-                >
-                  Reset Tempi Possesso
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Right Column: Events */}
@@ -2766,11 +2540,9 @@ function IPOView({
                 if (ipoActiveTeam === 'home') {
                   setIpoEvents({ shotsIn: 0, shotsOut: 0, penalties: 0, freeKicks: 0, corners: 0, crosses: 0 });
                   setGoals(0);
-                  setPossessionSeconds(0);
                 } else {
                   setIpoEventsAway({ shotsIn: 0, shotsOut: 0, penalties: 0, freeKicks: 0, corners: 0, crosses: 0 });
                   setGoalsAway(0);
-                  setPossessionAwaySeconds(0);
                 }
                 addMatchEvent({ type: 'match_reset', description: `Reset totale ${ipoActiveTeam === 'home' ? teamName : awayTeam}` });
               }}

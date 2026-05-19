@@ -44,7 +44,7 @@ service cloud.firestore {
       let allowedFields = [
         'userId', 'teamName', 'teamColor', 'awayTeam', 'awayColor', 'date', 'createdAt', 
         'totalXG', 'totalGoals', 'ipoEvents', 'ipoEventsAway', 
-        'goals', 'goalsAway', 'possessionSeconds', 'possessionAwaySeconds'
+        'goals', 'goalsAway', 'matchEvents'
       ];
       return hasRequiredFields(data, ['userId', 'teamName', 'date']) &&
              hasOnlyAllowedFields(data, allowedFields) &&
