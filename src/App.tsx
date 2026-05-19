@@ -154,26 +154,15 @@ interface ErrorBoundaryState {
 // Error Boundary Component
 const AppLogo = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 100 100" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
-    {/* Bars (Teal) */}
-    <rect x="10" y="55" width="8" height="35" rx="1.5" fill="#12b5b0" />
-    <rect x="22" y="45" width="8" height="45" rx="1.5" fill="#12b5b0" />
-    <rect x="34" y="35" width="8" height="55" rx="1.5" fill="#12b5b0" />
-    <rect x="46" y="48" width="8" height="42" rx="1.5" fill="#12b5b0" />
-    <rect x="58" y="52" width="8" height="38" rx="1.5" fill="#12b5b0" />
-    <rect x="70" y="70" width="8" height="20" rx="1.5" fill="#12b5b0" />
-    <rect x="82" y="55" width="8" height="35" rx="1.5" fill="#12b5b0" />
-    
-    {/* Line Chart (Grey) */}
-    <path d="M10 45 L22 35 L34 25 L46 38 L58 48 L70 60 L82 50" stroke="#808080" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    
-    {/* Dots on Line */}
-    <circle cx="10" cy="45" r="2.5" fill="#808080" />
-    <circle cx="22" cy="35" r="2.5" fill="#808080" />
-    <circle cx="34" cy="25" r="2.5" fill="#808080" />
-    <circle cx="46" cy="38" r="2.5" fill="#808080" />
-    <circle cx="58" cy="48" r="2.5" fill="#808080" />
-    <circle cx="70" cy="60" r="2.5" fill="#808080" />
-    <circle cx="82" cy="50" r="2.5" fill="#808080" />
+    <defs>
+      <linearGradient id="logo-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#12b5b0" />
+        <stop offset="100%" stopColor="#3b82f6" />
+      </linearGradient>
+    </defs>
+    <path d="M50 15L15 85H35L50 50L65 85H85L50 15Z" fill="url(#logo-gradient)" />
+    <path d="M50 45L38 70H62L50 45Z" fill="white" fillOpacity="0.2" />
+    <circle cx="50" cy="80" r="4" fill="#3b82f6" fillOpacity="0.8" />
   </svg>
 );
 
@@ -999,11 +988,16 @@ export default function App() {
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 h-auto min-h-[80px] py-4 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-start">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 flex items-center justify-center bg-white/5 border border-white/10 rounded-xl sm:rounded-2xl shadow-2xl group hover:border-blue-500/50 transition-all duration-500">
-                <AppLogo className="w-7 h-7 text-blue-500 group-hover:scale-110 transition-transform duration-500" />
+              <div className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 flex items-center justify-center bg-white/5 border border-white/10 rounded-xl sm:rounded-2xl shadow-2xl relative group overflow-hidden transition-all duration-500 hover:border-[#12b5b0]/50">
+                <div className="absolute inset-0 bg-gradient-to-br from-[#12b5b0]/5 to-[#3b82f6]/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <AppLogo className="w-7 h-7 relative z-10 group-hover:scale-110 transition-transform duration-500" />
               </div>
-              <div>
-                <h1 className="font-black text-xl sm:text-2xl tracking-tighter text-white leading-none uppercase">Analytic <span className="text-[#12b5b0]">Hub</span></h1>
+              <div className="flex flex-col">
+                <h1 className="font-black text-xl sm:text-2xl tracking-tighter text-white leading-none uppercase flex items-baseline">
+                  ANALYTIC
+                  <span className="text-[#12b5b0] ml-1">HUB</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#12b5b0] ml-1.5 animate-pulse" />
+                </h1>
                 <div className="flex items-center gap-2 mt-1">
                   {!isOnline && (
                     <div className="flex items-center gap-1">

@@ -23,6 +23,8 @@ const updateSW = registerSW({
   }
 });
 
+console.log('App booting...');
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>

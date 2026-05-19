@@ -27,15 +27,42 @@
           }
         }
       })();
+
+      // Global error handler to catch boot errors
+      window.onerror = function(msg, url, lineNo, columnNo, error) {
+        const statusEl = document.getElementById('boot-status');
+        if (statusEl) {
+          statusEl.textContent = 'Errore: ' + msg;
+          statusEl.style.color = '#ef4444';
+        }
+        return false;
+      };
     </script>
   </head>
   <body>
     <div id="root">
       <div style="height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #0a0a0a; color: white; font-family: system-ui, -apple-system, sans-serif;">
-        <div style="text-align: center;">
-          <h1 style="font-weight: 900; font-size: 2rem; letter-spacing: -0.05em; margin: 0; text-transform: uppercase;">Analytic <span style="color: #12b5b0;">Hub</span></h1>
-          <div style="width: 48px; height: 3px; background: #12b5b0; margin: 12px auto; border-radius: 2px;"></div>
-          <p style="font-size: 0.75rem; font-weight: 700; color: #4b5563; text-transform: uppercase; letter-spacing: 0.1em; animate: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;">Caricamento...</p>
+        <div style="text-align: center; display: flex; flex-direction: column; align-items: center;">
+          <div style="width: 80px; height: 80px; margin-bottom: 32px; filter: drop-shadow(0 0 20px rgba(18, 181, 176, 0.2));">
+            <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="load-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#12b5b0" />
+                  <stop offset="100%" stopColor="#3b82f6" />
+                </linearGradient>
+              </defs>
+              <path d="M50 15L15 85H35L50 50L65 85H85L50 15Z" fill="url(#load-gradient)" />
+              <path d="M50 45L38 70H62L50 45Z" fill="white" fillOpacity="0.2" />
+              <circle cx="50" cy="80" r="4" fill="#3b82f6" fillOpacity="0.8">
+                <animate attributeName="opacity" values="0.3;1;0.3" dur="2s" repeatCount="indefinite" />
+              </circle>
+            </svg>
+          </div>
+          <h1 style="font-weight: 900; font-size: 2.25rem; letter-spacing: -0.05em; margin: 0; text-transform: uppercase; display: flex; align-items: baseline;">
+            ANALYTIC <span style="color: #12b5b0; margin-left: 8px;">HUB</span>
+          </h1>
+          <div style="width: 48px; height: 3px; background: linear-gradient(to right, #12b5b0, #3b82f6); margin: 16px auto; border-radius: 2px;"></div>
+          <p id="boot-status" style="font-size: 0.7rem; font-weight: 800; color: #4b5563; text-transform: uppercase; letter-spacing: 0.2em; animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;">Caricamento Sistema</p>
         </div>
       </div>
     </div>
