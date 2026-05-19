@@ -1281,108 +1281,65 @@ export default function App() {
           <div className="flex flex-col gap-8">
             {/* Bento Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className={cn(
-                  "border rounded-3xl p-6 group hover:border-blue-500/20 transition-all duration-500",
-                  theme === 'dark' ? "bg-white/[0.02] border-white/[0.05]" : "bg-white border-gray-100 shadow-sm"
-                )}
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-8 h-8 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500">
-                    <Target className="w-4 h-4" />
-                  </div>
-                  <div className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse" />
-                </div>
-                <div className="space-y-1">
-                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Expected Goals</p>
-                  <div className="flex items-baseline gap-2">
-                    <span className={cn("text-3xl font-black tabular-nums tracking-tight", theme === 'dark' ? "text-white" : "text-gray-900")}>
-                      <AnimatedCounter value={displayXG} />
-                    </span>
-                    <span className="text-xs font-bold text-blue-500/60 uppercase">xG</span>
-                  </div>
-                </div>
-              </motion.div>
-
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-                className={cn(
-                  "border rounded-3xl p-6 group hover:border-yellow-500/20 transition-all duration-500",
-                  theme === 'dark' ? "bg-white/[0.02] border-white/[0.05]" : "bg-white border-gray-100 shadow-sm"
-                )}
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-8 h-8 rounded-xl bg-yellow-500/10 flex items-center justify-center text-yellow-500">
-                    <Trophy className="w-4 h-4" />
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Gol Reali</p>
-                  <div className="flex items-baseline gap-2">
-                    <span className={cn("text-3xl font-black tabular-nums tracking-tight", theme === 'dark' ? "text-white" : "text-gray-900")}>{displayGoals}</span>
-                    <span className="text-xs font-bold text-yellow-500/60 uppercase">GOL</span>
-                  </div>
-                </div>
-              </motion.div>
-
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className={cn(
-                  "border rounded-3xl p-6 group hover:border-emerald-500/20 transition-all duration-500",
-                  theme === 'dark' ? "bg-white/[0.02] border-white/[0.05]" : "bg-white border-gray-100 shadow-sm"
-                )}
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
-                    <Activity className="w-4 h-4" />
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">xG/Tiro</p>
-                  <div className="flex items-baseline gap-2">
-                    <span className={cn("text-3xl font-black tabular-nums tracking-tight", theme === 'dark' ? "text-white" : "text-gray-900")}>
-                      <AnimatedCounter value={displayXGPerShot} decimals={2} />
-                    </span>
-                    <span className="text-xs font-bold text-emerald-500/60 uppercase">Qualità</span>
-                  </div>
-                </div>
-              </motion.div>
-
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-                className={cn(
-                  "border rounded-3xl p-6 group hover:border-purple-500/20 transition-all duration-500",
-                  theme === 'dark' ? "bg-white/[0.02] border-white/[0.05]" : "bg-white border-gray-100 shadow-sm"
-                )}
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-8 h-8 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-500">
-                    <Zap className="w-4 h-4" />
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Indice IPO</p>
-                  <div className="flex items-baseline gap-2">
-                    <span className={cn("text-3xl font-black tabular-nums tracking-tight", theme === 'dark' ? "text-white" : "text-gray-900")}>
-                      <AnimatedCounter value={ipo} decimals={1} />
-                    </span>
+              {[
+                { label: 'Expected Goals', value: displayXG, icon: Target, color: 'blue', detail: 'xG', decimals: 2 },
+                { label: 'Gol Reali', value: displayGoals, icon: Trophy, color: 'yellow', detail: 'Gol', decimals: 0 },
+                { label: 'xG/Tiro', value: displayXGPerShot, icon: Activity, color: 'emerald', detail: 'Qualità', decimals: 2 },
+                { label: 'Indice IPO', value: ipo, icon: Zap, color: 'indigo', detail: ipo >= ipoAway ? 'Dominio' : 'In Difesa', decimals: 1 }
+              ].map((stat, i) => (
+                <motion.div 
+                  key={stat.label}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.1 }}
+                  className={cn(
+                    "border rounded-[2rem] p-6 group transition-all duration-500 relative overflow-hidden",
+                    theme === 'dark' 
+                      ? "bg-white/[0.02] border-white/[0.05] hover:bg-white/[0.04] hover:border-white/10" 
+                      : "bg-white border-gray-100 shadow-sm hover:shadow-md hover:border-gray-200"
+                  )}
+                >
+                  <div className="flex items-center justify-between mb-4 relative z-10">
                     <div className={cn(
-                      "px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest",
-                      ipo > ipoAway ? "bg-emerald-500/10 text-emerald-500" : "bg-red-500/10 text-red-500"
+                      "w-10 h-10 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110 duration-500",
+                      stat.color === 'blue' ? "bg-blue-500/10 text-blue-500" :
+                      stat.color === 'yellow' ? "bg-yellow-500/10 text-yellow-500" :
+                      stat.color === 'emerald' ? "bg-emerald-500/10 text-emerald-500" :
+                      "bg-indigo-500/10 text-indigo-500"
                     )}>
-                      {ipo > ipoAway ? 'Dominio' : 'In Difesa'}
+                      <stat.icon className="w-5 h-5" />
+                    </div>
+                    {stat.label === 'Expected Goals' && (
+                      <div className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse" />
+                    )}
+                  </div>
+                  <div className="space-y-1 relative z-10">
+                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{stat.label}</p>
+                    <div className="flex items-baseline gap-2">
+                      <span className={cn("text-3xl font-black tabular-nums tracking-tight", theme === 'dark' ? "text-white" : "text-gray-900")}>
+                        <AnimatedCounter value={stat.value} decimals={stat.decimals} />
+                      </span>
+                      <span className={cn(
+                        "text-[10px] font-black uppercase tracking-tighter px-2 py-0.5 rounded-full",
+                        stat.color === 'blue' ? "text-blue-500/60 bg-blue-500/5" :
+                        stat.color === 'yellow' ? "text-yellow-500/60 bg-yellow-500/5" :
+                        stat.color === 'emerald' ? "text-emerald-500/60 bg-emerald-500/5" :
+                        (ipo >= ipoAway ? "text-emerald-500 bg-emerald-500/5" : "text-red-500 bg-red-500/5")
+                      )}>
+                        {stat.detail}
+                      </span>
                     </div>
                   </div>
-                </div>
-              </motion.div>
+                  {/* Subtle background decoration */}
+                  <div className={cn(
+                    "absolute -right-4 -bottom-4 w-24 h-24 rounded-full blur-3xl opacity-0 group-hover:opacity-20 transition-opacity duration-1000",
+                    stat.color === 'blue' ? "bg-blue-500" :
+                    stat.color === 'yellow' ? "bg-yellow-500" :
+                    stat.color === 'emerald' ? "bg-emerald-500" :
+                    "bg-indigo-500"
+                  )} />
+                </motion.div>
+              ))}
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -1430,11 +1387,11 @@ export default function App() {
                   >
                     {/* Minimal Markings */}
                     <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-[0.07]" viewBox="0 0 68 34">
-                      <rect x="0" y="0" width="68" height="34" fill="none" stroke={theme === 'dark' ? "white" : "#3b82f6"} strokeWidth="0.15" />
-                      <rect x="13.84" y="0" width="40.32" height="16.5" fill="none" stroke={theme === 'dark' ? "white" : "#3b82f6"} strokeWidth="0.15" />
-                      <rect x="24.84" y="0" width="18.32" height="5.5" fill="none" stroke={theme === 'dark' ? "white" : "#3b82f6"} strokeWidth="0.15" />
-                      <circle cx="34" cy="11" r="0.2" fill={theme === 'dark' ? "white" : "#3b82f6"} />
-                      <path d="M 27.5 16.5 A 9.15 9.15 0 0 0 40.5 16.5" fill="none" stroke={theme === 'dark' ? "white" : "#3b82f6"} strokeWidth="0.15" />
+                      <rect x="0" y="0" width="68" height="34" fill="none" stroke="currentColor" strokeWidth="0.15" />
+                      <rect x="13.84" y="0" width="40.32" height="16.5" fill="none" stroke="currentColor" strokeWidth="0.15" />
+                      <rect x="24.84" y="0" width="18.32" height="5.5" fill="none" stroke="currentColor" strokeWidth="0.15" />
+                      <circle cx="34" cy="11" r="0.2" fill="currentColor" />
+                      <path d="M 27.5 16.5 A 9.15 9.15 0 0 0 40.5 16.5" fill="none" stroke="currentColor" strokeWidth="0.15" />
                     </svg>
 
                     {/* Heatmap */}
@@ -1535,21 +1492,27 @@ export default function App() {
                              else if (selectedShot) updateShot(selectedShot.id, { playerName: val });
                              else setNewShotConfig(prev => ({ ...prev, playerName: val }));
                           }}
-                          className="w-full bg-[#0d0d0e] border border-white/5 rounded-2xl py-4 px-6 text-xs font-bold text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all appearance-none"
+                          className={cn(
+                            "w-full border rounded-2xl py-4 px-6 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all appearance-none",
+                            theme === 'dark' ? "bg-[#0d0d0e] border-white/5 text-white" : "bg-gray-50 border-gray-200 text-gray-900"
+                          )}
                         >
                           <option value="">Seleziona...</option>
                           {PREDEFINED_PLAYERS.map(p => <option key={p} value={p}>{p}</option>)}
                           {playerList.filter(p => !PREDEFINED_PLAYERS.includes(p)).map(p => <option key={p} value={p}>{p}</option>)}
                           <option value="ADD_NEW">+ Aggiungi Nuovo</option>
                         </select>
-                        <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-700 pointer-events-none" />
+                        <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-3">
                         <label className="text-[9px] font-black text-gray-500 uppercase tracking-[0.2em] px-1">Parte Corpo</label>
-                        <div className="flex bg-[#0d0d0e] p-1 rounded-2xl border border-white/5">
+                        <div className={cn(
+                          "flex p-1 rounded-2xl border transition-colors",
+                          theme === 'dark' ? "bg-[#0d0d0e] border-white/5" : "bg-gray-100 border-gray-200"
+                        )}>
                           {[
                             { id: 'foot', label: 'Piede', icon: Footprints },
                             { id: 'head', label: 'Testa', icon: UserIcon }
@@ -1563,8 +1526,8 @@ export default function App() {
                               className={cn(
                                 "flex-1 flex flex-col items-center gap-2 py-3 rounded-xl transition-all duration-300",
                                 (selectedShot ? selectedShot.bodyPart : newShotConfig.bodyPart) === part.id 
-                                  ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20" 
-                                  : "text-gray-500 hover:text-gray-300"
+                                  ? (theme === 'dark' ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20" : "bg-white text-blue-600 shadow-sm font-black") 
+                                  : "text-gray-500 hover:text-gray-400"
                               )}
                             >
                               <part.icon className="w-4 h-4" />
@@ -1585,7 +1548,7 @@ export default function App() {
                             "w-full h-full min-h-[78px] flex flex-col items-center justify-center gap-2 border-2 rounded-2xl transition-all duration-300",
                             (selectedShot ? selectedShot.isGoal : newShotConfig.isGoal)
                               ? "bg-yellow-500/10 border-yellow-500/40 text-yellow-500" 
-                              : "bg-[#0d0d0e] border-white/5 text-gray-600 hover:border-white/10"
+                              : (theme === 'dark' ? "bg-[#0d0d0e] border-white/5 text-gray-600 hover:border-white/10" : "bg-gray-100 border-gray-200 text-gray-500 hover:border-gray-300")
                           )}
                         >
                           <Trophy className={cn("w-5 h-5", (selectedShot ? selectedShot.isGoal : newShotConfig.isGoal) ? "animate-bounce" : "opacity-30")} />
@@ -1654,27 +1617,34 @@ export default function App() {
                     <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Live Feed</h3>
                     <div className="px-2 py-1 bg-blue-500/10 rounded-lg text-[8px] font-black text-blue-500">{matchEvents.length} EVENTI</div>
                   </div>
-                  <div className="flex-1 overflow-y-auto no-scrollbar space-y-3">
+                  <div className="flex-1 overflow-y-auto no-scrollbar space-y-4">
                     {matchEvents.length === 0 ? (
-                      <div className="h-full flex flex-col items-center justify-center text-gray-700 opacity-50">
-                        <Activity className="w-8 h-8 mb-3" />
-                        <span className="text-[8px] font-black uppercase tracking-widest">In attesa di eventi...</span>
+                      <div className="h-full flex flex-col items-center justify-center text-gray-500 opacity-40">
+                        <Activity className="w-10 h-10 mb-4 animate-pulse" />
+                        <span className="text-[10px] font-black uppercase tracking-widest">In attesa di eventi...</span>
                       </div>
                     ) : (
                       matchEvents.map(event => (
                         <div key={event.id} className={cn(
-                          "flex gap-4 p-3 border rounded-2xl group transition-all",
-                          theme === 'dark' ? "bg-white/[0.02] border-white/[0.03] hover:border-white/10" : "bg-gray-50 border-gray-100 hover:border-gray-200"
+                          "flex gap-4 p-4 border rounded-[1.5rem] group transition-all duration-300",
+                          theme === 'dark' ? "bg-white/[0.02] border-white/[0.03] hover:bg-white/[0.04] hover:border-white/10" : "bg-gray-50/50 border-gray-100 hover:bg-white hover:border-gray-200 hover:shadow-sm"
                         )}>
                           <div className={cn(
-                            "w-8 h-8 rounded-xl flex items-center justify-center shrink-0",
-                            event.type === 'goal' ? 'bg-yellow-500/10 text-yellow-500' : 'bg-blue-600/10 text-blue-500'
+                            "w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 shadow-sm",
+                            event.type === 'goal' ? 'bg-yellow-500/10 text-yellow-500' : 
+                            event.type === 'shot' ? 'bg-blue-600/10 text-blue-500' :
+                            'bg-gray-500/10 text-gray-400'
                           )}>
-                            {event.type === 'goal' ? <Trophy className="w-4 h-4" /> : <Target className="w-4 h-4" />}
+                            {event.type === 'goal' ? <Trophy className="w-5 h-5" /> : 
+                             event.type === 'shot' ? <Target className="w-5 h-5" /> : 
+                             <Zap className="w-5 h-5" />}
                           </div>
-                          <div>
-                            <p className={cn("text-[10px] font-black leading-snug", theme === 'dark' ? "text-white" : "text-gray-900")}>{event.description}</p>
-                            <p className="text-[8px] font-bold text-gray-600 uppercase tracking-widest mt-1">Minuto {event.minute}'</p>
+                          <div className="flex-1">
+                            <p className={cn("text-xs font-black leading-tight", theme === 'dark' ? "text-white" : "text-gray-900")}>{event.description}</p>
+                            <div className="flex items-center gap-2 mt-1.5 focus:outline-none">
+                              <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest bg-gray-500/5 px-2 py-0.5 rounded-full">Minuto {event.minute}'</span>
+                              {event.value && <span className="text-[9px] font-bold text-blue-500/80 uppercase">+{event.value.toFixed(2)} xG</span>}
+                            </div>
                           </div>
                         </div>
                       ))
@@ -2316,78 +2286,101 @@ function IPOView({
     <div className="max-w-[1600px] mx-auto p-4 sm:p-6 lg:p-8 flex flex-col gap-8">
       {/* Scoreboard Bento */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className={cn(
-            "lg:col-span-1 border rounded-[2.5rem] p-8 flex flex-col justify-between min-h-[220px] transition-colors",
-            theme === 'dark' ? "bg-white/[0.02] border-white/[0.05]" : "bg-gray-50/50 border-gray-100"
-          )}
-        >
-          <div className="flex items-center justify-between">
-            <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Live Status</p>
-            <div className="flex gap-1">
-              <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-              <div className={cn("w-1.5 h-1.5 rounded-full", theme === 'dark' ? "bg-white/10" : "bg-gray-200")} />
+        {[
+          { 
+            label: 'Goal Reali', 
+            icon: Trophy, 
+            color: 'yellow',
+            content: (
+              <div className="flex items-center justify-between w-full">
+                <div className="flex flex-col">
+                  <span className={cn("text-6xl font-black tabular-nums tracking-tighter", theme === 'dark' ? "text-white" : "text-gray-900")}>
+                    {ipoActiveTeam === 'home' ? goals : goalsAway}
+                  </span>
+                  <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mt-1">GOL TOTALI</p>
+                </div>
+                <div className={cn("h-16 w-px mx-6", theme === 'dark' ? "bg-white/10" : "bg-gray-200")} />
+                <div className="flex flex-col text-right">
+                  <span className={cn("text-3xl font-black tabular-nums tracking-tight", theme === 'dark' ? "text-white" : "text-gray-900")}>
+                    {ipoActiveTeam === 'home' ? teamName : awayTeam}
+                  </span>
+                  <div className="flex items-center gap-1.5 justify-end mt-1">
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: ipoActiveTeam === 'home' ? teamColor : awayColor }} />
+                    <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Active Team</span>
+                  </div>
+                </div>
+              </div>
+            )
+          },
+          { 
+            label: 'Performance Index', 
+            icon: Zap, 
+            color: 'blue',
+            content: (
+              <div className="flex items-baseline gap-4 w-full">
+                <span className={cn("text-6xl font-black tracking-tighter tabular-nums", theme === 'dark' ? "text-white" : "text-gray-900")}>
+                  <AnimatedCounter value={ipoActiveTeam === 'home' ? ipo : ipoAway} />
+                </span>
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest leading-none bg-blue-500/10 px-3 py-1 rounded-full">IPO INDEX</span>
+                  <span className="text-[8px] font-bold text-gray-500 uppercase tracking-[0.2em] px-1">{ipo >= ipoAway ? 'Dominio' : 'In Difesa'}</span>
+                </div>
+              </div>
+            )
+          },
+          { 
+            label: 'Real Efficiency', 
+            icon: Activity, 
+            color: 'emerald',
+            content: (
+              <div className="flex items-center justify-between w-full">
+                <div className="flex flex-col">
+                  <span className={cn("text-6xl font-black tabular-nums tracking-tighter", theme === 'dark' ? "text-white" : "text-gray-900")}>
+                    {(efficiency * 100).toFixed(0)}<span className="text-2xl opacity-30">%</span>
+                  </span>
+                  <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mt-1">CONVERSIONE</p>
+                </div>
+                <div className={cn("h-16 w-px mx-6", theme === 'dark' ? "bg-white/10" : "bg-gray-200")} />
+                <div className="flex-1 space-y-2">
+                  <div className="h-1.5 w-full bg-gray-500/10 rounded-full overflow-hidden">
+                    <motion.div 
+                      className="h-full bg-emerald-500" 
+                      initial={{ width: 0 }}
+                      animate={{ width: `${Math.min(100, efficiency * 100)}%` }}
+                    />
+                  </div>
+                  <p className="text-[8px] font-bold text-gray-500 uppercase tracking-widest">Efficiency Scoring Rate</p>
+                </div>
+              </div>
+            )
+          }
+        ].map((item, i) => (
+          <motion.div 
+            key={item.label}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.1 }}
+            className={cn(
+              "border rounded-[2.5rem] p-8 flex flex-col justify-between min-h-[220px] transition-all duration-500 relative overflow-hidden group",
+              theme === 'dark' ? "bg-white/[0.02] border-white/[0.05] hover:bg-white/[0.04]" : "bg-white border-gray-100 shadow-sm hover:shadow-md"
+            )}
+          >
+            <div className="flex items-center justify-between mb-2 relative z-10">
+              <p className="text-[9px] font-black text-gray-500 uppercase tracking-[0.2em]">{item.label}</p>
+              <div className={cn(
+                "w-8 h-8 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110",
+                item.color === 'yellow' ? "bg-yellow-500/10 text-yellow-500" :
+                item.color === 'blue' ? "bg-blue-500/10 text-blue-500" :
+                "bg-emerald-500/10 text-emerald-500"
+              )}>
+                <item.icon className="w-4 h-4" />
+              </div>
             </div>
-          </div>
-          <div>
-            <h2 className={cn("text-3xl font-black uppercase tracking-tighter leading-none mb-2", theme === 'dark' ? "text-white" : "text-gray-900")}>
-              {ipoActiveTeam === 'home' ? teamName : awayTeam}
-            </h2>
-            <div className="flex items-center gap-3">
-              <span className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">{ipoActiveTeam === 'home' ? 'Squadra Casa' : 'Squadra Ospite'}</span>
-              <div className={cn("h-px w-8", theme === 'dark' ? "bg-white/10" : "bg-gray-200")} />
+            <div className="relative z-10 flex-1 flex items-center">
+              {item.content}
             </div>
-          </div>
-        </motion.div>
-
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className={cn(
-            "lg:col-span-1 border rounded-[2.5rem] p-8 flex flex-col justify-between transition-colors",
-            theme === 'dark' ? "bg-white/[0.02] border-white/[0.05]" : "bg-gray-50/50 border-gray-100"
-          )}
-        >
-          <div className="flex items-center justify-between">
-            <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Performance Index</p>
-            <Zap className="w-4 h-4 text-blue-500" />
-          </div>
-          <div className="flex items-baseline gap-4">
-            <span className={cn("text-6xl font-black tracking-tighter tabular-nums", theme === 'dark' ? "text-white" : "text-gray-900")}>
-              <AnimatedCounter value={ipoActiveTeam === 'home' ? ipo : ipoAway} />
-            </span>
-            <span className="text-xs font-black text-blue-500 uppercase tracking-widest leading-none bg-blue-500/10 px-3 py-1 rounded-full">IPO</span>
-          </div>
-        </motion.div>
-
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className={cn(
-            "lg:col-span-1 border rounded-[2.5rem] p-8 flex flex-col justify-between transition-colors",
-            theme === 'dark' ? "bg-white/[0.02] border-white/[0.05]" : "bg-gray-50/50 border-gray-100"
-          )}
-        >
-          <div className="flex items-center justify-between">
-            <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Real Efficiency</p>
-            <Trophy className="w-4 h-4 text-yellow-500" />
-          </div>
-          <div className="flex items-center justify-between">
-             <div className="flex flex-col">
-                <span className={cn("text-4xl font-black", theme === 'dark' ? "text-white" : "text-gray-900")}>{ipoActiveTeam === 'home' ? goals : goalsAway}</span>
-                <span className="text-[8px] font-bold text-gray-600 uppercase mt-1">GOL TOTALI</span>
-             </div>
-             <div className={cn("h-10 w-px mx-4", theme === 'dark' ? "bg-white/10" : "bg-gray-200")} />
-             <div className="flex flex-col text-right">
-                <span className={cn("text-4xl font-black", theme === 'dark' ? "text-white" : "text-gray-900")}>{(efficiency * 100).toFixed(0)}%</span>
-                <span className="text-[8px] font-bold text-gray-600 uppercase mt-1">EFFICIENZA</span>
-             </div>
-          </div>
-        </motion.div>
+          </motion.div>
+        ))}
       </div>
 
       {/* Events Control Zone */}
