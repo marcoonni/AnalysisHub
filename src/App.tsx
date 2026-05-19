@@ -9,6 +9,7 @@ import {
   Target, 
   Activity, 
   Settings, 
+  Settings2,
   Flame, 
   Trophy, 
   Zap, 
@@ -38,7 +39,9 @@ import {
   Palette,
   UserPlus,
   RotateCw,
-  ChevronUp
+  ChevronUp,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Papa from 'papaparse';
@@ -411,6 +414,7 @@ export default function App() {
 
   // Timer state
   const [timerSeconds, setTimerSeconds] = useState(0);
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const lastTickRef = useRef<number>(Date.now());
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [matchEvents, setMatchEvents] = useState<MatchEvent[]>([]);
@@ -969,7 +973,10 @@ export default function App() {
   };
 
   return (
-    <div className="relative min-h-screen bg-[#070708] text-gray-100 font-sans selection:bg-blue-500/30 overflow-x-hidden">
+    <div className={cn(
+      "relative min-h-screen font-sans selection:bg-blue-500/30 overflow-x-hidden transition-colors duration-500",
+      theme === 'dark' ? "bg-[#070708] text-gray-100" : "bg-white text-gray-900"
+    )}>
       {/* Global Loading Overlay */}
       <AnimatePresence>
         {loadingMatchId && !showMatchList && (
@@ -977,7 +984,10 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-[#070708]/95 backdrop-blur-2xl flex flex-col items-center justify-center gap-8"
+            className={cn(
+              "fixed inset-0 z-[100] backdrop-blur-2xl flex flex-col items-center justify-center gap-8",
+              theme === 'dark' ? "bg-[#070708]/95" : "bg-white/95"
+            )}
           >
             <div className="relative">
               <div className="w-16 h-16 border-2 border-blue-500/10 rounded-full" />
@@ -985,7 +995,7 @@ export default function App() {
               <AppLogo className="absolute inset-0 m-auto w-6 h-6 animate-pulse" />
             </div>
             <div className="flex flex-col items-center gap-1.5 text-center">
-              <h3 className="text-xs font-bold uppercase tracking-[0.3em] text-white">Sincronizzazione</h3>
+              <h3 className={cn("text-xs font-bold uppercase tracking-[0.3em]", theme === 'dark' ? "text-white" : "text-gray-900")}>Sincronizzazione</h3>
               <p className="text-gray-500 text-[10px] font-medium tracking-widest uppercase opacity-50">Preparazione campo Analitico...</p>
             </div>
           </motion.div>
@@ -993,44 +1003,54 @@ export default function App() {
       </AnimatePresence>
 
       {/* Header */}
-      <header className="bg-[#070708]/50 border-b border-white/[0.03] backdrop-blur-3xl sticky top-0 z-50">
-        <div className="max-w-[1600px] mx-auto px-6 h-20 flex items-center justify-between gap-8">
+      <header className={cn(
+        "border-b backdrop-blur-3xl sticky top-0 z-50 transition-colors duration-500",
+        theme === 'dark' ? "bg-[#070708]/50 border-white/[0.03]" : "bg-white/70 border-gray-100"
+      )}>
+        <div className="max-w-[1600px] mx-auto px-6 h-18 flex items-center justify-between gap-8">
           <div className="flex items-center gap-5">
-            <div className="w-11 h-11 flex items-center justify-center bg-white/[0.03] border border-white/5 rounded-2xl shadow-xl relative group overflow-hidden transition-all duration-500 hover:border-blue-500/20">
+            <div className={cn(
+              "w-10 h-10 flex items-center justify-center rounded-xl shadow-xl relative group overflow-hidden transition-all duration-500 hover:border-blue-500/20 border",
+              theme === 'dark' ? "bg-white/[0.03] border-white/5" : "bg-gray-50 border-gray-200"
+            )}>
               <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 to-blue-400/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-              <AppLogo className="w-7 h-7 relative z-10 group-hover:scale-105 transition-transform duration-500" />
+              <AppLogo className="w-6 h-6 relative z-10 group-hover:scale-105 transition-transform duration-500" />
             </div>
             <div className="flex flex-col">
               <div className="flex items-center gap-2.5">
-                <h1 className="font-black text-lg tracking-tight text-white leading-none uppercase">
+                <h1 className={cn("font-black text-base tracking-tight leading-none uppercase", theme === 'dark' ? "text-white" : "text-gray-900")}>
                   Analytic <span className="text-blue-500">Hub</span>
                 </h1>
                 <div className="flex gap-1 items-center">
                   <span className="w-1 h-1 rounded-full bg-blue-500 animate-pulse" />
-                  <span className="w-1 h-1 rounded-full bg-white/10" />
+                  <span className={cn("w-1 h-1 rounded-full", theme === 'dark' ? "bg-white/10" : "bg-gray-200")} />
                 </div>
               </div>
-              <div className="flex items-center gap-2 mt-2">
+              <div className="flex items-center gap-2 mt-1.5">
                 <button 
                   onClick={() => setShowMatchSettings(true)}
                   className="flex items-center gap-2 hover:text-blue-400 transition-all group/match whitespace-nowrap"
                 >
-                  <span className="text-[9px] font-bold text-gray-500 uppercase tracking-[0.1em] group-hover/match:text-blue-400/80 transition-colors">
-                    {teamName} <span className="text-gray-700 italic lowercase mx-0.5 opacity-50">vs</span> {awayTeam || 'Avversario'}
+                  <span className={cn("text-[8px] font-bold uppercase tracking-[0.1em] group-hover/match:text-blue-400/80 transition-colors", theme === 'dark' ? "text-gray-500" : "text-gray-400")}>
+                    {teamName} <span className="italic lowercase mx-0.5 opacity-50">vs</span> {awayTeam || 'Avversario'}
                   </span>
-                  <Settings className="w-2.5 h-2.5 text-gray-700 group-hover/match:text-blue-400 opacity-50 transition-all" />
+                  <Settings className="w-2 h-2 text-gray-700 group-hover/match:text-blue-400 opacity-50 transition-all" />
                 </button>
               </div>
             </div>
           </div>
 
-          {/* Tab Switcher */}
-          <div className="flex items-center bg-white/[0.03] border border-white/5 rounded-2xl p-1 gap-1">
+          <div className={cn(
+            "flex items-center border rounded-xl p-1 gap-1",
+            theme === 'dark' ? "bg-white/[0.03] border-white/5" : "bg-gray-50 border-gray-100"
+          )}>
             <button
               onClick={() => setActiveTab('xg')}
               className={cn(
-                "px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                activeTab === 'xg' ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20" : "text-gray-500 hover:text-white"
+                "px-5 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
+                activeTab === 'xg' 
+                  ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20" 
+                  : (theme === 'dark' ? "text-gray-500 hover:text-white" : "text-gray-400 hover:text-gray-600")
               )}
             >
               Campo
@@ -1038,23 +1058,28 @@ export default function App() {
             <button
               onClick={() => setActiveTab('ipo')}
               className={cn(
-                "px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                activeTab === 'ipo' ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20" : "text-gray-500 hover:text-white"
+                "px-5 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
+                activeTab === 'ipo' 
+                  ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20" 
+                  : (theme === 'dark' ? "text-gray-500 hover:text-white" : "text-gray-400 hover:text-gray-600")
               )}
             >
               IPO
             </button>
           </div>
 
-          <div className="flex items-center gap-8">
-            <div className="hidden lg:flex items-center bg-white/[0.02] border border-white/5 rounded-2xl px-5 py-2 gap-6">
-              <div className="flex items-center gap-2.5">
-                <div className={cn("w-1.5 h-1.5 rounded-full transition-colors", isOnline ? "bg-emerald-500" : "bg-red-500 animate-pulse")} />
-                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest leading-none">{isOnline ? 'Online' : 'Offline'}</span>
+          <div className="flex items-center gap-6">
+            <div className={cn(
+              "hidden lg:flex items-center border rounded-xl px-4 py-1.5 gap-4",
+              theme === 'dark' ? "bg-white/[0.02] border-white/5" : "bg-gray-50 border-gray-100"
+            )}>
+              <div className="flex items-center gap-2">
+                <div className={cn("w-1 h-1 rounded-full transition-colors", isOnline ? "bg-emerald-500" : "bg-red-500 animate-pulse")} />
+                <span className="text-[8px] font-bold text-gray-500 uppercase tracking-widest leading-none">{isOnline ? 'Online' : 'Offline'}</span>
               </div>
-              <div className="w-px h-3.5 bg-white/10" />
-              <div className="flex items-center gap-2.5 text-[10px] font-black font-mono tabular-nums text-white/90 leading-none tracking-widest">
-                <Clock className="w-3.5 h-3.5 text-gray-500" />
+              <div className={cn("w-px h-3", theme === 'dark' ? "bg-white/10" : "bg-gray-200")} />
+              <div className={cn("flex items-center gap-2 text-[9px] font-black font-mono tabular-nums leading-none tracking-widest", theme === 'dark' ? "text-white/90" : "text-gray-900")}>
+                <Clock className="w-3 h-3 text-gray-500" />
                 {String(Math.floor(timerSeconds / 60)).padStart(2, '0')}:{String(timerSeconds % 60).padStart(2, '0')}
               </div>
             </div>
@@ -1063,75 +1088,97 @@ export default function App() {
               <button 
                 onClick={() => setIsTimerRunning(!isTimerRunning)}
                 className={cn(
-                  "px-4 py-2.5 rounded-2xl transition-all border outline-none",
+                  "px-4 py-2 rounded-xl transition-all border outline-none font-black uppercase tracking-widest text-[9px]",
                   isTimerRunning 
-                    ? "bg-yellow-500/10 border-yellow-500/20 text-yellow-500 hover:bg-yellow-500/20" 
-                    : "bg-blue-600/10 border-blue-500/20 text-blue-500 hover:bg-blue-600/20"
+                    ? (theme === 'dark' ? "bg-yellow-500/10 border-yellow-500/20 text-yellow-500 hover:bg-yellow-500/20" : "bg-yellow-500 text-white border-yellow-500 shadow-lg shadow-yellow-500/20")
+                    : (theme === 'dark' ? "bg-blue-600/10 border-blue-500/20 text-blue-500 hover:bg-blue-600/20" : "bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-600/20")
                 )}
               >
                 <div className="flex items-center gap-2">
-                  {isTimerRunning ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-                  <span className="text-[10px] font-bold uppercase tracking-widest hidden xs:inline">{isTimerRunning ? 'Pausa' : 'Avvia'}</span>
+                  {isTimerRunning ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+                  <span className="hidden xs:inline">{isTimerRunning ? 'Pausa' : 'Avvia'}</span>
                 </div>
               </button>
               
-              <div className="h-8 w-px bg-white/5 mx-1" />
+              <div className={cn("h-6 w-px mx-1", theme === 'dark' ? "bg-white/5" : "bg-gray-100")} />
 
               <div className="flex items-center gap-2">
                 <button 
+                  onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                  className={cn(
+                    "p-2.5 rounded-xl border transition-all outline-none",
+                    theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-500 hover:text-white" : "bg-gray-50 border-gray-100 text-gray-400 hover:text-gray-900"
+                  )}
+                  title={theme === 'dark' ? "Modalità Chiara" : "Modalità Scura"}
+                >
+                  {theme === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+                </button>
+                <button 
                   onClick={() => setShowMatchList(true)}
-                  className="p-3 rounded-2xl bg-white/[0.02] border border-white/5 text-gray-500 hover:text-white hover:border-white/10 transition-all outline-none"
+                  className={cn(
+                    "p-2.5 rounded-xl border transition-all outline-none",
+                    theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-500 hover:text-white" : "bg-gray-50 border-gray-100 text-gray-400 hover:text-gray-900"
+                  )}
                   title="Le mie partite"
                 >
-                  <List className="w-4 h-4" />
+                  <List className="w-3.5 h-3.5" />
                 </button>
                 <button 
                   onClick={() => user ? logout() : login()}
-                  className="p-3 rounded-2xl bg-white/[0.02] border border-white/5 text-gray-500 hover:text-white hover:border-white/10 transition-all outline-none"
+                  className={cn(
+                    "p-2.5 rounded-xl border transition-all outline-none",
+                    theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-500 hover:text-white" : "bg-gray-50 border-gray-100 text-gray-400 hover:text-gray-900"
+                  )}
                   title={user ? "Logout" : "Accedi"}
                 >
-                  {user ? <LogOut className="w-4 h-4" /> : <LogIn className="w-4 h-4" />}
+                  {user ? <LogOut className="w-3.5 h-3.5" /> : <LogIn className="w-3.5 h-3.5" />}
                 </button>
               </div>
             </div>
 
-            <div className="hidden sm:block h-8 w-px bg-white/10" />
+            <div className={cn("hidden sm:block h-6 w-px mx-1", theme === 'dark' ? "bg-white/10" : "bg-gray-200")} />
 
             {activeTab === 'xg' && (
               <div className="flex items-center gap-3">
-                <div className="flex items-center bg-white/5 rounded-lg p-1 border border-white/10">
+                <div className={cn(
+                  "flex items-center rounded-xl p-1 border",
+                  theme === 'dark' ? "bg-white/5 border-white/10" : "bg-gray-50 border-gray-200"
+                )}>
                   <button 
                     onClick={() => setShowHeatmap(!showHeatmap)}
                     className={cn(
-                      "px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-[10px] sm:text-xs font-medium transition-all flex items-center gap-1.5 sm:gap-2",
-                      showHeatmap ? "bg-blue-600 text-white shadow-lg" : "text-gray-400 hover:text-white"
+                      "px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all flex items-center gap-2",
+                      showHeatmap 
+                        ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20" 
+                        : (theme === 'dark' ? "text-gray-400 hover:text-white" : "text-gray-400 hover:text-gray-600")
                     )}
                   >
-                    <Flame className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                    <Flame className="w-3 h-3" />
                     <span className="hidden xs:inline">Heat Map</span>
                   </button>
                   <button 
                     onClick={() => setShowGridValues(!showGridValues)}
                     className={cn(
-                      "px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-[10px] sm:text-xs font-medium transition-all flex items-center gap-1.5 sm:gap-2",
-                      showGridValues ? "bg-blue-600 text-white shadow-lg" : "text-gray-400 hover:text-white"
+                      "px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all flex items-center gap-2",
+                      showGridValues 
+                        ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20" 
+                        : (theme === 'dark' ? "text-gray-400 hover:text-white" : "text-gray-400 hover:text-gray-600")
                     )}
                   >
-                    <Hash className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                    <Hash className="w-3 h-3" />
                     <span className="hidden xs:inline">Grid</span>
                   </button>
                 </div>
 
-                <div className="hidden xl:flex items-center gap-2 mr-2">
-                </div>
-
-
                 {showHeatmap && (
-                  <div className="hidden lg:flex items-center gap-4 bg-white/5 border border-white/10 rounded-xl px-3 py-1.5">
+                  <div className={cn(
+                    "hidden lg:flex items-center gap-4 border rounded-xl px-3 py-1.5",
+                    theme === 'dark' ? "bg-white/5 border-white/10" : "bg-gray-50 border-gray-200"
+                  )}>
                     <div className="flex flex-col gap-1">
                       <div className="flex justify-between items-center">
-                        <span className="text-[8px] font-black text-gray-500 uppercase">Opacità</span>
-                        <span className="text-[8px] font-bold text-blue-500">{Math.round(heatmapOpacity * 100)}%</span>
+                        <span className="text-[7px] font-black text-gray-500 uppercase">Opacità</span>
+                        <span className="text-[7px] font-bold text-blue-500">{Math.round(heatmapOpacity * 100)}%</span>
                       </div>
                       <input 
                         type="range" 
@@ -1140,29 +1187,26 @@ export default function App() {
                         step="0.1" 
                         value={heatmapOpacity}
                         onChange={(e) => setHeatmapOpacity(parseFloat(e.target.value))}
-                        className="w-20 h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                        className="w-16 h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-blue-600"
                       />
                     </div>
-                    <div className="w-px h-6 bg-white/10" />
+                    <div className={cn("w-px h-6", theme === 'dark' ? "bg-white/10" : "bg-gray-200")} />
                     <div className="flex flex-col gap-1">
-                      <div className="flex justify-between items-center">
-                        <span className="text-[8px] font-black text-gray-500 uppercase">Scala Colore</span>
-                        <span className="text-[8px] font-bold text-blue-500 uppercase">{heatmapScale}</span>
-                      </div>
+                      <span className="text-[7px] font-black text-gray-500 uppercase">Scala</span>
                       <div className="flex items-center gap-1">
                         {(['default', 'viridis', 'plasma', 'hot'] as const).map((scale) => (
                           <button
                             key={scale}
                             onClick={() => setHeatmapScale(scale)}
                             className={cn(
-                              "w-4 h-4 rounded-full border border-white/10 transition-all",
+                              "w-3 h-3 rounded-full border transition-all",
+                              theme === 'dark' ? "border-white/10" : "border-gray-200",
                               heatmapScale === scale ? "ring-2 ring-blue-500 scale-110" : "opacity-50 hover:opacity-100",
                               scale === 'default' && "bg-gradient-to-r from-green-500 via-yellow-500 to-red-500",
                               scale === 'viridis' && "bg-gradient-to-r from-[#440154] via-[#21908d] to-[#fde725]",
                               scale === 'plasma' && "bg-gradient-to-r from-[#0d0887] via-[#9c179e] to-[#f0f921]",
                               scale === 'hot' && "bg-gradient-to-r from-[#800000] via-[#ff0000] to-[#ffff00]"
                             )}
-                            title={scale.charAt(0).toUpperCase() + scale.slice(1)}
                           />
                         ))}
                       </div>
@@ -1172,116 +1216,60 @@ export default function App() {
               </div>
             )}
 
-              <div className="flex items-center gap-2">
-                <motion.button 
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={exportToExcel}
-                  disabled={isSaving}
-                  className="p-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white transition-all shadow-lg shadow-emerald-500/20 flex items-center gap-2 disabled:opacity-50"
-                  title="Esporta Excel"
-                >
-                  <FileSpreadsheet className="w-4 h-4" />
-                  <span className="hidden xl:inline text-xs font-bold">Report Excel</span>
-                </motion.button>
-
-              <div className="h-8 w-px bg-white/10 mx-1" />
-
-              <motion.button 
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setShowXGTuning(true)}
-                className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all border border-white/10 flex items-center gap-2"
-                title="Personalizza xG"
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={exportToExcel}
+                className={cn(
+                  "p-2.5 rounded-xl border transition-all outline-none",
+                  theme === 'dark' ? "bg-emerald-600/10 border-emerald-500/20 text-emerald-500 hover:bg-emerald-600/20" : "bg-emerald-50 border-emerald-100 text-emerald-600 hover:bg-emerald-100"
+                )}
+                title="Esporta Excel"
               >
-                <Activity className="w-4 h-4" />
-                <span className="hidden xl:inline text-xs font-bold">Modello xG</span>
-              </motion.button>
+                <FileSpreadsheet className="w-3.5 h-3.5" />
+              </button>
 
-              {currentMatchId && !isReadOnly && (
-                <motion.button 
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
+              <button 
+                onClick={() => setShowXGTuning(true)}
+                className={cn(
+                  "p-2.5 rounded-xl border transition-all outline-none",
+                  theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-500 hover:text-white" : "bg-gray-50 border-gray-100 text-gray-400 hover:text-gray-900"
+                )}
+                title="Personalizza Modello"
+              >
+                <Settings2 className="w-3.5 h-3.5" />
+              </button>
+
+              {user && currentMatchId && !isReadOnly && (
+                <button 
                   onClick={() => {
                     const url = `${window.location.origin}${window.location.pathname}?matchId=${currentMatchId}`;
                     navigator.clipboard.writeText(url);
-                    setShowToast({ message: "Link di invito copiato! Invialo ai tuoi amici per collaborare (sola lettura).", type: 'success' });
+                    setShowToast({ message: "Link di invito copiato!", type: 'success' });
                   }}
-                  className="p-2.5 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-500/30 flex items-center gap-2 transition-all"
+                  className={cn(
+                    "p-2.5 rounded-xl border transition-all outline-none",
+                    theme === 'dark' ? "bg-blue-600/10 border-blue-500/20 text-blue-400 hover:bg-blue-600/20" : "bg-blue-50 border-blue-100 text-blue-600 hover:bg-blue-100"
+                  )}
                   title="Invita Collaboratori"
                 >
-                  <UserPlus className="w-4 h-4" />
-                  <span className="hidden xl:inline text-xs font-bold">Invita</span>
-                </motion.button>
+                  <UserPlus className="w-3.5 h-3.5" />
+                </button>
               )}
 
-              {deferredPrompt && (
-                <motion.button 
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={installPWA}
-                  className="p-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white flex items-center gap-2 transition-all shadow-lg shadow-blue-500/20"
+              {user && !isReadOnly && (
+                <button 
+                  onClick={saveMatch}
+                  disabled={isSaving}
+                  className={cn(
+                    "p-2.5 rounded-xl border transition-all outline-none",
+                    isSaving 
+                      ? "opacity-50 cursor-not-allowed" 
+                      : (theme === 'dark' ? "bg-blue-600/10 border-blue-500/20 text-blue-500 hover:bg-blue-600/20" : "bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-600/20")
+                  )}
+                  title="Salva Partita"
                 >
-                  <Download className="w-4 h-4" />
-                  <span className="hidden sm:inline text-xs font-black uppercase tracking-widest">Installa</span>
-                </motion.button>
-              )}
-
-              {user ? (
-                <>
-                  <motion.button 
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => setShowMatchSettings(true)}
-                    disabled={isReadOnly}
-                    className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all border border-white/10 flex items-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed"
-                    title="Impostazioni Partita"
-                  >
-                    <Settings className="w-4 h-4" />
-                    <span className="hidden xl:inline text-xs font-bold">Impostazioni</span>
-                  </motion.button>
-                  <motion.button 
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => setShowMatchList(true)}
-                    className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all border border-white/10 flex items-center gap-2"
-                    title="Le mie partite"
-                  >
-                    <List className="w-4 h-4" />
-                    <span className="hidden xl:inline text-xs font-bold">Partite</span>
-                  </motion.button>
-                  <motion.button 
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={saveMatch}
-                    disabled={isSaving || isReadOnly}
-                    className="p-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white transition-all shadow-lg shadow-blue-500/20 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                    title="Salva Partita"
-                  >
-                    {isSaving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                    <span className="hidden xl:inline text-xs font-bold">Salva</span>
-                  </motion.button>
-                  <motion.button 
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={logout}
-                    className="p-2.5 rounded-xl bg-white/5 hover:bg-red-500/20 text-gray-400 hover:text-red-500 transition-all border border-white/10"
-                    title="Logout"
-                  >
-                    <LogOut className="w-4 h-4" />
-                  </motion.button>
-                </>
-              ) : (
-                <motion.button 
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={login}
-                  disabled={isLoggingIn}
-                  className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs transition-all flex items-center gap-2 shadow-lg shadow-blue-500/20 disabled:opacity-50"
-                >
-                  {isLoggingIn ? <RefreshCw className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
-                  {isLoggingIn ? 'Accesso...' : 'Accedi'}
-                </motion.button>
+                  {isSaving ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                </button>
               )}
             </div>
           </div>
@@ -1296,7 +1284,10 @@ export default function App() {
               <motion.div 
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-white/[0.02] border border-white/[0.05] rounded-3xl p-6 group hover:border-blue-500/20 transition-all duration-500"
+                className={cn(
+                  "border rounded-3xl p-6 group hover:border-blue-500/20 transition-all duration-500",
+                  theme === 'dark' ? "bg-white/[0.02] border-white/[0.05]" : "bg-white border-gray-100 shadow-sm"
+                )}
               >
                 <div className="flex items-center justify-between mb-4">
                   <div className="w-8 h-8 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500">
@@ -1307,7 +1298,7 @@ export default function App() {
                 <div className="space-y-1">
                   <p className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Expected Goals</p>
                   <div className="flex items-baseline gap-2">
-                    <span className="text-3xl font-black text-white tabular-nums tracking-tight">
+                    <span className={cn("text-3xl font-black tabular-nums tracking-tight", theme === 'dark' ? "text-white" : "text-gray-900")}>
                       <AnimatedCounter value={displayXG} />
                     </span>
                     <span className="text-xs font-bold text-blue-500/60 uppercase">xG</span>
@@ -1319,7 +1310,10 @@ export default function App() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                className="bg-white/[0.02] border border-white/[0.05] rounded-3xl p-6 group hover:border-yellow-500/20 transition-all duration-500"
+                className={cn(
+                  "border rounded-3xl p-6 group hover:border-yellow-500/20 transition-all duration-500",
+                  theme === 'dark' ? "bg-white/[0.02] border-white/[0.05]" : "bg-white border-gray-100 shadow-sm"
+                )}
               >
                 <div className="flex items-center justify-between mb-4">
                   <div className="w-8 h-8 rounded-xl bg-yellow-500/10 flex items-center justify-center text-yellow-500">
@@ -1329,7 +1323,7 @@ export default function App() {
                 <div className="space-y-1">
                   <p className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Gol Reali</p>
                   <div className="flex items-baseline gap-2">
-                    <span className="text-3xl font-black text-white tabular-nums tracking-tight">{displayGoals}</span>
+                    <span className={cn("text-3xl font-black tabular-nums tracking-tight", theme === 'dark' ? "text-white" : "text-gray-900")}>{displayGoals}</span>
                     <span className="text-xs font-bold text-yellow-500/60 uppercase">GOL</span>
                   </div>
                 </div>
@@ -1339,7 +1333,10 @@ export default function App() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className="bg-white/[0.02] border border-white/[0.05] rounded-3xl p-6 group hover:border-emerald-500/20 transition-all duration-500"
+                className={cn(
+                  "border rounded-3xl p-6 group hover:border-emerald-500/20 transition-all duration-500",
+                  theme === 'dark' ? "bg-white/[0.02] border-white/[0.05]" : "bg-white border-gray-100 shadow-sm"
+                )}
               >
                 <div className="flex items-center justify-between mb-4">
                   <div className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
@@ -1349,7 +1346,7 @@ export default function App() {
                 <div className="space-y-1">
                   <p className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">xG/Tiro</p>
                   <div className="flex items-baseline gap-2">
-                    <span className="text-3xl font-black text-white tabular-nums tracking-tight">
+                    <span className={cn("text-3xl font-black tabular-nums tracking-tight", theme === 'dark' ? "text-white" : "text-gray-900")}>
                       <AnimatedCounter value={displayXGPerShot} decimals={2} />
                     </span>
                     <span className="text-xs font-bold text-emerald-500/60 uppercase">Qualità</span>
@@ -1361,7 +1358,10 @@ export default function App() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
-                className="bg-white/[0.02] border border-white/[0.05] rounded-3xl p-6 group hover:border-purple-500/20 transition-all duration-500"
+                className={cn(
+                  "border rounded-3xl p-6 group hover:border-purple-500/20 transition-all duration-500",
+                  theme === 'dark' ? "bg-white/[0.02] border-white/[0.05]" : "bg-white border-gray-100 shadow-sm"
+                )}
               >
                 <div className="flex items-center justify-between mb-4">
                   <div className="w-8 h-8 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-500">
@@ -1371,7 +1371,7 @@ export default function App() {
                 <div className="space-y-1">
                   <p className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Indice IPO</p>
                   <div className="flex items-baseline gap-2">
-                    <span className="text-3xl font-black text-white tabular-nums tracking-tight">
+                    <span className={cn("text-3xl font-black tabular-nums tracking-tight", theme === 'dark' ? "text-white" : "text-gray-900")}>
                       <AnimatedCounter value={ipo} decimals={1} />
                     </span>
                     <div className={cn(
@@ -1388,12 +1388,18 @@ export default function App() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
               {/* Pitch Area */}
               <div className="lg:col-span-8 flex flex-col gap-6">
-                <div className="relative bg-white/[0.01] border border-white/[0.03] rounded-[3rem] p-4 sm:p-6 lg:p-8 overflow-hidden group/field">
+                <div className={cn(
+                  "relative border rounded-[3rem] p-4 sm:p-6 lg:p-8 overflow-hidden group/field transition-colors",
+                  theme === 'dark' ? "bg-white/[0.01] border-white/[0.03]" : "bg-white border-gray-100 shadow-sm"
+                )}>
                   {/* Field Tools */}
                   <div className="absolute top-8 left-8 flex items-center gap-3 z-10 pointer-events-none">
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-950/80 backdrop-blur-xl border border-white/5 rounded-full ring-1 ring-white/5">
+                    <div className={cn(
+                      "flex items-center gap-1.5 px-3 py-1.5 backdrop-blur-xl border rounded-full ring-1",
+                      theme === 'dark' ? "bg-gray-950/80 border-white/5 ring-white/5" : "bg-white/80 border-gray-200 ring-gray-100 shadow-sm"
+                    )}>
                       <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-                      <span className="text-[9px] font-black text-white uppercase tracking-[0.2em]">Analisi Campo</span>
+                      <span className={cn("text-[9px] font-black uppercase tracking-[0.2em]", theme === 'dark' ? "text-white" : "text-gray-900")}>Analisi Campo</span>
                     </div>
                   </div>
 
@@ -1403,7 +1409,10 @@ export default function App() {
                       whileTap={{ scale: 0.95 }}
                       onClick={() => undoLastShot()}
                       disabled={shots.length === 0 || isReadOnly}
-                      className="p-2.5 rounded-xl bg-gray-950/80 backdrop-blur-xl border border-white/5 text-gray-400 hover:text-white disabled:opacity-20 transition-all outline-none"
+                      className={cn(
+                        "p-2.5 rounded-xl border transition-all outline-none disabled:opacity-20",
+                        theme === 'dark' ? "bg-gray-950/80 backdrop-blur-xl border-white/5 text-gray-400 hover:text-white" : "bg-white/80 backdrop-blur-xl border-gray-200 text-gray-400 hover:text-gray-900 shadow-sm"
+                      )}
                     >
                       <Undo2 className="w-4 h-4" />
                     </motion.button>
@@ -1414,18 +1423,18 @@ export default function App() {
                     ref={pitchRef}
                     onClick={handlePitchClick}
                     className={cn(
-                      "relative aspect-[34/17] w-full bg-[#0a0a0b] border border-white/5 rounded-[2rem] overflow-hidden shadow-2xl cursor-crosshair transition-all duration-1000",
+                      "relative aspect-[34/17] w-full border rounded-[2rem] overflow-hidden shadow-2xl cursor-crosshair transition-all duration-1000",
+                      theme === 'dark' ? "bg-[#0a0a0b] border-white/5" : "bg-gray-50 border-gray-200",
                       isTimerRunning ? "shadow-[0_0_80px_-20px_rgba(59,130,246,0.15)] ring-1 ring-blue-500/20" : ""
                     )}
                   >
                     {/* Minimal Markings */}
                     <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-[0.07]" viewBox="0 0 68 34">
-                      <rect x="0" y="0" width="68" height="34" fill="none" stroke="white" strokeWidth="0.15" />
-                      <rect x="13.84" y="0" width="40.32" height="16.5" fill="none" stroke="white" strokeWidth="0.15" />
-                      <rect x="24.84" y="0" width="18.32" height="5.5" fill="none" stroke="white" strokeWidth="0.15" />
-                      <circle cx="34" cy="11" r="0.2" fill="white" />
-                      <path d="M 27.5 16.5 A 9.15 9.15 0 0 0 40.5 16.5" fill="none" stroke="white" strokeWidth="0.15" />
-                      <rect x="0" y="17" width="68" height="0.1" fill="white" fillOpacity="0.5" />
+                      <rect x="0" y="0" width="68" height="34" fill="none" stroke={theme === 'dark' ? "white" : "#3b82f6"} strokeWidth="0.15" />
+                      <rect x="13.84" y="0" width="40.32" height="16.5" fill="none" stroke={theme === 'dark' ? "white" : "#3b82f6"} strokeWidth="0.15" />
+                      <rect x="24.84" y="0" width="18.32" height="5.5" fill="none" stroke={theme === 'dark' ? "white" : "#3b82f6"} strokeWidth="0.15" />
+                      <circle cx="34" cy="11" r="0.2" fill={theme === 'dark' ? "white" : "#3b82f6"} />
+                      <path d="M 27.5 16.5 A 9.15 9.15 0 0 0 40.5 16.5" fill="none" stroke={theme === 'dark' ? "white" : "#3b82f6"} strokeWidth="0.15" />
                     </svg>
 
                     {/* Heatmap */}
@@ -1592,13 +1601,19 @@ export default function App() {
                         <div className="flex flex-col gap-2">
                            <button 
                              onClick={() => removeShot(selectedShot.id)}
-                             className="w-full py-4 bg-red-500/5 hover:bg-red-500/10 text-red-500 border border-red-500/20 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all"
+                             className={cn(
+                               "w-full py-4 border rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all",
+                               theme === 'dark' ? "bg-red-500/5 hover:bg-red-500/10 text-red-500 border-red-500/20" : "bg-red-50 hover:bg-red-100 text-red-600 border-red-100"
+                             )}
                            >
                              Elimina Tiro
                            </button>
                            <button 
                              onClick={() => setSelectedShot(null)}
-                             className="w-full py-4 bg-white/5 hover:bg-white/10 text-gray-400 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all"
+                             className={cn(
+                               "w-full py-4 border rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all",
+                               theme === 'dark' ? "bg-white/5 hover:bg-white/10 text-gray-400 border-white/10" : "bg-gray-50 hover:bg-gray-100 text-gray-500 border-gray-100"
+                             )}
                            >
                              Chiudi Modifica
                            </button>
@@ -1606,11 +1621,24 @@ export default function App() {
                       )}
                       
                       <div className="grid grid-cols-2 gap-3">
-                        <button onClick={saveMatch} disabled={isSaving || isReadOnly} className="flex-1 py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-blue-500/10 flex items-center justify-center gap-2 disabled:opacity-30">
+                        <button 
+                          onClick={saveMatch} 
+                          disabled={isSaving || isReadOnly} 
+                          className={cn(
+                            "flex-1 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 disabled:opacity-30",
+                            theme === 'dark' ? "bg-blue-600 hover:bg-blue-500 text-white shadow-xl shadow-blue-500/10" : "bg-blue-600 text-white shadow-lg shadow-blue-600/20"
+                          )}
+                        >
                           <Save className="w-3.5 h-3.5" /> Salva
                         </button>
-                        <button onClick={exportToExcel} className="flex-1 py-4 bg-white/5 hover:bg-white/10 text-white border border-white/5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2">
-                          <FileDown className="w-3.5 h-3.5" /> Export
+                        <button 
+                          onClick={exportToExcel} 
+                          className={cn(
+                            "flex-1 py-4 border rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2",
+                            theme === 'dark' ? "bg-white/5 hover:bg-white/10 text-white border-white/5" : "bg-gray-50 hover:bg-gray-100 text-gray-700 border-gray-100"
+                          )}
+                        >
+                          <FileSpreadsheet className="w-3.5 h-3.5" /> Export
                         </button>
                       </div>
                     </div>
@@ -1618,10 +1646,13 @@ export default function App() {
                 </section>
 
                 {/* Event Feed Bento Card */}
-                <div className="bg-white/[0.02] border border-white/[0.05] rounded-[2.5rem] p-7 h-[300px] flex flex-col">
+                <div className={cn(
+                  "border rounded-[2.5rem] p-7 h-[300px] flex flex-col transition-colors",
+                  theme === 'dark' ? "bg-white/[0.02] border-white/[0.05]" : "bg-white border-gray-100 shadow-sm"
+                )}>
                   <div className="flex items-center justify-between mb-6">
                     <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Live Feed</h3>
-                    <div className="px-2 py-1 bg-white/5 rounded-lg text-[8px] font-black text-blue-500">{matchEvents.length} EVENTI</div>
+                    <div className="px-2 py-1 bg-blue-500/10 rounded-lg text-[8px] font-black text-blue-500">{matchEvents.length} EVENTI</div>
                   </div>
                   <div className="flex-1 overflow-y-auto no-scrollbar space-y-3">
                     {matchEvents.length === 0 ? (
@@ -1631,7 +1662,10 @@ export default function App() {
                       </div>
                     ) : (
                       matchEvents.map(event => (
-                        <div key={event.id} className="flex gap-4 p-3 bg-white/[0.02] border border-white/[0.03] rounded-2xl group hover:border-white/10 transition-all">
+                        <div key={event.id} className={cn(
+                          "flex gap-4 p-3 border rounded-2xl group transition-all",
+                          theme === 'dark' ? "bg-white/[0.02] border-white/[0.03] hover:border-white/10" : "bg-gray-50 border-gray-100 hover:border-gray-200"
+                        )}>
                           <div className={cn(
                             "w-8 h-8 rounded-xl flex items-center justify-center shrink-0",
                             event.type === 'goal' ? 'bg-yellow-500/10 text-yellow-500' : 'bg-blue-600/10 text-blue-500'
@@ -1639,7 +1673,7 @@ export default function App() {
                             {event.type === 'goal' ? <Trophy className="w-4 h-4" /> : <Target className="w-4 h-4" />}
                           </div>
                           <div>
-                            <p className="text-[10px] font-black text-white leading-snug">{event.description}</p>
+                            <p className={cn("text-[10px] font-black leading-snug", theme === 'dark' ? "text-white" : "text-gray-900")}>{event.description}</p>
                             <p className="text-[8px] font-bold text-gray-600 uppercase tracking-widest mt-1">Minuto {event.minute}'</p>
                           </div>
                         </div>
@@ -1671,6 +1705,7 @@ export default function App() {
             weights={weights}
             addMatchEvent={addMatchEvent}
             isReadOnly={isReadOnly}
+            theme={theme}
           />
         )}
       </main>
@@ -1690,21 +1725,30 @@ export default function App() {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-md bg-[#121212] border border-white/10 rounded-3xl shadow-2xl overflow-hidden"
+              className={cn(
+                "relative w-full max-w-md border rounded-3xl shadow-2xl overflow-hidden",
+                theme === 'dark' ? "bg-[#121212] border-white/10" : "bg-white border-gray-100"
+              )}
             >
-              <div className="p-6 border-b border-white/10 flex items-center justify-between">
+              <div className={cn(
+                "p-6 border-b flex items-center justify-between",
+                theme === 'dark' ? "border-white/10" : "border-gray-100"
+              )}>
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-blue-600/10 rounded-xl flex items-center justify-center">
                     <Settings className="text-blue-500 w-5 h-5" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-black text-white">Impostazioni Partita</h2>
+                    <h2 className={cn("text-lg font-black", theme === 'dark' ? "text-white" : "text-gray-900")}>Impostazioni Partita</h2>
                     <p className="text-xs text-gray-500 font-medium">Configura le squadre</p>
                   </div>
                 </div>
                 <button 
                   onClick={() => setShowMatchSettings(false)}
-                  className="w-10 h-10 bg-white/5 hover:bg-white/10 rounded-xl flex items-center justify-center text-gray-400 hover:text-white transition-all"
+                  className={cn(
+                    "w-10 h-10 rounded-xl flex items-center justify-center transition-all",
+                    theme === 'dark' ? "bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white" : "bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-900"
+                  )}
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -1720,7 +1764,10 @@ export default function App() {
                       value={teamName}
                       onChange={(e) => setTeamName(e.target.value)}
                       placeholder="Nome Squadra Casa"
-                      className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-white"
+                      className={cn(
+                        "w-full border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all",
+                        theme === 'dark' ? "bg-black/40 border-white/10 text-white" : "bg-gray-50 border-gray-200 text-gray-900"
+                      )}
                     />
                     <div className="flex items-center gap-3">
                       <input 
@@ -1734,7 +1781,7 @@ export default function App() {
                   </div>
                 </div>
 
-                <div className="h-px bg-white/5" />
+                <div className={cn("h-px", theme === 'dark' ? "bg-white/5" : "bg-gray-100")} />
 
                 {/* Away Team */}
                 <div className="space-y-4">
@@ -1745,7 +1792,10 @@ export default function App() {
                       value={awayTeam}
                       onChange={(e) => setAwayTeam(e.target.value)}
                       placeholder="Nome Squadra Ospite"
-                      className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-white"
+                      className={cn(
+                        "w-full border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all",
+                        theme === 'dark' ? "bg-black/40 border-white/10 text-white" : "bg-gray-50 border-gray-200 text-gray-900"
+                      )}
                     />
                     <div className="flex items-center gap-3">
                       <input 
@@ -1759,15 +1809,18 @@ export default function App() {
                   </div>
                 </div>
 
-                <div className="h-px bg-white/5" />
+                <div className={cn("h-px", theme === 'dark' ? "bg-white/5" : "bg-gray-100")} />
 
                 {/* Offline Guide */}
-                <div className="bg-blue-600/10 border border-blue-500/20 rounded-2xl p-4 space-y-2">
-                  <div className="flex items-center gap-2 text-blue-400">
+                <div className={cn(
+                  "border rounded-2xl p-4 space-y-2",
+                  theme === 'dark' ? "bg-blue-600/10 border-blue-500/20" : "bg-blue-50 border-blue-100"
+                )}>
+                  <div className="flex items-center gap-2 text-blue-500">
                     <Shield className="w-4 h-4" />
                     <h3 className="text-[10px] font-black uppercase tracking-widest">Guida Offline</h3>
                   </div>
-                  <p className="text-[10px] text-gray-400 leading-relaxed">
+                  <p className="text-[10px] text-gray-500 leading-relaxed">
                     Per avviare l'app senza internet, aggiungila alla schermata Home (clicca "Installa" nell'header o usa il menu del browser). Una volta installata, l'app si caricherà istantaneamente anche offline.
                   </p>
                 </div>
@@ -1799,21 +1852,30 @@ export default function App() {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-md bg-[#121212] border border-white/10 rounded-3xl shadow-2xl overflow-hidden"
+              className={cn(
+                "relative w-full max-w-md border rounded-3xl shadow-2xl overflow-hidden",
+                theme === 'dark' ? "bg-[#121212] border-white/10" : "bg-white border-gray-100"
+              )}
             >
-              <div className="p-6 border-b border-white/10 flex items-center justify-between">
+              <div className={cn(
+                "p-6 border-b flex items-center justify-between",
+                theme === 'dark' ? "border-white/10" : "border-gray-100"
+              )}>
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-emerald-600/10 rounded-xl flex items-center justify-center">
                     <Activity className="text-emerald-500 w-5 h-5" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-black text-white">Modello xG</h2>
+                    <h2 className={cn("text-lg font-black", theme === 'dark' ? "text-white" : "text-gray-900")}>Modello xG</h2>
                     <p className="text-xs text-gray-500 font-medium">Personalizza i coefficienti del calcolo</p>
                   </div>
                 </div>
                 <button 
                   onClick={() => setShowXGTuning(false)}
-                  className="w-10 h-10 bg-white/5 hover:bg-white/10 rounded-xl flex items-center justify-center text-gray-400 hover:text-white transition-all"
+                  className={cn(
+                    "w-10 h-10 rounded-xl flex items-center justify-center transition-all",
+                    theme === 'dark' ? "bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white" : "bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-900"
+                  )}
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -1868,7 +1930,10 @@ export default function App() {
                       type="number" step="0.1"
                       value={xgCoeffs.beta3Foot}
                       onChange={(e) => setXgCoeffs(prev => ({ ...prev, beta3Foot: parseFloat(e.target.value) }))}
-                      className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:ring-1 focus:ring-emerald-500/50 outline-none"
+                      className={cn(
+                        "w-full border rounded-xl px-3 py-2 text-sm outline-none transition-all",
+                        theme === 'dark' ? "bg-black/40 border-white/10 text-white focus:ring-1 focus:ring-emerald-500/50" : "bg-gray-50 border-gray-200 text-gray-900 focus:ring-1 focus:ring-emerald-500/50"
+                      )}
                     />
                   </div>
                   <div className="space-y-3">
@@ -1877,7 +1942,10 @@ export default function App() {
                       type="number" step="0.1"
                       value={xgCoeffs.beta4Pass}
                       onChange={(e) => setXgCoeffs(prev => ({ ...prev, beta4Pass: parseFloat(e.target.value) }))}
-                      className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:ring-1 focus:ring-emerald-500/50 outline-none"
+                      className={cn(
+                        "w-full border rounded-xl px-3 py-2 text-sm outline-none transition-all",
+                        theme === 'dark' ? "bg-black/40 border-white/10 text-white focus:ring-1 focus:ring-emerald-500/50" : "bg-gray-50 border-gray-200 text-gray-900 focus:ring-1 focus:ring-emerald-500/50"
+                      )}
                     />
                   </div>
                   <div className="space-y-3">
@@ -1886,7 +1954,10 @@ export default function App() {
                       type="number" step="0.1"
                       value={xgCoeffs.beta4Cross}
                       onChange={(e) => setXgCoeffs(prev => ({ ...prev, beta4Cross: parseFloat(e.target.value) }))}
-                      className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:ring-1 focus:ring-emerald-500/50 outline-none"
+                      className={cn(
+                        "w-full border rounded-xl px-3 py-2 text-sm outline-none transition-all",
+                        theme === 'dark' ? "bg-black/40 border-white/10 text-white focus:ring-1 focus:ring-emerald-500/50" : "bg-gray-50 border-gray-200 text-gray-900 focus:ring-1 focus:ring-emerald-500/50"
+                      )}
                     />
                   </div>
                   <div className="space-y-3">
@@ -1895,7 +1966,10 @@ export default function App() {
                       type="number" step="0.1"
                       value={xgCoeffs.beta4Rebound}
                       onChange={(e) => setXgCoeffs(prev => ({ ...prev, beta4Rebound: parseFloat(e.target.value) }))}
-                      className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:ring-1 focus:ring-emerald-500/50 outline-none"
+                      className={cn(
+                        "w-full border rounded-xl px-3 py-2 text-sm outline-none transition-all",
+                        theme === 'dark' ? "bg-black/40 border-white/10 text-white focus:ring-1 focus:ring-emerald-500/50" : "bg-gray-50 border-gray-200 text-gray-900 focus:ring-1 focus:ring-emerald-500/50"
+                      )}
                     />
                   </div>
                 </div>
@@ -1903,7 +1977,10 @@ export default function App() {
                 <div className="flex gap-3 pt-2">
                   <button 
                     onClick={() => setXgCoeffs(DEFAULT_XG_COEFFICIENTS)}
-                    className="flex-1 py-3 bg-white/5 hover:bg-white/10 text-gray-400 font-black rounded-xl transition-all uppercase tracking-widest text-[10px]"
+                    className={cn(
+                      "flex-1 py-3 font-black rounded-xl transition-all uppercase tracking-widest text-[10px]",
+                      theme === 'dark' ? "bg-white/5 hover:bg-white/10 text-gray-400" : "bg-gray-100 hover:bg-gray-200 text-gray-500"
+                    )}
                   >
                     Reset Default
                   </button>
@@ -1929,27 +2006,39 @@ export default function App() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setShowMatchList(false)}
-              className="absolute inset-0 bg-[#070708]/90 backdrop-blur-md"
+              className={cn(
+                "absolute inset-0 backdrop-blur-md",
+                theme === 'dark' ? "bg-[#070708]/90" : "bg-white/90"
+              )}
             />
             <motion.div 
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-2xl bg-[#0d0d0e] border border-white/[0.05] rounded-[2.5rem] shadow-2xl overflow-hidden"
+              className={cn(
+                "relative w-full max-w-2xl border rounded-[2.5rem] shadow-2xl overflow-hidden",
+                theme === 'dark' ? "bg-[#0d0d0e] border-white/[0.05]" : "bg-white border-gray-100"
+              )}
             >
-              <div className="p-8 border-b border-white/[0.03] flex items-center justify-between">
+              <div className={cn(
+                "p-8 border-b flex items-center justify-between",
+                theme === 'dark' ? "border-white/[0.03]" : "border-gray-100"
+              )}>
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-white/[0.03] rounded-2xl flex items-center justify-center">
+                  <div className="w-12 h-12 bg-blue-600/10 rounded-2xl flex items-center justify-center">
                     <List className="text-blue-500 w-5 h-5" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-black text-white uppercase tracking-tight">Le Mie Partite</h2>
+                    <h2 className={cn("text-lg font-black uppercase tracking-tight", theme === 'dark' ? "text-white" : "text-gray-900")}>Le Mie Partite</h2>
                     <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Archivio Analitico</p>
                   </div>
                 </div>
                 <button 
                   onClick={() => setShowMatchList(false)}
-                  className="w-12 h-12 bg-white/[0.03] hover:bg-white/[0.06] rounded-2xl flex items-center justify-center text-gray-500 hover:text-white transition-all outline-none"
+                  className={cn(
+                    "w-12 h-12 rounded-2xl flex items-center justify-center transition-all outline-none",
+                    theme === 'dark' ? "bg-white/[0.03] hover:bg-white/[0.06] text-gray-500 hover:text-white" : "bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-900"
+                  )}
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -1958,16 +2047,19 @@ export default function App() {
               <div className="max-h-[60vh] overflow-y-auto p-6 space-y-4 no-scrollbar">
                 {matches.length === 0 ? (
                   <div className="py-24 text-center">
-                    <div className="w-20 h-20 bg-white/[0.02] rounded-full flex items-center justify-center mx-auto mb-6">
-                      <FileSpreadsheet className="w-8 h-8 text-gray-700" />
+                    <div className="w-20 h-20 bg-gray-500/5 rounded-full flex items-center justify-center mx-auto mb-6">
+                      <FileSpreadsheet className="w-8 h-8 text-gray-400" />
                     </div>
-                    <p className="text-gray-600 text-[10px] font-black uppercase tracking-[0.2em]">Nessuna partita salvata</p>
+                    <p className="text-gray-400 text-[10px] font-black uppercase tracking-[0.2em]">Nessuna partita salvata</p>
                   </div>
                 ) : (
                   matches.map((match) => (
                     <div 
                       key={match.id}
-                      className="group bg-white/[0.01] border border-white/5 hover:border-blue-500/20 rounded-3xl p-5 flex items-center justify-between transition-all"
+                      className={cn(
+                        "group border rounded-3xl p-5 flex items-center justify-between transition-all",
+                        theme === 'dark' ? "bg-white/[0.01] border-white/5 hover:border-blue-500/20" : "bg-gray-50 border-gray-200 hover:border-blue-500/20 hover:shadow-sm"
+                      )}
                     >
                       <div 
                         className={cn(
@@ -1978,9 +2070,9 @@ export default function App() {
                       >
                         <div className="flex items-center gap-4 mb-2">
                           <div className="flex items-center gap-3">
-                            <span className="text-sm font-black text-white uppercase tracking-tight">{match.teamName}</span>
-                            <span className="text-[9px] font-bold text-gray-700 uppercase italic">vs</span>
-                            <span className="text-sm font-black text-white uppercase tracking-tight">{match.awayTeam || 'Avversario'}</span>
+                            <span className={cn("text-sm font-black uppercase tracking-tight", theme === 'dark' ? "text-white" : "text-gray-900")}>{match.teamName}</span>
+                            <span className="text-[9px] font-bold text-gray-500 uppercase italic">vs</span>
+                            <span className={cn("text-sm font-black uppercase tracking-tight", theme === 'dark' ? "text-white" : "text-gray-900")}>{match.awayTeam || 'Avversario'}</span>
                           </div>
                           <div className="px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-500 text-[8px] font-black uppercase tracking-widest">
                             {match.goals} Gol • {match.totalXG.toFixed(2)} xG
@@ -2039,25 +2131,31 @@ export default function App() {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-sm bg-[#121212] border border-white/10 rounded-3xl p-8 shadow-2xl text-center"
+              className={cn(
+                "relative w-full max-w-sm border rounded-3xl p-8 shadow-2xl text-center transition-colors",
+                theme === 'dark' ? "bg-[#121212] border-white/10" : "bg-white border-gray-100"
+              )}
             >
               <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
                 <Trash2 className="text-red-500 w-10 h-10" />
               </div>
-              <h2 className="text-2xl font-black text-white mb-2">Elimina Partita?</h2>
-              <p className="text-gray-400 text-sm mb-8 font-medium">
+              <h2 className={cn("text-2xl font-black mb-2", theme === 'dark' ? "text-white" : "text-gray-900")}>Elimina Partita?</h2>
+              <p className="text-gray-500 text-sm mb-8 font-medium">
                 Questa azione è irreversibile. Tutti i dati della partita verranno persi per sempre.
               </p>
               <div className="flex flex-col gap-3">
                 <button 
                   onClick={() => deleteMatch(matchToDelete)}
-                  className="w-full py-4 bg-red-500 hover:bg-red-400 text-black font-black rounded-2xl transition-all shadow-lg shadow-red-500/20"
+                  className="w-full py-4 bg-red-500 hover:bg-red-400 text-white font-black rounded-2xl transition-all shadow-lg shadow-red-500/20"
                 >
                   Sì, Elimina Definitivamente
                 </button>
                 <button 
                   onClick={() => setMatchToDelete(null)}
-                  className="w-full py-4 bg-white/5 hover:bg-white/10 text-white font-bold rounded-2xl transition-all border border-white/10"
+                  className={cn(
+                    "w-full py-4 border font-bold rounded-2xl transition-all",
+                    theme === 'dark' ? "bg-white/5 hover:bg-white/10 text-white border-white/10" : "bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-100"
+                  )}
                 >
                   Annulla
                 </button>
@@ -2070,23 +2168,37 @@ export default function App() {
       {/* Toast Notification */}
       <AnimatePresence>
         {showToast && (
-          <motion.div 
-            initial={{ opacity: 0, y: 50, x: '-50%', scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, x: '-50%', scale: 1 }}
-            exit={{ opacity: 0, y: 50, x: '-50%', scale: 0.9 }}
-            className="fixed bottom-12 left-1/2 z-[300] px-8 py-4 rounded-[1.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex items-center gap-4 border border-white/[0.05] bg-[#0d0d0e]/95 backdrop-blur-2xl"
-          >
-            <div className={cn(
-              "w-8 h-8 rounded-xl flex items-center justify-center",
-              showToast.type === 'success' ? "bg-blue-500/10 text-blue-500" : "bg-red-500/10 text-red-500"
-            )}>
-              {showToast.type === 'success' ? <CheckCircle2 className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
-            </div>
-            <span className="font-black text-[10px] uppercase tracking-widest text-white leading-none">{showToast.message}</span>
-          </motion.div>
+            <motion.div 
+              initial={{ opacity: 0, y: 50, x: '-50%', scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, x: '-50%', scale: 1 }}
+              exit={{ opacity: 0, y: 50, x: '-50%', scale: 0.9 }}
+              className={cn(
+                "fixed bottom-12 left-1/2 z-[300] px-8 py-4 rounded-[1.5rem] flex items-center gap-4 border backdrop-blur-2xl transition-all",
+                theme === 'dark' 
+                  ? "bg-[#0d0d0e]/95 border-white/[0.05] shadow-[0_20px_50px_rgba(0,0,0,0.5)]" 
+                  : "bg-white/95 border-gray-100 shadow-[0_10px_40px_rgba(0,0,0,0.1)]"
+              )}
+            >
+              <div className={cn(
+                "w-8 h-8 rounded-xl flex items-center justify-center",
+                showToast.type === 'success' ? "bg-blue-500/10 text-blue-500" : "bg-red-500/10 text-red-500"
+              )}>
+                {showToast.type === 'success' ? <CheckCircle2 className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+              </div>
+              <span className={cn("font-black text-[10px] uppercase tracking-widest leading-none", theme === 'dark' ? "text-white" : "text-gray-900")}>
+                {showToast.message}
+              </span>
+            </motion.div>
         )}
       </AnimatePresence>
       <style dangerouslySetInnerHTML={{ __html: `
+        .no-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        .no-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
         .custom-scrollbar::-webkit-scrollbar {
           width: 4px;
         }
@@ -2094,11 +2206,11 @@ export default function App() {
           background: transparent;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: rgba(255, 255, 255, 0.1);
+          background: ${theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'};
           border-radius: 10px;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: rgba(255, 255, 255, 0.2);
+          background: ${theme === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'};
         }
       `}} />
     </div>
@@ -2124,7 +2236,8 @@ function IPOView({
   prevIpoAway,
   weights,
   addMatchEvent,
-  isReadOnly
+  isReadOnly,
+  theme
 }: any) {
   const [ipoActiveTeam, setIpoActiveTeam] = useState<'home' | 'away'>('home');
   const efficiency = ipoActiveTeam === 'home' 
@@ -2139,18 +2252,30 @@ function IPOView({
     const count = currentIpoEvents[key as keyof typeof ipoEvents];
 
     return (
-      <div className="flex items-center justify-between p-5 rounded-[2rem] bg-white/[0.01] border border-white/[0.03] hover:bg-white/[0.02] transition-all group">
+      <div className={cn(
+        "flex items-center justify-between p-5 rounded-[2rem] transition-all group border",
+        theme === 'dark' 
+          ? "bg-white/[0.01] border-white/[0.03] hover:bg-white/[0.02]" 
+          : "bg-gray-50/50 border-gray-100 hover:bg-gray-50"
+      )}>
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-white/[0.03] flex items-center justify-center text-gray-400 group-hover:text-blue-500 transition-colors">
+          <div className={cn(
+            "w-12 h-12 rounded-2xl flex items-center justify-center transition-colors",
+            theme === 'dark' ? "bg-white/[0.03] text-gray-400" : "bg-gray-100 text-gray-500",
+            "group-hover:text-blue-500"
+          )}>
             {icon}
           </div>
           <div>
-            <div className="text-[10px] font-black text-white uppercase tracking-[0.1em]">{label}</div>
+            <div className={cn("text-[10px] font-black uppercase tracking-[0.1em]", theme === 'dark' ? "text-white" : "text-gray-900")}>{label}</div>
             <div className="text-[8px] font-bold text-gray-600 uppercase tracking-widest mt-1">PESO: {weight}</div>
           </div>
         </div>
         <div className="flex items-center gap-6">
-          <div className="flex items-center bg-gray-950/50 rounded-2xl p-1.5 border border-white/5">
+          <div className={cn(
+            "flex items-center rounded-2xl p-1.5 border",
+            theme === 'dark' ? "bg-gray-950/50 border-white/5" : "bg-white border-gray-100 shadow-sm"
+          )}>
             <motion.button 
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
@@ -2159,11 +2284,11 @@ function IPOView({
                 setIpoEventsFn((prev: any) => ({ ...prev, [key]: prev[key] - 1 }));
                 addMatchEvent({ type: 'ipo_event', description: `Rimosso ${label} (${currentTeamName})` });
               }}
-              className="w-10 h-10 flex items-center justify-center text-gray-600 hover:text-white transition-colors"
+              className={cn("w-10 h-10 flex items-center justify-center transition-colors", theme === 'dark' ? "text-gray-600 hover:text-white" : "text-gray-400 hover:text-gray-900")}
             >
               <Minus className="w-4 h-4" />
             </motion.button>
-            <div className="w-12 text-center font-black text-white text-xl tabular-nums">
+            <div className={cn("w-12 text-center font-black text-xl tabular-nums", theme === 'dark' ? "text-white" : "text-gray-900")}>
               {count}
             </div>
             <motion.button 
@@ -2174,7 +2299,7 @@ function IPOView({
                 setIpoEventsFn((prev: any) => ({ ...prev, [key]: prev[key] + 1 }));
                 addMatchEvent({ type: 'ipo_event', description: `Aggiunto ${label} (${currentTeamName})` });
               }}
-              className="w-10 h-10 flex items-center justify-center text-gray-600 hover:text-white transition-colors"
+              className={cn("w-10 h-10 flex items-center justify-center transition-colors", theme === 'dark' ? "text-gray-600 hover:text-white" : "text-gray-400 hover:text-gray-900")}
             >
               <Plus className="w-4 h-4" />
             </motion.button>
@@ -2194,22 +2319,25 @@ function IPOView({
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="lg:col-span-1 bg-white/[0.02] border border-white/[0.05] rounded-[2.5rem] p-8 flex flex-col justify-between min-h-[220px]"
+          className={cn(
+            "lg:col-span-1 border rounded-[2.5rem] p-8 flex flex-col justify-between min-h-[220px] transition-colors",
+            theme === 'dark' ? "bg-white/[0.02] border-white/[0.05]" : "bg-gray-50/50 border-gray-100"
+          )}
         >
           <div className="flex items-center justify-between">
             <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Live Status</p>
             <div className="flex gap-1">
               <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-              <div className="w-1.5 h-1.5 rounded-full bg-white/10" />
+              <div className={cn("w-1.5 h-1.5 rounded-full", theme === 'dark' ? "bg-white/10" : "bg-gray-200")} />
             </div>
           </div>
           <div>
-            <h2 className="text-3xl font-black text-white uppercase tracking-tighter leading-none mb-2">
+            <h2 className={cn("text-3xl font-black uppercase tracking-tighter leading-none mb-2", theme === 'dark' ? "text-white" : "text-gray-900")}>
               {ipoActiveTeam === 'home' ? teamName : awayTeam}
             </h2>
             <div className="flex items-center gap-3">
               <span className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">{ipoActiveTeam === 'home' ? 'Squadra Casa' : 'Squadra Ospite'}</span>
-              <div className="h-px w-8 bg-white/10" />
+              <div className={cn("h-px w-8", theme === 'dark' ? "bg-white/10" : "bg-gray-200")} />
             </div>
           </div>
         </motion.div>
@@ -2218,14 +2346,17 @@ function IPOView({
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="lg:col-span-1 bg-white/[0.02] border border-white/[0.05] rounded-[2.5rem] p-8 flex flex-col justify-between"
+          className={cn(
+            "lg:col-span-1 border rounded-[2.5rem] p-8 flex flex-col justify-between transition-colors",
+            theme === 'dark' ? "bg-white/[0.02] border-white/[0.05]" : "bg-gray-50/50 border-gray-100"
+          )}
         >
           <div className="flex items-center justify-between">
             <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Performance Index</p>
             <Zap className="w-4 h-4 text-blue-500" />
           </div>
           <div className="flex items-baseline gap-4">
-            <span className="text-6xl font-black text-white tracking-tighter tabular-nums">
+            <span className={cn("text-6xl font-black tracking-tighter tabular-nums", theme === 'dark' ? "text-white" : "text-gray-900")}>
               <AnimatedCounter value={ipoActiveTeam === 'home' ? ipo : ipoAway} />
             </span>
             <span className="text-xs font-black text-blue-500 uppercase tracking-widest leading-none bg-blue-500/10 px-3 py-1 rounded-full">IPO</span>
@@ -2236,7 +2367,10 @@ function IPOView({
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="lg:col-span-1 bg-white/[0.02] border border-white/[0.05] rounded-[2.5rem] p-8 flex flex-col justify-between"
+          className={cn(
+            "lg:col-span-1 border rounded-[2.5rem] p-8 flex flex-col justify-between transition-colors",
+            theme === 'dark' ? "bg-white/[0.02] border-white/[0.05]" : "bg-gray-50/50 border-gray-100"
+          )}
         >
           <div className="flex items-center justify-between">
             <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Real Efficiency</p>
@@ -2244,12 +2378,12 @@ function IPOView({
           </div>
           <div className="flex items-center justify-between">
              <div className="flex flex-col">
-                <span className="text-4xl font-black text-white">{ipoActiveTeam === 'home' ? goals : goalsAway}</span>
+                <span className={cn("text-4xl font-black", theme === 'dark' ? "text-white" : "text-gray-900")}>{ipoActiveTeam === 'home' ? goals : goalsAway}</span>
                 <span className="text-[8px] font-bold text-gray-600 uppercase mt-1">GOL TOTALI</span>
              </div>
-             <div className="h-10 w-px bg-white/10 mx-4" />
+             <div className={cn("h-10 w-px mx-4", theme === 'dark' ? "bg-white/10" : "bg-gray-200")} />
              <div className="flex flex-col text-right">
-                <span className="text-4xl font-black text-white">{(efficiency * 100).toFixed(0)}%</span>
+                <span className={cn("text-4xl font-black", theme === 'dark' ? "text-white" : "text-gray-900")}>{(efficiency * 100).toFixed(0)}%</span>
                 <span className="text-[8px] font-bold text-gray-600 uppercase mt-1">EFFICIENZA</span>
              </div>
           </div>
@@ -2259,41 +2393,67 @@ function IPOView({
       {/* Events Control Zone */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         <div className="lg:col-span-4 flex flex-col gap-6">
-           <div className="bg-[#0d0d0e] border border-white/5 rounded-[2.5rem] p-4 flex flex-col gap-2">
+           <div className={cn(
+             "border rounded-[2.5rem] p-4 flex flex-col gap-2 transition-colors",
+             theme === 'dark' ? "bg-[#0d0d0e] border-white/5" : "bg-white border-gray-100 shadow-sm"
+           )}>
              <button
                onClick={() => setIpoActiveTeam('home')}
                className={cn(
                  "group relative py-6 px-8 rounded-[2rem] text-left transition-all duration-500 overflow-hidden",
-                 ipoActiveTeam === 'home' ? "bg-white/[0.03]" : "hover:bg-white/[0.01]"
+                 ipoActiveTeam === 'home' 
+                   ? (theme === 'dark' ? "bg-white/[0.03]" : "bg-blue-50") 
+                   : (theme === 'dark' ? "hover:bg-white/[0.01]" : "hover:bg-gray-50")
                )}
              >
-               {ipoActiveTeam === 'home' && <motion.div layoutId="ipo-active" className="absolute inset-0 bg-blue-500/5 ring-1 ring-blue-500/20" />}
+               {ipoActiveTeam === 'home' && (
+                 <motion.div 
+                   layoutId="ipo-active" 
+                   className={cn(
+                     "absolute inset-0 ring-1",
+                     theme === 'dark' ? "bg-blue-500/5 ring-blue-500/20" : "bg-blue-500/10 ring-blue-500/30"
+                   )} 
+                 />
+               )}
                <div className="relative z-10">
-                 <p className="text-[8px] font-black text-gray-600 uppercase tracking-widest mb-1">Squadra A</p>
-                 <h4 className="text-sm font-black text-white uppercase tracking-tight">{teamName}</h4>
+                 <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-1">Squadra A</p>
+                 <h4 className={cn("text-sm font-black uppercase tracking-tight", theme === 'dark' ? "text-white" : "text-gray-900")}>{teamName}</h4>
                </div>
              </button>
              <button
                onClick={() => setIpoActiveTeam('away')}
                className={cn(
                  "group relative py-6 px-8 rounded-[2rem] text-left transition-all duration-500 overflow-hidden",
-                 ipoActiveTeam === 'away' ? "bg-white/[0.03]" : "hover:bg-white/[0.01]"
+                 ipoActiveTeam === 'away' 
+                   ? (theme === 'dark' ? "bg-white/[0.03]" : "bg-blue-50") 
+                   : (theme === 'dark' ? "hover:bg-white/[0.01]" : "hover:bg-gray-50")
                )}
              >
-               {ipoActiveTeam === 'away' && <motion.div layoutId="ipo-active" className="absolute inset-0 bg-blue-500/5 ring-1 ring-blue-500/20" />}
+               {ipoActiveTeam === 'away' && (
+                 <motion.div 
+                   layoutId="ipo-active" 
+                   className={cn(
+                     "absolute inset-0 ring-1",
+                     theme === 'dark' ? "bg-blue-500/5 ring-blue-500/20" : "bg-blue-500/10 ring-blue-500/30"
+                   )} 
+                 />
+               )}
                <div className="relative z-10">
-                 <p className="text-[8px] font-black text-gray-600 uppercase tracking-widest mb-1">Squadra B</p>
-                 <h4 className="text-sm font-black text-white uppercase tracking-tight">{awayTeam || 'Avversario'}</h4>
+                 <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-1">Squadra B</p>
+                 <h4 className={cn("text-sm font-black uppercase tracking-tight", theme === 'dark' ? "text-white" : "text-gray-900")}>{awayTeam || 'Avversario'}</h4>
                </div>
              </button>
            </div>
 
-           <div className="bg-white/[0.01] border border-white/[0.03] rounded-[2.5rem] p-8 space-y-6">
+           <div className={cn(
+             "border rounded-[2.5rem] p-8 space-y-6 transition-colors",
+             theme === 'dark' ? "bg-white/[0.01] border-white/[0.03]" : "bg-white border-gray-100 shadow-sm"
+           )}>
               <div className="flex items-center gap-3">
                  <div className="w-8 h-8 rounded-xl bg-yellow-500/10 flex items-center justify-center text-yellow-500">
                     <Zap className="w-4 h-4" />
                  </div>
-                 <h4 className="text-[10px] font-black text-white uppercase tracking-widest">Azioni Rapide</h4>
+                 <h4 className={cn("text-[10px] font-black uppercase tracking-widest", theme === 'dark' ? "text-white" : "text-gray-900")}>Azioni Rapide</h4>
               </div>
               <div className="flex flex-col gap-3">
                  <button 
@@ -2317,7 +2477,10 @@ function IPOView({
                       }
                       addMatchEvent({ type: 'match_reset', description: `Reset (${ipoActiveTeam === 'home' ? teamName : awayTeam})` });
                     }}
-                    className="w-full py-4 bg-white/5 hover:bg-white/10 text-gray-500 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border border-white/10"
+                    className={cn(
+                      "w-full py-4 border rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all",
+                      theme === 'dark' ? "bg-white/5 hover:bg-white/10 text-gray-500 border-white/10" : "bg-gray-50 hover:bg-gray-100 text-gray-500 border-gray-200"
+                    )}
                  >
                     Reset Statistiche
                  </button>
@@ -2325,10 +2488,13 @@ function IPOView({
            </div>
         </div>
 
-        <div className="lg:col-span-8 bg-white/[0.01] border border-white/[0.03] rounded-[3rem] p-8">
+        <div className={cn(
+          "lg:col-span-8 border rounded-[3rem] p-8 transition-colors",
+          theme === 'dark' ? "bg-white/[0.01] border-white/[0.03]" : "bg-white border-gray-100 shadow-sm"
+        )}>
            <div className="flex items-center justify-between mb-10">
               <div>
-                <h3 className="text-xl font-black text-white uppercase tracking-tight">Pannello Eventi</h3>
+                <h3 className={cn("text-xl font-black uppercase tracking-tight", theme === 'dark' ? "text-white" : "text-gray-900")}>Pannello Eventi</h3>
                 <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest mt-1">Click per incrementare l'indice IPO</p>
               </div>
               <div className="flex items-center gap-2 px-4 py-2 bg-blue-500/10 rounded-xl">
@@ -2346,11 +2512,14 @@ function IPOView({
               {renderEventRow('crosses', 'Cross/Traversone', weights.crosses, <ChevronUp className="w-5 h-5" />, ipoActiveTeam)}
            </div>
 
-           <div className="mt-10 pt-8 border-t border-white/[0.03] flex items-center justify-between">
+           <div className={cn(
+             "mt-10 pt-8 border-t flex items-center justify-between",
+             theme === 'dark' ? "border-white/[0.03]" : "border-gray-100"
+           )}>
               <p className="text-[9px] font-bold text-gray-700 uppercase tracking-[0.2em]">Algoritmo IPO v3.4 Dynamic Weighting</p>
               <div className="flex items-center gap-4">
                  <span className="text-[10px] font-black text-gray-500 uppercase">Totale</span>
-                 <span className="text-3xl font-black text-white">{(ipoActiveTeam === 'home' ? ipo : ipoAway).toFixed(1)}</span>
+                 <span className={cn("text-3xl font-black", theme === 'dark' ? "text-white" : "text-gray-900")}>{(ipoActiveTeam === 'home' ? ipo : ipoAway).toFixed(1)}</span>
               </div>
            </div>
         </div>
