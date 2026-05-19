@@ -156,13 +156,31 @@ const AppLogo = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 100 100" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
     <defs>
       <linearGradient id="logo-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#12b5b0" />
+        <stop offset="0%" stopColor="#2563eb" />
         <stop offset="100%" stopColor="#3b82f6" />
       </linearGradient>
+      <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+        <feGaussianBlur stdDeviation="2" result="blur" />
+        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+      </filter>
     </defs>
-    <path d="M50 15L15 85H35L50 50L65 85H85L50 15Z" fill="url(#logo-gradient)" />
-    <path d="M50 45L38 70H62L50 45Z" fill="white" fillOpacity="0.2" />
-    <circle cx="50" cy="80" r="4" fill="#3b82f6" fillOpacity="0.8" />
+    {/* Minimalist Hexagonal Shield / Data Node */}
+    <path 
+      d="M50 5 L89 27.5 V72.5 L50 95 L11 72.5 V27.5 L50 5Z" 
+      fill="url(#logo-gradient)" 
+      filter="url(#glow)"
+    />
+    <path 
+      d="M50 20 L76 35 V65 L50 80 L24 65 V35 L50 20Z" 
+      fill="white" 
+      fillOpacity="0.15"
+    />
+    <path 
+      d="M50 30 L67 40 V60 L50 70 L33 60 V40 L50 30Z" 
+      fill="white" 
+      fillOpacity="0.9"
+    />
+    <circle cx="50" cy="50" r="5" fill="#2563eb" />
   </svg>
 );
 
@@ -988,15 +1006,18 @@ export default function App() {
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 h-auto min-h-[80px] py-4 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-start">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 flex items-center justify-center bg-white/5 border border-white/10 rounded-xl sm:rounded-2xl shadow-2xl relative group overflow-hidden transition-all duration-500 hover:border-[#12b5b0]/50">
-                <div className="absolute inset-0 bg-gradient-to-br from-[#12b5b0]/5 to-[#3b82f6]/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                <AppLogo className="w-7 h-7 relative z-10 group-hover:scale-110 transition-transform duration-500" />
+              <div className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 flex items-center justify-center bg-white/5 border border-white/10 rounded-xl sm:rounded-2xl shadow-2xl relative group overflow-hidden transition-all duration-500 hover:border-blue-500/50">
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 to-blue-400/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <AppLogo className="w-8 h-8 relative z-10 group-hover:scale-110 transition-transform duration-500" />
               </div>
               <div className="flex flex-col">
-                <h1 className="font-black text-xl sm:text-2xl tracking-tighter text-white leading-none uppercase flex items-baseline">
+                <h1 className="font-black text-xl sm:text-2xl tracking-tighter text-white leading-none uppercase flex items-center">
                   ANALYTIC
-                  <span className="text-[#12b5b0] ml-1">HUB</span>
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#12b5b0] ml-1.5 animate-pulse" />
+                  <span className="text-blue-500 ml-1.5">HUB</span>
+                  <div className="flex gap-0.5 ml-2">
+                    <span className="w-1 h-1 rounded-full bg-blue-500 animate-pulse" />
+                    <span className="w-1 h-1 rounded-full bg-white animate-pulse delay-75" />
+                  </div>
                 </h1>
                 <div className="flex items-center gap-2 mt-1">
                   {!isOnline && (
