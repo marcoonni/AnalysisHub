@@ -36,7 +36,9 @@ import {
   Shield,
   Share2,
   Palette,
-  UserPlus
+  UserPlus,
+  RotateCw,
+  ChevronUp
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Papa from 'papaparse';
@@ -967,7 +969,7 @@ export default function App() {
   };
 
   return (
-    <div className="relative min-h-screen bg-[#0a0a0a] text-gray-100 font-sans selection:bg-blue-500/30 overflow-x-hidden">
+    <div className="relative min-h-screen bg-[#070708] text-gray-100 font-sans selection:bg-blue-500/30 overflow-x-hidden">
       {/* Global Loading Overlay */}
       <AnimatePresence>
         {loadingMatchId && !showMatchList && (
@@ -975,134 +977,100 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-xl flex flex-col items-center justify-center gap-6"
+            className="fixed inset-0 z-[100] bg-[#070708]/95 backdrop-blur-2xl flex flex-col items-center justify-center gap-8"
           >
             <div className="relative">
-              <div className="w-20 h-20 border-4 border-blue-500/20 rounded-full" />
-              <div className="absolute inset-0 w-20 h-20 border-4 border-t-blue-500 rounded-full animate-spin" />
-              <Target className="absolute inset-0 m-auto w-8 h-8 text-blue-500 animate-pulse" />
+              <div className="w-16 h-16 border-2 border-blue-500/10 rounded-full" />
+              <div className="absolute inset-0 w-16 h-16 border-2 border-t-blue-500 rounded-full animate-spin" />
+              <AppLogo className="absolute inset-0 m-auto w-6 h-6 animate-pulse" />
             </div>
-            <div className="flex flex-col items-center gap-2">
-              <h3 className="text-xl font-black uppercase tracking-widest text-white">Caricamento Partita</h3>
-              <p className="text-gray-400 text-sm font-medium animate-pulse">Recupero dati dal campo...</p>
+            <div className="flex flex-col items-center gap-1.5 text-center">
+              <h3 className="text-xs font-bold uppercase tracking-[0.3em] text-white">Sincronizzazione</h3>
+              <p className="text-gray-500 text-[10px] font-medium tracking-widest uppercase opacity-50">Preparazione campo Analitico...</p>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
+
       {/* Header */}
-      <header className="bg-black/40 border-b border-white/10 backdrop-blur-md sticky top-0 z-50">
-        {isReadOnly && (
-          <div className="bg-blue-600/20 border-b border-blue-500/30 py-2 px-4 flex items-center justify-center gap-2">
-            <Info className="w-4 h-4 text-blue-400" />
-            <span className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">Modalità Visualizzazione (Sola Lettura)</span>
-            <button 
-              onClick={clearAll}
-              className="ml-4 text-[10px] font-black text-white bg-blue-600 hover:bg-blue-500 px-3 py-1 rounded-full transition-all"
-            >
-              Esci
-            </button>
-          </div>
-        )}
-        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 h-auto min-h-[80px] py-4 flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-start">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 flex items-center justify-center bg-white/5 border border-white/10 rounded-xl sm:rounded-2xl shadow-2xl relative group overflow-hidden transition-all duration-500 hover:border-blue-500/50">
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 to-blue-400/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                <AppLogo className="w-8 h-8 relative z-10 group-hover:scale-110 transition-transform duration-500" />
-              </div>
-              <div className="flex flex-col">
-                <h1 className="font-black text-xl sm:text-2xl tracking-tighter text-white leading-none uppercase flex items-center">
-                  ANALYTIC
-                  <span className="text-blue-500 ml-1.5">HUB</span>
-                  <div className="flex gap-0.5 ml-2">
-                    <span className="w-1 h-1 rounded-full bg-blue-500 animate-pulse" />
-                    <span className="w-1 h-1 rounded-full bg-white animate-pulse delay-75" />
-                  </div>
+      <header className="bg-[#070708]/50 border-b border-white/[0.03] backdrop-blur-3xl sticky top-0 z-50">
+        <div className="max-w-[1600px] mx-auto px-6 h-20 flex items-center justify-between gap-8">
+          <div className="flex items-center gap-5">
+            <div className="w-11 h-11 flex items-center justify-center bg-white/[0.03] border border-white/5 rounded-2xl shadow-xl relative group overflow-hidden transition-all duration-500 hover:border-blue-500/20">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 to-blue-400/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <AppLogo className="w-7 h-7 relative z-10 group-hover:scale-105 transition-transform duration-500" />
+            </div>
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2.5">
+                <h1 className="font-black text-lg tracking-tight text-white leading-none uppercase">
+                  Analytic <span className="text-blue-500">Hub</span>
                 </h1>
-                <div className="flex items-center gap-2 mt-1">
-                  {!isOnline && (
-                    <div className="flex items-center gap-1">
-                      <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                      <span className="text-[8px] font-bold text-red-500 uppercase tracking-widest">Offline</span>
-                    </div>
-                  )}
-                  {isOnline && isPWAReady && (
-                    <div className="flex items-center gap-1">
-                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                      <span className="text-[8px] font-bold text-emerald-500 uppercase tracking-widest">Ready</span>
-                    </div>
-                  )}
-                  <div className="w-px h-2 bg-white/10 mx-1" />
-                  <button 
-                    onClick={() => setShowMatchSettings(true)}
-                    className="flex items-center gap-1.5 hover:text-blue-400 transition-colors group/matchinfo"
-                  >
-                    <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest group-hover/matchinfo:text-blue-400/70 transition-colors">{teamName} vs {awayTeam || 'Avversario'}</span>
-                    <Settings className="w-2 h-2 text-gray-600 group-hover/matchinfo:text-blue-400 transition-colors" />
-                  </button>
+                <div className="flex gap-1 items-center">
+                  <span className="w-1 h-1 rounded-full bg-blue-500 animate-pulse" />
+                  <span className="w-1 h-1 rounded-full bg-white/10" />
                 </div>
               </div>
+              <div className="flex items-center gap-2 mt-2">
+                <button 
+                  onClick={() => setShowMatchSettings(true)}
+                  className="flex items-center gap-2 hover:text-blue-400 transition-all group/match whitespace-nowrap"
+                >
+                  <span className="text-[9px] font-bold text-gray-500 uppercase tracking-[0.1em] group-hover/match:text-blue-400/80 transition-colors">
+                    {teamName} <span className="text-gray-700 italic lowercase mx-0.5 opacity-50">vs</span> {awayTeam || 'Avversario'}
+                  </span>
+                  <Settings className="w-2.5 h-2.5 text-gray-700 group-hover/match:text-blue-400 opacity-50 transition-all" />
+                </button>
+              </div>
             </div>
           </div>
 
-          <div className="flex flex-nowrap items-center justify-end gap-2 sm:gap-3 w-full md:w-auto overflow-x-auto no-scrollbar">
-            <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-2 sm:px-3 py-1.5 shrink-0">
-              <span className="text-xs sm:text-sm font-black font-mono tabular-nums text-white">
+          <div className="flex items-center gap-8">
+            <div className="hidden lg:flex items-center bg-white/[0.02] border border-white/5 rounded-2xl px-5 py-2 gap-6">
+              <div className="flex items-center gap-2.5">
+                <div className={cn("w-1.5 h-1.5 rounded-full transition-colors", isOnline ? "bg-emerald-500" : "bg-red-500 animate-pulse")} />
+                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest leading-none">{isOnline ? 'Online' : 'Offline'}</span>
+              </div>
+              <div className="w-px h-3.5 bg-white/10" />
+              <div className="flex items-center gap-2.5 text-[10px] font-black font-mono tabular-nums text-white/90 leading-none tracking-widest">
+                <Clock className="w-3.5 h-3.5 text-gray-500" />
                 {String(Math.floor(timerSeconds / 60)).padStart(2, '0')}:{String(timerSeconds % 60).padStart(2, '0')}
-              </span>
-              <div className="flex gap-1">
-                <motion.button 
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  onClick={() => setIsTimerRunning(!isTimerRunning)}
-                  disabled={isReadOnly}
-                  className={cn(
-                    "w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center transition-all disabled:opacity-50 disabled:cursor-not-allowed",
-                    isTimerRunning ? "bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20" : "bg-blue-600/10 text-blue-500 hover:bg-blue-600/20"
-                  )}
-                >
-                  {isTimerRunning ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-                </motion.button>
-                <motion.button 
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  onClick={() => {
-                    setTimerSeconds(0);
-                    setIsTimerRunning(false);
-                  }}
-                  disabled={isReadOnly}
-                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 flex items-center justify-center transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                </motion.button>
               </div>
             </div>
 
-            <div className="flex items-center bg-white/5 rounded-xl p-1 border border-white/10 shrink-0">
-              <motion.button 
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setActiveTab('xg')}
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={() => setIsTimerRunning(!isTimerRunning)}
                 className={cn(
-                  "px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-bold transition-all flex items-center gap-1.5",
-                  activeTab === 'xg' ? "bg-blue-600 text-white shadow-lg" : "text-gray-400 hover:text-white"
+                  "px-4 py-2.5 rounded-2xl transition-all border outline-none",
+                  isTimerRunning 
+                    ? "bg-yellow-500/10 border-yellow-500/20 text-yellow-500 hover:bg-yellow-500/20" 
+                    : "bg-blue-600/10 border-blue-500/20 text-blue-500 hover:bg-blue-600/20"
                 )}
               >
-                <Target className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Match</span>
-              </motion.button>
-              <motion.button 
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setActiveTab('ipo')}
-                className={cn(
-                  "px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-bold transition-all flex items-center gap-1.5",
-                  activeTab === 'ipo' ? "bg-yellow-500 text-black shadow-lg" : "text-gray-400 hover:text-white"
-                )}
-              >
-                <Zap className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">IPO</span>
-              </motion.button>
+                <div className="flex items-center gap-2">
+                  {isTimerRunning ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                  <span className="text-[10px] font-bold uppercase tracking-widest hidden xs:inline">{isTimerRunning ? 'Pausa' : 'Avvia'}</span>
+                </div>
+              </button>
+              
+              <div className="h-8 w-px bg-white/5 mx-1" />
+
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => setShowMatchList(true)}
+                  className="p-3 rounded-2xl bg-white/[0.02] border border-white/5 text-gray-500 hover:text-white hover:border-white/10 transition-all outline-none"
+                  title="Le mie partite"
+                >
+                  <List className="w-4 h-4" />
+                </button>
+                <button 
+                  onClick={() => user ? logout() : login()}
+                  className="p-3 rounded-2xl bg-white/[0.02] border border-white/5 text-gray-500 hover:text-white hover:border-white/10 transition-all outline-none"
+                  title={user ? "Logout" : "Accedi"}
+                >
+                  {user ? <LogOut className="w-4 h-4" /> : <LogIn className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
 
             <div className="hidden sm:block h-8 w-px bg-white/10" />
@@ -1298,586 +1266,369 @@ export default function App() {
         </div>
       </header>
 
-      <main ref={dashboardRef} className="max-w-[1600px] mx-auto p-4 sm:p-6">
+      <main ref={dashboardRef} className="max-w-[1600px] mx-auto p-4 sm:p-6 lg:p-8">
         {activeTab === 'xg' ? (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* Left Column: Pitch & Controls */}
-            <div className="lg:col-span-8 space-y-6">
-              {/* Match Info Card */}
+          <div className="flex flex-col gap-8">
+            {/* Bento Stats Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
               <motion.div 
-                initial={{ opacity: 0, y: -10 }}
+                initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center justify-between backdrop-blur-sm"
+                className="bg-white/[0.02] border border-white/[0.05] rounded-3xl p-6 group hover:border-blue-500/20 transition-all duration-500"
               >
-                <div className="flex items-center gap-6">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center border border-white/10" style={{ backgroundColor: `${teamColor}20`, borderColor: `${teamColor}40` }}>
-                      <span className="text-lg font-black" style={{ color: teamColor }}>{teamName.substring(0, 1)}</span>
-                    </div>
-                    <div>
-                      <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-0.5">Casa</p>
-                      <h3 className="text-sm font-black text-white uppercase">{teamName}</h3>
-                    </div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-8 h-8 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500">
+                    <Target className="w-4 h-4" />
                   </div>
-                  
-                  <div className="flex flex-col items-center">
-                    <div className="h-4 w-px bg-white/10 mb-1" />
-                    <span className="text-[10px] font-black text-gray-600 italic">VS</span>
-                    <div className="h-4 w-px bg-white/10 mt-1" />
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center border border-white/10" style={{ backgroundColor: `${awayColor}20`, borderColor: `${awayColor}40` }}>
-                      <span className="text-lg font-black" style={{ color: awayColor }}>{awayTeam ? awayTeam.substring(0, 1) : 'A'}</span>
-                    </div>
-                    <div>
-                      <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-0.5">Ospite</p>
-                      <h3 className="text-sm font-black text-white uppercase">{awayTeam || 'Avversario'}</h3>
-                    </div>
+                  <div className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse" />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Expected Goals</p>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-3xl font-black text-white tabular-nums tracking-tight">
+                      <AnimatedCounter value={displayXG} />
+                    </span>
+                    <span className="text-xs font-bold text-blue-500/60 uppercase">xG</span>
                   </div>
                 </div>
-
-                <button 
-                  onClick={() => setShowMatchSettings(true)}
-                  disabled={isReadOnly}
-                  className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all border border-white/10 disabled:opacity-30"
-                >
-                  <Settings className="w-4 h-4" />
-                </button>
               </motion.div>
 
-              {/* Stats Row */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-white/5 border border-white/10 p-4 sm:p-5 rounded-2xl backdrop-blur-sm group relative"
-            >
-              <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity hidden sm:block">
-                <div className="bg-black/80 backdrop-blur-md border border-white/10 p-3 rounded-xl text-[10px] w-48 shadow-2xl z-50">
-                  <p className="font-bold text-emerald-500 mb-1 uppercase tracking-widest">Formula xG</p>
-                  <p className="text-gray-400 leading-relaxed">
-                    P(gol) = 1 / (1 + e^-(β0 + β1·dist + β2·angolo + β3·piede + β4·assist))
-                  </p>
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="bg-white/[0.02] border border-white/[0.05] rounded-3xl p-6 group hover:border-yellow-500/20 transition-all duration-500"
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-8 h-8 rounded-xl bg-yellow-500/10 flex items-center justify-center text-yellow-500">
+                    <Trophy className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Gol Reali</p>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-3xl font-black text-white tabular-nums tracking-tight">{displayGoals}</span>
+                    <span className="text-xs font-bold text-yellow-500/60 uppercase">GOL</span>
+                  </div>
+                </div>
+              </motion.div>
+
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="bg-white/[0.02] border border-white/[0.05] rounded-3xl p-6 group hover:border-emerald-500/20 transition-all duration-500"
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                    <Activity className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">xG/Tiro</p>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-3xl font-black text-white tabular-nums tracking-tight">
+                      <AnimatedCounter value={displayXGPerShot} decimals={2} />
+                    </span>
+                    <span className="text-xs font-bold text-emerald-500/60 uppercase">Qualità</span>
+                  </div>
+                </div>
+              </motion.div>
+
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="bg-white/[0.02] border border-white/[0.05] rounded-3xl p-6 group hover:border-purple-500/20 transition-all duration-500"
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-8 h-8 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-500">
+                    <Zap className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Indice IPO</p>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-3xl font-black text-white tabular-nums tracking-tight">
+                      <AnimatedCounter value={ipo} decimals={1} />
+                    </span>
+                    <div className={cn(
+                      "px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest",
+                      ipo > ipoAway ? "bg-emerald-500/10 text-emerald-500" : "bg-red-500/10 text-red-500"
+                    )}>
+                      {ipo > ipoAway ? 'Dominio' : 'In Difesa'}
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+              {/* Pitch Area */}
+              <div className="lg:col-span-8 flex flex-col gap-6">
+                <div className="relative bg-white/[0.01] border border-white/[0.03] rounded-[3rem] p-4 sm:p-6 lg:p-8 overflow-hidden group/field">
+                  {/* Field Tools */}
+                  <div className="absolute top-8 left-8 flex items-center gap-3 z-10 pointer-events-none">
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-950/80 backdrop-blur-xl border border-white/5 rounded-full ring-1 ring-white/5">
+                      <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                      <span className="text-[9px] font-black text-white uppercase tracking-[0.2em]">Analisi Campo</span>
+                    </div>
+                  </div>
+
+                  <div className="absolute top-8 right-8 flex items-center gap-2 z-20">
+                    <motion.button 
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => undoLastShot()}
+                      disabled={shots.length === 0 || isReadOnly}
+                      className="p-2.5 rounded-xl bg-gray-950/80 backdrop-blur-xl border border-white/5 text-gray-400 hover:text-white disabled:opacity-20 transition-all outline-none"
+                    >
+                      <Undo2 className="w-4 h-4" />
+                    </motion.button>
+                  </div>
+
+                  {/* Pitch Canvas Styled */}
+                  <div 
+                    ref={pitchRef}
+                    onClick={handlePitchClick}
+                    className={cn(
+                      "relative aspect-[34/17] w-full bg-[#0a0a0b] border border-white/5 rounded-[2rem] overflow-hidden shadow-2xl cursor-crosshair transition-all duration-1000",
+                      isTimerRunning ? "shadow-[0_0_80px_-20px_rgba(59,130,246,0.15)] ring-1 ring-blue-500/20" : ""
+                    )}
+                  >
+                    {/* Minimal Markings */}
+                    <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-[0.07]" viewBox="0 0 68 34">
+                      <rect x="0" y="0" width="68" height="34" fill="none" stroke="white" strokeWidth="0.15" />
+                      <rect x="13.84" y="0" width="40.32" height="16.5" fill="none" stroke="white" strokeWidth="0.15" />
+                      <rect x="24.84" y="0" width="18.32" height="5.5" fill="none" stroke="white" strokeWidth="0.15" />
+                      <circle cx="34" cy="11" r="0.2" fill="white" />
+                      <path d="M 27.5 16.5 A 9.15 9.15 0 0 0 40.5 16.5" fill="none" stroke="white" strokeWidth="0.15" />
+                      <rect x="0" y="17" width="68" height="0.1" fill="white" fillOpacity="0.5" />
+                    </svg>
+
+                    {/* Heatmap */}
+                    <AnimatePresence>
+                      {showHeatmap && (
+                        <motion.div 
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          className="absolute inset-0 grid grid-cols-[repeat(34,1fr)] grid-rows-[repeat(17,1fr)] pointer-events-none"
+                        >
+                          {xgGrid.map((row, r) => row.map((val, c) => (
+                            <div key={`${r}-${c}`} style={{ backgroundColor: getXGColor(val) }} className="transition-colors duration-1000" />
+                          )))}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                    {/* Shots */}
+                    {shots.map((shot) => (
+                      <motion.div
+                        key={shot.id}
+                        initial={{ scale: 0, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        whileHover={{ scale: 1.4, zIndex: 50 }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedShot(shot);
+                        }}
+                        className={cn(
+                          "absolute w-4 h-4 -ml-2 -mt-2 rounded-full flex items-center justify-center cursor-pointer shadow-xl transition-all",
+                          shot.isGoal ? "bg-yellow-400 ring-4 ring-yellow-400/20" : "bg-white/80 ring-2 ring-white/10",
+                          selectedShot?.id === shot.id ? "ring-blue-500 ring-opacity-100 z-50 scale-125" : ""
+                        )}
+                        style={{ 
+                          top: `${(shot.x / DEFAULT_PITCH.height) * 100}%`, 
+                          left: `${(shot.y / DEFAULT_PITCH.width) * 100}%` 
+                        }}
+                      >
+                        {shot.isGoal ? (
+                          <Trophy className="w-1.5 h-1.5 text-black" />
+                        ) : (
+                          <div className="w-1 h-1 bg-black/40 rounded-full" />
+                        )}
+                      </motion.div>
+                    ))}
+
+                    {/* Interaction Ripples */}
+                    {ripples.map(ripple => (
+                      <motion.div
+                        key={ripple.id}
+                        initial={{ scale: 0, opacity: 1 }}
+                        animate={{ scale: 5, opacity: 0 }}
+                        className="absolute w-8 h-8 -ml-4 -mt-4 border border-blue-500/50 rounded-full pointer-events-none"
+                        style={{ top: `${ripple.y}%`, left: `${ripple.x}%` }}
+                      />
+                    ))}
+                  </div>
+
+                  <div className="mt-8 flex items-center justify-between px-2">
+                    <div className="flex items-center gap-6">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-yellow-400" />
+                        <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Gol</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-white/80" />
+                        <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Tiro</span>
+                      </div>
+                    </div>
+                    <p className="text-[9px] font-bold text-gray-600 uppercase tracking-[0.2em]">Interfaccia Tattica v2.0</p>
+                  </div>
                 </div>
               </div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-widest">xG</span>
-                <Activity className="w-4 h-4 text-emerald-500" />
-              </div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-2xl sm:text-3xl font-black text-white">
-                  <AnimatedCounter value={displayXG} decimals={2} />
-                </span>
-                <span className="text-[10px] sm:text-xs text-emerald-500 font-bold">+{((displayXG / (displayGoals || 1)) * 10).toFixed(1)}%</span>
-              </div>
-            </motion.div>
 
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="bg-white/5 border border-white/10 p-4 sm:p-5 rounded-2xl backdrop-blur-sm"
-            >
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-widest">Gol Reali</span>
-                <Trophy className="w-4 h-4 text-yellow-500" />
-              </div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-2xl sm:text-3xl font-black text-white">
-                  <AnimatedCounter value={displayGoals} decimals={0} />
-                </span>
-                <span className="text-[10px] sm:text-xs text-gray-400 font-medium">vs {displayXG.toFixed(1)} xG</span>
-              </div>
-            </motion.div>
-
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="bg-white/5 border border-white/10 p-4 sm:p-5 rounded-2xl backdrop-blur-sm"
-            >
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-widest">xG per Tiro</span>
-                <Zap className="w-4 h-4 text-emerald-500" />
-              </div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-2xl sm:text-3xl font-black text-white">
-                  <AnimatedCounter value={displayXGPerShot} decimals={2} />
-                </span>
-                <span className="text-[10px] sm:text-xs text-emerald-500 font-bold">{displayShots.length} tiri</span>
-              </div>
-            </motion.div>
-          </div>
-
-          {/* Pitch Container */}
-          <motion.div 
-            className="relative bg-black/40 border border-white/10 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl transition-all duration-700"
-          >
-            <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-10 flex gap-2">
-              <div className="bg-black/60 backdrop-blur-md border border-white/10 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full flex items-center gap-1.5 sm:gap-2 text-[8px] sm:text-[10px] font-bold uppercase tracking-wider text-gray-400">
-                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-blue-600 animate-pulse" />
-                Live Analysis
-              </div>
-            </div>
-
-            <div className="absolute top-3 right-3 sm:top-4 sm:right-4 z-10 flex gap-2">
-              <button 
-                onClick={undoLastShot}
-                disabled={shots.length === 0 || isReadOnly}
-                className="bg-white/10 hover:bg-white/20 text-white border border-white/10 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[8px] sm:text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 sm:gap-2 disabled:opacity-30 disabled:cursor-not-allowed"
-                title="Annulla ultimo tiro"
-              >
-                <Undo2 className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                Undo
-              </button>
-
-              <AnimatePresence>
-                {showResetConfirm ? (
-                  <motion.div 
-                    initial={{ opacity: 0, scale: 0.9, x: 20 }}
-                    animate={{ opacity: 1, scale: 1, x: 0 }}
-                    exit={{ opacity: 0, scale: 0.9, x: 20 }}
-                    className="bg-black/80 backdrop-blur-md border border-white/10 p-1.5 sm:p-2 rounded-xl flex items-center gap-2 sm:gap-3 shadow-2xl"
-                  >
-                    <span className="text-[8px] sm:text-[10px] font-bold text-white px-1 sm:px-2">Reset?</span>
-                    <div className="flex gap-1">
-                      <button 
-                        onClick={clearAll}
-                        className="bg-red-500 hover:bg-red-400 text-white px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[8px] sm:text-[10px] font-black uppercase transition-all"
-                      >
-                        Sì
-                      </button>
-                      <button 
-                        onClick={() => setShowResetConfirm(false)}
-                        className="bg-white/10 hover:bg-white/20 text-white px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[8px] sm:text-[10px] font-black uppercase transition-all"
-                      >
-                        No
-                      </button>
+              {/* Sidebar Action Zone */}
+              <div className="lg:col-span-4 flex flex-col gap-6">
+                <section className="bg-white/[0.02] border border-white/[0.05] rounded-[2.5rem] p-7 transition-all hover:bg-white/[0.03]">
+                  <div className="flex items-center gap-4 mb-8">
+                    <div className="w-11 h-11 bg-white/[0.03] border border-white/5 rounded-2xl flex items-center justify-center text-blue-500 group-hover:scale-110 transition-transform">
+                      {selectedShot ? <Settings className="w-5 h-5 animate-spin-slow" /> : <Plus className="w-5 h-5 text-gray-400" />}
                     </div>
-                  </motion.div>
-                ) : (
-                  <button 
-                    onClick={() => setShowResetConfirm(true)}
-                    disabled={isReadOnly}
-                    className="bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[8px] sm:text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 sm:gap-2 disabled:opacity-30 disabled:cursor-not-allowed"
-                  >
-                    <RefreshCw className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                    Resetta
-                  </button>
-                )}
-              </AnimatePresence>
-            </div>
+                    <div>
+                      <h3 className="text-sm font-black text-white uppercase tracking-wider">{selectedShot ? 'Modifica Evento' : 'Registra Tiro'}</h3>
+                      <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest mt-1">Dati real-time</p>
+                    </div>
+                  </div>
 
-            <div 
-              ref={pitchRef}
-              onClick={handlePitchClick}
-              className="relative aspect-[2/1] w-full cursor-crosshair group"
-              style={{
-                backgroundImage: 'radial-gradient(circle at center, #1a1a1a 0%, #0a0a0a 100%)'
-              }}
-            >
-              {/* Pitch Markings */}
-              <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-20" viewBox="0 0 68 34">
-                <rect x="0" y="0" width="68" height="34" fill="none" stroke="white" strokeWidth="0.2" />
-                <rect x="13.84" y="0" width="40.32" height="16.5" fill="none" stroke="white" strokeWidth="0.2" />
-                <rect x="24.84" y="0" width="18.32" height="5.5" fill="none" stroke="white" strokeWidth="0.2" />
-                <circle cx="34" cy="11" r="0.3" fill="white" />
-                <path d="M 27.5 16.5 A 9.15 9.15 0 0 0 40.5 16.5" fill="none" stroke="white" strokeWidth="0.2" />
-                <rect x="30.34" y="-1" width="7.32" height="1" fill="none" stroke="white" strokeWidth="0.4" />
-              </svg>
-
-              {/* Ripples */}
-              <AnimatePresence>
-                {ripples.map(ripple => (
-                  <motion.div
-                    key={ripple.id}
-                    initial={{ scale: 0, opacity: 0.8 }}
-                    animate={{ scale: 4, opacity: 0 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.8, ease: "easeOut" }}
-                    className="absolute w-8 h-8 -ml-4 -mt-4 rounded-full border-2 border-blue-500 pointer-events-none z-30"
-                    style={{ left: `${ripple.x}%`, top: `${ripple.y}%` }}
-                  />
-                ))}
-              </AnimatePresence>
-
-              {/* Heatmap Overlay */}
-              <AnimatePresence>
-                {showHeatmap && (
-                  <motion.div 
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="absolute inset-0 grid grid-cols-[repeat(34,1fr)] grid-rows-[repeat(17,1fr)]"
-                  >
-                    {xgGrid.map((row, r) => 
-                      row.map((val, c) => (
-                        <div 
-                          key={`${r}-${c}`}
-                          onMouseEnter={() => setHoveredCell({ r, c, xg: val })}
-                          onMouseLeave={() => setHoveredCell(null)}
-                          className="flex items-center justify-center border-[0.5px] border-white/5 transition-colors duration-500 relative group/cell"
-                          style={{ backgroundColor: getXGColor(val) }}
+                  <div className="space-y-7">
+                    <div className="space-y-3">
+                      <label className="text-[9px] font-black text-gray-500 uppercase tracking-[0.2em] px-1">Giocatore</label>
+                      <div className="relative group">
+                        <select 
+                          value={selectedShot ? selectedShot.playerName : newShotConfig.playerName}
+                          onChange={(e) => {
+                             const val = e.target.value;
+                             if (val === 'ADD_NEW') setIsAddingNewPlayer(true);
+                             else if (selectedShot) updateShot(selectedShot.id, { playerName: val });
+                             else setNewShotConfig(prev => ({ ...prev, playerName: val }));
+                          }}
+                          className="w-full bg-[#0d0d0e] border border-white/5 rounded-2xl py-4 px-6 text-xs font-bold text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all appearance-none"
                         >
-                          {showGridValues && (
-                            <span className="text-[6px] font-bold text-white/40">{val.toFixed(2)}</span>
+                          <option value="">Seleziona...</option>
+                          {PREDEFINED_PLAYERS.map(p => <option key={p} value={p}>{p}</option>)}
+                          {playerList.filter(p => !PREDEFINED_PLAYERS.includes(p)).map(p => <option key={p} value={p}>{p}</option>)}
+                          <option value="ADD_NEW">+ Aggiungi Nuovo</option>
+                        </select>
+                        <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-700 pointer-events-none" />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-3">
+                        <label className="text-[9px] font-black text-gray-500 uppercase tracking-[0.2em] px-1">Parte Corpo</label>
+                        <div className="flex bg-[#0d0d0e] p-1 rounded-2xl border border-white/5">
+                          {[
+                            { id: 'foot', label: 'Piede', icon: Footprints },
+                            { id: 'head', label: 'Testa', icon: UserIcon }
+                          ].map(part => (
+                            <button
+                              key={part.id}
+                              onClick={() => {
+                                if (selectedShot) updateShot(selectedShot.id, { bodyPart: part.id as BodyPart });
+                                else setNewShotConfig(prev => ({ ...prev, bodyPart: part.id as BodyPart }));
+                              }}
+                              className={cn(
+                                "flex-1 flex flex-col items-center gap-2 py-3 rounded-xl transition-all duration-300",
+                                (selectedShot ? selectedShot.bodyPart : newShotConfig.bodyPart) === part.id 
+                                  ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20" 
+                                  : "text-gray-500 hover:text-gray-300"
+                              )}
+                            >
+                              <part.icon className="w-4 h-4" />
+                              <span className="text-[8px] font-black uppercase tracking-tighter">{part.label}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="space-y-3">
+                        <label className="text-[9px] font-black text-gray-500 uppercase tracking-[0.2em] px-1">Esito</label>
+                        <button
+                          onClick={() => {
+                            if (selectedShot) updateShot(selectedShot.id, { isGoal: !selectedShot.isGoal });
+                            else setNewShotConfig(prev => ({ ...prev, isGoal: !prev.isGoal }));
+                          }}
+                          className={cn(
+                            "w-full h-full min-h-[78px] flex flex-col items-center justify-center gap-2 border-2 rounded-2xl transition-all duration-300",
+                            (selectedShot ? selectedShot.isGoal : newShotConfig.isGoal)
+                              ? "bg-yellow-500/10 border-yellow-500/40 text-yellow-500" 
+                              : "bg-[#0d0d0e] border-white/5 text-gray-600 hover:border-white/10"
                           )}
+                        >
+                          <Trophy className={cn("w-5 h-5", (selectedShot ? selectedShot.isGoal : newShotConfig.isGoal) ? "animate-bounce" : "opacity-30")} />
+                          <span className="text-[8px] font-black uppercase tracking-widest leading-none">
+                            {(selectedShot ? selectedShot.isGoal : newShotConfig.isGoal) ? 'GOL' : 'TIRO'}
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="pt-4 space-y-4">
+                      {selectedShot && (
+                        <div className="flex flex-col gap-2">
+                           <button 
+                             onClick={() => removeShot(selectedShot.id)}
+                             className="w-full py-4 bg-red-500/5 hover:bg-red-500/10 text-red-500 border border-red-500/20 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all"
+                           >
+                             Elimina Tiro
+                           </button>
+                           <button 
+                             onClick={() => setSelectedShot(null)}
+                             className="w-full py-4 bg-white/5 hover:bg-white/10 text-gray-400 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all"
+                           >
+                             Chiudi Modifica
+                           </button>
+                        </div>
+                      )}
+                      
+                      <div className="grid grid-cols-2 gap-3">
+                        <button onClick={saveMatch} disabled={isSaving || isReadOnly} className="flex-1 py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-blue-500/10 flex items-center justify-center gap-2 disabled:opacity-30">
+                          <Save className="w-3.5 h-3.5" /> Salva
+                        </button>
+                        <button onClick={exportToExcel} className="flex-1 py-4 bg-white/5 hover:bg-white/10 text-white border border-white/5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2">
+                          <FileDown className="w-3.5 h-3.5" /> Export
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                {/* Event Feed Bento Card */}
+                <div className="bg-white/[0.02] border border-white/[0.05] rounded-[2.5rem] p-7 h-[300px] flex flex-col">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Live Feed</h3>
+                    <div className="px-2 py-1 bg-white/5 rounded-lg text-[8px] font-black text-blue-500">{matchEvents.length} EVENTI</div>
+                  </div>
+                  <div className="flex-1 overflow-y-auto no-scrollbar space-y-3">
+                    {matchEvents.length === 0 ? (
+                      <div className="h-full flex flex-col items-center justify-center text-gray-700 opacity-50">
+                        <Activity className="w-8 h-8 mb-3" />
+                        <span className="text-[8px] font-black uppercase tracking-widest">In attesa di eventi...</span>
+                      </div>
+                    ) : (
+                      matchEvents.map(event => (
+                        <div key={event.id} className="flex gap-4 p-3 bg-white/[0.02] border border-white/[0.03] rounded-2xl group hover:border-white/10 transition-all">
+                          <div className={cn(
+                            "w-8 h-8 rounded-xl flex items-center justify-center shrink-0",
+                            event.type === 'goal' ? 'bg-yellow-500/10 text-yellow-500' : 'bg-blue-600/10 text-blue-500'
+                          )}>
+                            {event.type === 'goal' ? <Trophy className="w-4 h-4" /> : <Target className="w-4 h-4" />}
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-black text-white leading-snug">{event.description}</p>
+                            <p className="text-[8px] font-bold text-gray-600 uppercase tracking-widest mt-1">Minuto {event.minute}'</p>
+                          </div>
                         </div>
                       ))
                     )}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              {/* Hover Tooltip */}
-              <AnimatePresence>
-                {hoveredCell && showHeatmap && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.9 }}
-                    className="absolute pointer-events-none z-50 bg-black/90 backdrop-blur-md border border-white/20 p-2 rounded-lg shadow-2xl flex flex-col gap-1 min-w-[80px]"
-                    style={{
-                      left: `${(hoveredCell.c / 34) * 100}%`,
-                      top: `${(hoveredCell.r / 17) * 100}%`,
-                      transform: 'translate(-50%, -120%)'
-                    }}
-                  >
-                    <div className="flex justify-between items-center gap-4">
-                      <span className="text-[8px] font-black text-gray-500 uppercase">xG Value</span>
-                      <span className="text-[10px] font-black text-emerald-500">{hoveredCell.xg.toFixed(3)}</span>
-                    </div>
-                    <div className="flex justify-between items-center gap-4">
-                      <span className="text-[8px] font-black text-gray-500 uppercase">Posizione</span>
-                      <span className="text-[8px] font-bold text-white">{hoveredCell.r}, {hoveredCell.c}</span>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              {/* Shots */}
-              {shots.map((shot) => (
-                <motion.button
-                  key={shot.id}
-                  initial={{ scale: 0, opacity: 0, rotate: -45 }}
-                  animate={{ scale: 1, opacity: 1, rotate: 0 }}
-                  whileHover={{ scale: 1.4, zIndex: 30 }}
-                  whileTap={{ scale: 0.9 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 17 }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedShot(shot);
-                  }}
-                  className={cn(
-                    "absolute w-3 h-3 sm:w-4 sm:h-4 -ml-1.5 -mt-1.5 sm:-ml-2 sm:-mt-2 rounded-full border-[1.5px] sm:border-2 flex items-center justify-center transition-all z-20",
-                    shot.isGoal 
-                      ? "bg-yellow-500 border-white shadow-[0_0_15px_rgba(234,179,8,0.5)]" 
-                      : "bg-emerald-500 border-black shadow-[0_0_10px_rgba(16,185,129,0.3)]",
-                    selectedShot?.id === shot.id ? "ring-2 sm:ring-4 ring-white scale-150" : 
-                    matchDominance > 0.2 ? "ring-1 sm:ring-2 ring-blue-500/50" :
-                    matchDominance < -0.2 ? "ring-1 sm:ring-2 ring-red-500/50" : ""
-                  )}
-                  style={{
-                    left: `${(shot.y / DEFAULT_PITCH.width) * 100}%`,
-                    top: `${(shot.x / DEFAULT_PITCH.height) * 100}%`,
-                  }}
-                />
-              ))}
-
-              {shots.length === 0 && !showHeatmap && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div className="text-center space-y-4">
-                    <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto border border-white/10">
-                      <MousePointer2 className="w-8 h-8 text-gray-600" />
-                    </div>
-                    <div>
-                      <p className="text-gray-400 font-medium">Clicca sulla mappa per aggiungere un tiro</p>
-                      <p className="text-gray-600 text-sm">Configura i parametri nel pannello a destra</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </motion.div>
-        </div>
-
-        {/* Right Column: Sidebar */}
-        <div className="lg:col-span-4 space-y-6">
-          {/* Opponent Input */}
-          {/* Configuration Card */}
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-4 sm:p-6 backdrop-blur-sm">
-            <div className="flex items-center gap-2 mb-4 sm:mb-6">
-              <Settings className="w-4 h-4 text-blue-500" />
-              <h2 className="font-bold text-xs sm:text-sm uppercase tracking-widest text-gray-400">
-                {selectedShot ? 'Modifica Tiro' : 'Nuovo Tiro'}
-              </h2>
-            </div>
-
-            <div className="space-y-4 sm:space-y-6">
-              <div>
-                <label className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-2 sm:mb-3 block">Squadra</label>
-                <div className="bg-black/40 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl border border-white/10 text-sm font-bold text-white">
-                  {teamName}
-                </div>
-              </div>
-              <div>
-                <label className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-2 sm:mb-3 block">Nome Giocatore</label>
-                {!isAddingNewPlayer ? (
-                  <div className="relative">
-                    <select 
-                      value={selectedShot ? selectedShot.playerName : newShotConfig.playerName}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (val === "ADD_NEW") {
-                          setIsAddingNewPlayer(true);
-                        } else {
-                          if (selectedShot) {
-                            updateShot(selectedShot.id, { playerName: val });
-                          } else {
-                            setNewShotConfig(prev => ({ ...prev, playerName: val }));
-                          }
-                        }
-                      }}
-                      className="w-full bg-black/40 border border-white/10 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all appearance-none text-white"
-                    >
-                      <option value="">Seleziona giocatore...</option>
-                      {playerList.length > 0 && (
-                        <optgroup label="In questa partita">
-                          {playerList.map(p => <option key={p} value={p}>{p}</option>)}
-                        </optgroup>
-                      )}
-                      <optgroup label="Squadra / Suggeriti">
-                        {PREDEFINED_PLAYERS.map(p => <option key={p} value={p}>{p}</option>)}
-                      </optgroup>
-                      <option value="ADD_NEW">+ Aggiungi nuovo...</option>
-                    </select>
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">
-                      <ChevronDown className="w-4 h-4" />
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex gap-2">
-                    <input 
-                      autoFocus
-                      type="text"
-                      placeholder="Nome nuovo giocatore"
-                      className="flex-1 bg-black/40 border border-white/10 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-white"
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          const val = (e.target as HTMLInputElement).value;
-                          if (val) {
-                            if (selectedShot) {
-                              updateShot(selectedShot.id, { playerName: val });
-                            } else {
-                              setNewShotConfig(prev => ({ ...prev, playerName: val }));
-                            }
-                            setIsAddingNewPlayer(false);
-                          }
-                        }
-                        if (e.key === 'Escape') setIsAddingNewPlayer(false);
-                      }}
-                    />
-                    <motion.button 
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                      onClick={() => setIsAddingNewPlayer(false)}
-                      className="p-3 bg-white/5 border border-white/10 rounded-xl text-gray-400 hover:text-white transition-all"
-                      title="Annulla"
-                    >
-                      <X className="w-4 h-4" />
-                    </motion.button>
-                  </div>
-                )}
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                <div>
-                  <label className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-2 sm:mb-3 block">Parte Corpo</label>
-                  <div className="flex bg-black/40 p-1 rounded-xl border border-white/10">
-                    <motion.button 
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => {
-                        if (selectedShot) {
-                          updateShot(selectedShot.id, { bodyPart: 'foot' });
-                        } else {
-                          setNewShotConfig(prev => ({ ...prev, bodyPart: 'foot' }));
-                        }
-                      }}
-                      className={cn(
-                        "flex-1 py-1.5 sm:py-2 rounded-lg text-[10px] sm:text-xs font-bold transition-all flex items-center justify-center gap-1.5 sm:gap-2",
-                        (selectedShot ? selectedShot.bodyPart : newShotConfig.bodyPart) === 'foot' ? "bg-blue-600 text-white" : "text-gray-400 hover:text-white"
-                      )}
-                    >
-                      <Footprints className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                      Piede
-                    </motion.button>
-                    <motion.button 
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => {
-                        if (selectedShot) {
-                          updateShot(selectedShot.id, { bodyPart: 'head' });
-                        } else {
-                          setNewShotConfig(prev => ({ ...prev, bodyPart: 'head' }));
-                        }
-                      }}
-                      className={cn(
-                        "flex-1 py-1.5 sm:py-2 rounded-lg text-[10px] sm:text-xs font-bold transition-all flex items-center justify-center gap-1.5 sm:gap-2",
-                        (selectedShot ? selectedShot.bodyPart : newShotConfig.bodyPart) === 'head' ? "bg-blue-600 text-white" : "text-gray-400 hover:text-white"
-                      )}
-                    >
-                      <UserIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                      Testa
-                    </motion.button>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-2 sm:mb-3 block">Risultato</label>
-                  <motion.button 
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => {
-                      if (selectedShot) {
-                        updateShot(selectedShot.id, { isGoal: !selectedShot.isGoal });
-                      } else {
-                        setNewShotConfig(prev => ({ ...prev, isGoal: !prev.isGoal }));
-                      }
-                    }}
-                    className={cn(
-                      "w-full py-2 sm:py-2.5 rounded-xl text-[10px] sm:text-xs font-bold transition-all border flex items-center justify-center gap-1.5 sm:gap-2",
-                      (selectedShot ? selectedShot.isGoal : newShotConfig.isGoal) 
-                        ? "bg-yellow-500 border-yellow-400 text-black" 
-                        : "bg-white/5 border-white/10 text-gray-400"
-                    )}
-                  >
-                    {(selectedShot ? selectedShot.isGoal : newShotConfig.isGoal) ? 'GOL' : 'NO GOL'}
-                  </motion.button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                <div>
-                  <label className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-2 sm:mb-3 block">Minuto</label>
-                  <div className="flex items-center bg-black/40 border border-white/10 rounded-xl px-2 sm:px-3 py-2">
-                    <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-gray-500 mr-2" />
-                    <input 
-                      type="number"
-                      min="0"
-                      max="120"
-                      value={selectedShot ? selectedShot.minute : currentMinute}
-                      onChange={(e) => {
-                        const val = parseInt(e.target.value) || 0;
-                        if (selectedShot) {
-                          updateShot(selectedShot.id, { minute: val });
-                        }
-                      }}
-                      readOnly={!selectedShot}
-                      className={cn(
-                        "w-full bg-transparent text-xs sm:text-sm font-bold focus:outline-none",
-                        !selectedShot && "text-gray-500"
-                      )}
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-2 sm:mb-3 block">Distanza</label>
-                  <div className="flex items-center bg-black/5 border border-white/5 rounded-xl px-2 sm:px-3 py-2 text-gray-400">
-                    <Target className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-2" />
-                    <span className="text-xs sm:text-sm font-bold">
-                      {selectedShot 
-                        ? Math.sqrt(selectedShot.x**2 + (selectedShot.y-34)**2).toFixed(1) 
-                        : '---'}m
-                    </span>
                   </div>
                 </div>
               </div>
-
-              <div>
-                <label className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-2 sm:mb-3 block">Tipo Assist</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {(['none', 'pass', 'cross', 'rebound'] as AssistType[]).map((type) => (
-                    <motion.button
-                      key={type}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => {
-                        if (selectedShot) {
-                          updateShot(selectedShot.id, { assistType: type });
-                        } else {
-                          setNewShotConfig(prev => ({ ...prev, assistType: type }));
-                        }
-                      }}
-                      className={cn(
-                        "py-2 sm:py-2.5 rounded-xl text-[9px] sm:text-[10px] font-bold uppercase tracking-wider transition-all border",
-                        (selectedShot ? selectedShot.assistType : newShotConfig.assistType) === type 
-                          ? "bg-blue-600 border-blue-400 text-white" 
-                          : "bg-black/40 border-white/10 text-gray-400 hover:border-white/30"
-                      )}
-                    >
-                      {type === 'none' ? 'Nessuno' : type === 'pass' ? 'Passaggio' : type === 'cross' ? 'Cross' : 'Rimpallo'}
-                    </motion.button>
-                  ))}
-                </div>
-              </div>
-              
-              {selectedShot && (
-                <div className="pt-2 flex flex-col gap-2">
-                  <button 
-                    onClick={() => removeShot(selectedShot.id)}
-                    className="w-full py-2.5 sm:py-3 rounded-xl text-[10px] sm:text-xs font-bold bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20 transition-all flex items-center justify-center gap-2"
-                  >
-                    <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                    Elimina Tiro
-                  </button>
-                  <button 
-                    onClick={() => setSelectedShot(null)}
-                    className="w-full py-2.5 sm:py-3 rounded-xl text-[10px] sm:text-xs font-bold bg-white/5 text-gray-400 hover:text-white border border-white/10 transition-all flex items-center justify-center gap-2"
-                  >
-                    <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                    Nuovo Tiro
-                  </button>
-                </div>
-              )}
             </div>
           </div>
-
-          {/* Selected Shot Info Summary (Simplified since we have edit controls) */}
-          {/* Selected Shot Info Summary */}
-          <AnimatePresence mode="wait">
-            {selectedShot && (
-              <motion.div 
-                key="selected-stats"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 10 }}
-                className="bg-emerald-500 text-black rounded-2xl p-4 sm:p-6 shadow-xl shadow-emerald-500/20 relative overflow-hidden"
-              >
-                <div className="flex items-center justify-between relative z-10">
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <div className="w-8 h-8 sm:w-10 sm:h-10 bg-black rounded-lg flex items-center justify-center">
-                      <Zap className="text-emerald-500 w-4 h-4 sm:w-5 sm:h-5" />
-                    </div>
-                    <div>
-                      <p className="text-[8px] sm:text-[10px] font-bold uppercase tracking-widest opacity-60">Probabilità xG</p>
-                      <p className="text-xl sm:text-2xl font-black">{(selectedShot.xg * 100).toFixed(1)}%</p>
-                    </div>
-                  </div>
-                  <button 
-                    onClick={() => removeShot(selectedShot.id)}
-                    className="w-8 h-8 sm:w-10 sm:h-10 bg-black/10 hover:bg-black/20 rounded-lg flex items-center justify-center transition-all"
-                  >
-                    <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
-                  </button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      </div>
-    ) : (
+        ) : (
           <IPOView 
             teamName={teamName}
             teamColor={teamColor}
@@ -2156,45 +1907,45 @@ export default function App() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setShowMatchList(false)}
-              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+              className="absolute inset-0 bg-[#070708]/90 backdrop-blur-md"
             />
             <motion.div 
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-2xl bg-[#121212] border border-white/10 rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden"
+              className="relative w-full max-w-2xl bg-[#0d0d0e] border border-white/[0.05] rounded-[2.5rem] shadow-2xl overflow-hidden"
             >
-              <div className="p-4 sm:p-6 border-b border-white/10 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-600/10 rounded-lg sm:rounded-xl flex items-center justify-center">
-                    <List className="text-blue-500 w-4 h-4 sm:w-5 sm:h-5" />
+              <div className="p-8 border-b border-white/[0.03] flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-white/[0.03] rounded-2xl flex items-center justify-center">
+                    <List className="text-blue-500 w-5 h-5" />
                   </div>
                   <div>
-                    <h2 className="text-base sm:text-lg font-black text-white">Le Mie Partite</h2>
-                    <p className="text-[10px] sm:text-xs text-gray-500 font-medium">Seleziona una partita da caricare</p>
+                    <h2 className="text-lg font-black text-white uppercase tracking-tight">Le Mie Partite</h2>
+                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Archivio Analitico</p>
                   </div>
                 </div>
                 <button 
                   onClick={() => setShowMatchList(false)}
-                  className="w-8 h-8 sm:w-10 sm:h-10 bg-white/5 hover:bg-white/10 rounded-lg sm:rounded-xl flex items-center justify-center text-gray-400 hover:text-white transition-all"
+                  className="w-12 h-12 bg-white/[0.03] hover:bg-white/[0.06] rounded-2xl flex items-center justify-center text-gray-500 hover:text-white transition-all outline-none"
                 >
-                  <X className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <div className="max-h-[60vh] overflow-y-auto p-3 sm:p-4 space-y-2 sm:space-y-3 custom-scrollbar">
+              <div className="max-h-[60vh] overflow-y-auto p-6 space-y-4 no-scrollbar">
                 {matches.length === 0 ? (
-                  <div className="py-12 sm:py-20 text-center">
-                    <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <FileSpreadsheet className="w-6 h-6 sm:w-8 sm:h-8 text-gray-600" />
+                  <div className="py-24 text-center">
+                    <div className="w-20 h-20 bg-white/[0.02] rounded-full flex items-center justify-center mx-auto mb-6">
+                      <FileSpreadsheet className="w-8 h-8 text-gray-700" />
                     </div>
-                    <p className="text-gray-500 text-xs sm:text-sm font-medium">Nessuna partita salvata</p>
+                    <p className="text-gray-600 text-[10px] font-black uppercase tracking-[0.2em]">Nessuna partita salvata</p>
                   </div>
                 ) : (
                   matches.map((match) => (
                     <div 
                       key={match.id}
-                      className="group bg-white/5 border border-white/10 hover:border-blue-500/30 rounded-xl sm:rounded-2xl p-3 sm:p-4 flex items-center justify-between transition-all"
+                      className="group bg-white/[0.01] border border-white/5 hover:border-blue-500/20 rounded-3xl p-5 flex items-center justify-between transition-all"
                     >
                       <div 
                         className={cn(
@@ -2203,57 +1954,43 @@ export default function App() {
                         )} 
                         onClick={() => !loadingMatchId && loadMatch(match)}
                       >
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 mb-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <div className="flex items-center gap-1.5">
-                              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: match.teamColor || '#eab308' }} />
-                              <span className="text-xs sm:text-sm font-black text-white truncate">{match.teamName}</span>
-                            </div>
-                            <span className="text-[10px] font-bold text-gray-600">vs</span>
-                            <div className="flex items-center gap-1.5">
-                              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: match.awayColor || '#3b82f6' }} />
-                              <span className="text-xs sm:text-sm font-black text-white truncate">{match.awayTeam || 'Avversario'}</span>
-                            </div>
+                        <div className="flex items-center gap-4 mb-2">
+                          <div className="flex items-center gap-3">
+                            <span className="text-sm font-black text-white uppercase tracking-tight">{match.teamName}</span>
+                            <span className="text-[9px] font-bold text-gray-700 uppercase italic">vs</span>
+                            <span className="text-sm font-black text-white uppercase tracking-tight">{match.awayTeam || 'Avversario'}</span>
                           </div>
-                          <span className="text-[8px] sm:text-[10px] font-bold bg-blue-600/10 text-blue-500 px-2 py-0.5 rounded-full w-fit">
+                          <div className="px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-500 text-[8px] font-black uppercase tracking-widest">
                             {match.goals} Gol • {match.totalXG.toFixed(2)} xG
-                          </span>
+                          </div>
                         </div>
-                        <p className="text-[8px] sm:text-[10px] text-gray-500 font-medium uppercase tracking-widest">
+                        <p className="text-[9px] text-gray-600 font-bold uppercase tracking-[0.2em]">
                           {new Date(match.date).toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' })}
                         </p>
                       </div>
-                      <div className="flex items-center gap-1.5 sm:gap-2 ml-2">
+                      <div className="flex items-center gap-3 ml-4">
                         <button 
                           onClick={() => {
                             const url = `${window.location.origin}${window.location.pathname}?matchId=${match.id}`;
                             navigator.clipboard.writeText(url);
-                            setShowToast({ message: "Link copiato negli appunti!", type: 'success' });
+                            setShowToast({ message: "Link copiato!", type: 'success' });
                           }}
-                          className="p-1.5 sm:p-2 bg-white/5 hover:bg-blue-500/20 text-gray-500 hover:text-blue-500 rounded-lg transition-all"
-                          title="Condividi"
+                          className="p-3 bg-white/[0.03] hover:bg-blue-500/10 text-gray-600 hover:text-blue-500 rounded-xl transition-all"
                         >
-                          <Share2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                          <Share2 className="w-4 h-4" />
                         </button>
                         <button 
                           onClick={() => loadMatch(match)}
                           disabled={loadingMatchId !== null}
-                          className="px-3 sm:px-4 py-1.5 sm:py-2 bg-blue-600 hover:bg-blue-500 text-white text-[10px] sm:text-xs font-black rounded-lg transition-all disabled:opacity-50 flex items-center gap-2"
+                          className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all disabled:opacity-50"
                         >
-                          {loadingMatchId === match.id ? (
-                            <>
-                              <RefreshCw className="w-3 h-3 animate-spin" />
-                              <span>Caricamento...</span>
-                            </>
-                          ) : (
-                            'Carica'
-                          )}
+                          {loadingMatchId === match.id ? 'Loading...' : 'Apri'}
                         </button>
                         <button 
                           onClick={() => setMatchToDelete(match.id)}
-                          className="p-1.5 sm:p-2 bg-white/5 hover:bg-red-500/20 text-gray-500 hover:text-red-500 rounded-lg transition-all"
+                          className="p-3 bg-white/[0.03] hover:bg-red-500/10 text-gray-600 hover:text-red-500 rounded-xl transition-all"
                         >
-                          <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </div>
@@ -2312,16 +2049,18 @@ export default function App() {
       <AnimatePresence>
         {showToast && (
           <motion.div 
-            initial={{ opacity: 0, y: 50, x: '-50%' }}
-            animate={{ opacity: 1, y: 0, x: '-50%' }}
-            exit={{ opacity: 0, y: 50, x: '-50%' }}
-            className={cn(
-              "fixed bottom-8 left-1/2 z-[200] px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border backdrop-blur-md",
-              showToast.type === 'success' ? "bg-blue-600/90 border-blue-400 text-white" : "bg-red-500/90 border-red-400 text-white"
-            )}
+            initial={{ opacity: 0, y: 50, x: '-50%', scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, x: '-50%', scale: 1 }}
+            exit={{ opacity: 0, y: 50, x: '-50%', scale: 0.9 }}
+            className="fixed bottom-12 left-1/2 z-[300] px-8 py-4 rounded-[1.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex items-center gap-4 border border-white/[0.05] bg-[#0d0d0e]/95 backdrop-blur-2xl"
           >
-            {showToast.type === 'success' ? <CheckCircle2 className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
-            <span className="font-bold text-sm">{showToast.message}</span>
+            <div className={cn(
+              "w-8 h-8 rounded-xl flex items-center justify-center",
+              showToast.type === 'success' ? "bg-blue-500/10 text-blue-500" : "bg-red-500/10 text-red-500"
+            )}>
+              {showToast.type === 'success' ? <CheckCircle2 className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+            </div>
+            <span className="font-black text-[10px] uppercase tracking-widest text-white leading-none">{showToast.message}</span>
           </motion.div>
         )}
       </AnimatePresence>
@@ -2374,47 +2113,36 @@ function IPOView({
     const currentIpoEvents = activeTeam === 'home' ? ipoEvents : ipoEventsAway;
     const setIpoEventsFn = activeTeam === 'home' ? setIpoEvents : setIpoEventsAway;
     const currentTeamName = activeTeam === 'home' ? teamName : awayTeam;
-    const currentTeamColor = activeTeam === 'home' ? teamColor : awayColor;
     
     const count = currentIpoEvents[key as keyof typeof ipoEvents];
-    const teamColorStyle = { color: currentTeamColor };
 
     return (
-      <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 transition-all group">
-        <div className="flex items-center gap-3">
-          <div 
-            className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center text-gray-400 transition-colors"
-            style={teamColorStyle}
-          >
+      <div className="flex items-center justify-between p-5 rounded-[2rem] bg-white/[0.01] border border-white/[0.03] hover:bg-white/[0.02] transition-all group">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-white/[0.03] flex items-center justify-center text-gray-400 group-hover:text-blue-500 transition-colors">
             {icon}
           </div>
           <div>
-            <div className="text-xs font-black text-white uppercase tracking-tight">{label}</div>
-            <div className="text-[10px] font-bold text-gray-500 uppercase">x{weight}</div>
+            <div className="text-[10px] font-black text-white uppercase tracking-[0.1em]">{label}</div>
+            <div className="text-[8px] font-bold text-gray-600 uppercase tracking-widest mt-1">PESO: {weight}</div>
           </div>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center bg-black/40 rounded-lg p-1 border border-white/5">
+        <div className="flex items-center gap-6">
+          <div className="flex items-center bg-gray-950/50 rounded-2xl p-1.5 border border-white/5">
             <motion.button 
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               onClick={() => {
-                if (isReadOnly) return;
-                if (count > 0) {
-                  setIpoEventsFn((prev: any) => ({ ...prev, [key]: prev[key] - 1 }));
-                  addMatchEvent({
-                    type: 'ipo_event',
-                    description: `Rimosso ${label} per ${currentTeamName}`
-                  });
-                }
+                if (isReadOnly || count <= 0) return;
+                setIpoEventsFn((prev: any) => ({ ...prev, [key]: prev[key] - 1 }));
+                addMatchEvent({ type: 'ipo_event', description: `Rimosso ${label} (${currentTeamName})` });
               }}
-              disabled={isReadOnly}
-              className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              className="w-10 h-10 flex items-center justify-center text-gray-600 hover:text-white transition-colors"
             >
               <Minus className="w-4 h-4" />
             </motion.button>
-            <div className="w-10 text-center font-black text-white text-lg">
-              <AnimatedCounter value={count} decimals={0} />
+            <div className="w-12 text-center font-black text-white text-xl tabular-nums">
+              {count}
             </div>
             <motion.button 
               whileHover={{ scale: 1.1 }}
@@ -2422,21 +2150,14 @@ function IPOView({
               onClick={() => {
                 if (isReadOnly) return;
                 setIpoEventsFn((prev: any) => ({ ...prev, [key]: prev[key] + 1 }));
-                addMatchEvent({
-                  type: 'ipo_event',
-                  description: `Aggiunto ${label} per ${currentTeamName}`
-                });
+                addMatchEvent({ type: 'ipo_event', description: `Aggiunto ${label} (${currentTeamName})` });
               }}
-              disabled={isReadOnly}
-              className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              className="w-10 h-10 flex items-center justify-center text-gray-600 hover:text-white transition-colors"
             >
               <Plus className="w-4 h-4" />
             </motion.button>
           </div>
-          <div 
-            className="w-12 text-right font-black text-gray-400 transition-colors"
-            style={teamColorStyle}
-          >
+          <div className="w-16 text-right font-black text-blue-500 text-lg tabular-nums">
             {(count * weight).toFixed(1)}
           </div>
         </div>
@@ -2445,172 +2166,171 @@ function IPOView({
   };
 
   return (
-    <div className="max-w-[1600px] mx-auto p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
-      {/* Left Column */}
-      <div className="lg:col-span-5 space-y-6">
-        {/* Team Card */}
+    <div className="max-w-[1600px] mx-auto p-4 sm:p-6 lg:p-8 flex flex-col gap-8">
+      {/* Scoreboard Bento */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <motion.div 
-          className={cn(
-            "w-full text-left relative overflow-hidden bg-[#121212] border-l-4 rounded-2xl p-6 shadow-2xl transition-all",
-            "ring-2 ring-white/10"
-          )}
-          animate={{ 
-            boxShadow: (ipoActiveTeam === 'home' ? (prevIpo !== undefined && ipo > prevIpo) : (prevIpoAway !== undefined && ipoAway > prevIpoAway))
-              ? [`0px 0px 0px ${ipoActiveTeam === 'home' ? teamColor : awayColor}00`, `0px 0px 30px ${ipoActiveTeam === 'home' ? teamColor : awayColor}66`, `0px 0px 0px ${ipoActiveTeam === 'home' ? teamColor : awayColor}00`] 
-              : "0px 0px 0px rgba(0,0,0,0)"
-          }}
-          style={{ 
-            borderLeftColor: ipoActiveTeam === 'home' ? teamColor : awayColor,
-          }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="lg:col-span-1 bg-white/[0.02] border border-white/[0.05] rounded-[2.5rem] p-8 flex flex-col justify-between min-h-[220px]"
         >
-          <div className="flex justify-between items-start mb-8">
-            <div>
-              <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Squadra</span>
-              <h2 className="text-3xl font-black text-white uppercase tracking-tighter mt-1">
-                {ipoActiveTeam === 'home' ? teamName : awayTeam}
-              </h2>
-            </div>
-            <div className="text-right">
-              <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">IPO</span>
-              <div className="text-4xl font-black tracking-tighter" style={{ color: ipoActiveTeam === 'home' ? teamColor : awayColor }}>
-                <AnimatedCounter value={ipoActiveTeam === 'home' ? ipo : ipoAway} />
-              </div>
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Live Status</p>
+            <div className="flex gap-1">
+              <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+              <div className="w-1.5 h-1.5 rounded-full bg-white/10" />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-white/5 rounded-xl p-4 border border-white/5">
-              <span className="text-[10px] font-bold text-gray-500 uppercase block mb-2">Gol</span>
-              <div className="flex items-center justify-between">
-                <motion.button 
-                  whileHover={{ scale: 1.2 }}
-                  whileTap={{ scale: 0.8 }}
-                  onClick={() => { 
-                  if (isReadOnly) return;
-                  if (ipoActiveTeam === 'home') {
-                    if (goals > 0) {
-                      setGoals(goals - 1);
-                      addMatchEvent({ type: 'ipo_event', description: `Annullato GOL per ${teamName}` });
-                    }
-                  } else {
-                    if (goalsAway > 0) {
-                      setGoalsAway(goalsAway - 1);
-                      addMatchEvent({ type: 'ipo_event', description: `Annullato GOL per ${awayTeam}` });
-                    }
-                  }
-                }}
-                disabled={isReadOnly}
-                className="text-gray-500 hover:text-white cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-                >
-                  <Minus className="w-4 h-4" />
-                </motion.button>
-                <span className="text-2xl font-black text-white">
-                  <AnimatedCounter value={ipoActiveTeam === 'home' ? goals : goalsAway} decimals={0} />
-                </span>
-                <motion.button 
-                  whileHover={{ scale: 1.2 }}
-                  whileTap={{ scale: 0.8 }}
-                  onClick={() => { 
-                  if (isReadOnly) return;
-                  if (ipoActiveTeam === 'home') {
-                    setGoals(goals + 1);
-                    addMatchEvent({ type: 'goal', description: `GOL segnato da ${teamName}` });
-                  } else {
-                    setGoalsAway(goalsAway + 1);
-                    addMatchEvent({ type: 'goal', description: `GOL segnato da ${awayTeam}` });
-                  }
-                }}
-                disabled={isReadOnly}
-                className="text-gray-500 hover:text-white cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-                >
-                  <Plus className="w-4 h-4" />
-                </motion.button>
-              </div>
+          <div>
+            <h2 className="text-3xl font-black text-white uppercase tracking-tighter leading-none mb-2">
+              {ipoActiveTeam === 'home' ? teamName : awayTeam}
+            </h2>
+            <div className="flex items-center gap-3">
+              <span className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">{ipoActiveTeam === 'home' ? 'Squadra Casa' : 'Squadra Ospite'}</span>
+              <div className="h-px w-8 bg-white/10" />
             </div>
-            <div className="bg-white/5 rounded-xl p-4 border border-white/5">
-              <span className="text-[10px] font-bold text-gray-500 uppercase block mb-2">Efficienza</span>
-              <div className="text-2xl font-black text-white">
-                <AnimatedCounter value={efficiency} decimals={2} />
-              </div>
-            </div>
+          </div>
+        </motion.div>
+
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="lg:col-span-1 bg-white/[0.02] border border-white/[0.05] rounded-[2.5rem] p-8 flex flex-col justify-between"
+        >
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Performance Index</p>
+            <Zap className="w-4 h-4 text-blue-500" />
+          </div>
+          <div className="flex items-baseline gap-4">
+            <span className="text-6xl font-black text-white tracking-tighter tabular-nums">
+              <AnimatedCounter value={ipoActiveTeam === 'home' ? ipo : ipoAway} />
+            </span>
+            <span className="text-xs font-black text-blue-500 uppercase tracking-widest leading-none bg-blue-500/10 px-3 py-1 rounded-full">IPO</span>
+          </div>
+        </motion.div>
+
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="lg:col-span-1 bg-white/[0.02] border border-white/[0.05] rounded-[2.5rem] p-8 flex flex-col justify-between"
+        >
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Real Efficiency</p>
+            <Trophy className="w-4 h-4 text-yellow-500" />
+          </div>
+          <div className="flex items-center justify-between">
+             <div className="flex flex-col">
+                <span className="text-4xl font-black text-white">{ipoActiveTeam === 'home' ? goals : goalsAway}</span>
+                <span className="text-[8px] font-bold text-gray-600 uppercase mt-1">GOL TOTALI</span>
+             </div>
+             <div className="h-10 w-px bg-white/10 mx-4" />
+             <div className="flex flex-col text-right">
+                <span className="text-4xl font-black text-white">{(efficiency * 100).toFixed(0)}%</span>
+                <span className="text-[8px] font-bold text-gray-600 uppercase mt-1">EFFICIENZA</span>
+             </div>
           </div>
         </motion.div>
       </div>
 
-      {/* Right Column: Events */}
-      <div className="lg:col-span-7 bg-[#121212] border border-white/5 rounded-3xl overflow-hidden flex flex-col">
-        <div className="p-6 border-b border-white/5 flex flex-col gap-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div 
-                className="w-10 h-10 rounded-xl flex items-center justify-center bg-blue-500/10 text-blue-500"
-              >
-                <Target className="w-5 h-5" />
+      {/* Events Control Zone */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="lg:col-span-4 flex flex-col gap-6">
+           <div className="bg-[#0d0d0e] border border-white/5 rounded-[2.5rem] p-4 flex flex-col gap-2">
+             <button
+               onClick={() => setIpoActiveTeam('home')}
+               className={cn(
+                 "group relative py-6 px-8 rounded-[2rem] text-left transition-all duration-500 overflow-hidden",
+                 ipoActiveTeam === 'home' ? "bg-white/[0.03]" : "hover:bg-white/[0.01]"
+               )}
+             >
+               {ipoActiveTeam === 'home' && <motion.div layoutId="ipo-active" className="absolute inset-0 bg-blue-500/5 ring-1 ring-blue-500/20" />}
+               <div className="relative z-10">
+                 <p className="text-[8px] font-black text-gray-600 uppercase tracking-widest mb-1">Squadra A</p>
+                 <h4 className="text-sm font-black text-white uppercase tracking-tight">{teamName}</h4>
+               </div>
+             </button>
+             <button
+               onClick={() => setIpoActiveTeam('away')}
+               className={cn(
+                 "group relative py-6 px-8 rounded-[2rem] text-left transition-all duration-500 overflow-hidden",
+                 ipoActiveTeam === 'away' ? "bg-white/[0.03]" : "hover:bg-white/[0.01]"
+               )}
+             >
+               {ipoActiveTeam === 'away' && <motion.div layoutId="ipo-active" className="absolute inset-0 bg-blue-500/5 ring-1 ring-blue-500/20" />}
+               <div className="relative z-10">
+                 <p className="text-[8px] font-black text-gray-600 uppercase tracking-widest mb-1">Squadra B</p>
+                 <h4 className="text-sm font-black text-white uppercase tracking-tight">{awayTeam || 'Avversario'}</h4>
+               </div>
+             </button>
+           </div>
+
+           <div className="bg-white/[0.01] border border-white/[0.03] rounded-[2.5rem] p-8 space-y-6">
+              <div className="flex items-center gap-3">
+                 <div className="w-8 h-8 rounded-xl bg-yellow-500/10 flex items-center justify-center text-yellow-500">
+                    <Zap className="w-4 h-4" />
+                 </div>
+                 <h4 className="text-[10px] font-black text-white uppercase tracking-widest">Azioni Rapide</h4>
               </div>
-              <h3 className="text-lg font-black text-white uppercase tracking-tight">
-                Eventi IPO
-              </h3>
-            </div>
-            <button 
-              onClick={() => {
-                if (ipoActiveTeam === 'home') {
-                  setIpoEvents({ shotsIn: 0, shotsOut: 0, penalties: 0, freeKicks: 0, corners: 0, crosses: 0 });
-                  setGoals(0);
-                } else {
-                  setIpoEventsAway({ shotsIn: 0, shotsOut: 0, penalties: 0, freeKicks: 0, corners: 0, crosses: 0 });
-                  setGoalsAway(0);
-                }
-                addMatchEvent({ type: 'match_reset', description: `Reset totale ${ipoActiveTeam === 'home' ? teamName : awayTeam}` });
-              }}
-              className="p-2 text-gray-500 hover:text-white transition-colors"
-              title="Resetta statistiche"
-            >
-              <RotateCcw className="w-5 h-5" />
-            </button>
-          </div>
-
-          {/* Team Selector Tabs */}
-          <div className="flex p-1 bg-black/40 rounded-xl border border-white/5">
-            <button
-              onClick={() => setIpoActiveTeam('home')}
-              className={cn(
-                "flex-1 py-2 px-4 rounded-lg text-xs font-black uppercase transition-all",
-                ipoActiveTeam === 'home' 
-                  ? "bg-white/10 text-white shadow-lg" 
-                  : "text-gray-500 hover:text-gray-300"
-              )}
-              style={ipoActiveTeam === 'home' ? { borderBottom: `2px solid ${teamColor}` } : {}}
-            >
-              {teamName}
-            </button>
-            <button
-              onClick={() => setIpoActiveTeam('away')}
-              className={cn(
-                "flex-1 py-2 px-4 rounded-lg text-xs font-black uppercase transition-all",
-                ipoActiveTeam === 'away' 
-                  ? "bg-white/10 text-white shadow-lg" 
-                  : "text-gray-500 hover:text-gray-300"
-              )}
-              style={ipoActiveTeam === 'away' ? { borderBottom: `2px solid ${awayColor}` } : {}}
-            >
-              {awayTeam}
-            </button>
-          </div>
+              <div className="flex flex-col gap-3">
+                 <button 
+                   onClick={() => {
+                     if (ipoActiveTeam === 'home') setGoals(goals + 1);
+                     else setGoalsAway(goalsAway + 1);
+                     addMatchEvent({ type: 'goal', description: `GOL rapido (${ipoActiveTeam === 'home' ? teamName : awayTeam})` });
+                   }}
+                   className="w-full py-4 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border border-yellow-500/20 flex items-center justify-center gap-3"
+                 >
+                   <Trophy className="w-4 h-4" /> Registra GOL
+                 </button>
+                 <button 
+                    onClick={() => {
+                      if (ipoActiveTeam === 'home') {
+                        setIpoEvents({ shotsIn: 0, shotsOut: 0, penalties: 0, freeKicks: 0, corners: 0, crosses: 0 });
+                        setGoals(0);
+                      } else {
+                        setIpoEventsAway({ shotsIn: 0, shotsOut: 0, penalties: 0, freeKicks: 0, corners: 0, crosses: 0 });
+                        setGoalsAway(0);
+                      }
+                      addMatchEvent({ type: 'match_reset', description: `Reset (${ipoActiveTeam === 'home' ? teamName : awayTeam})` });
+                    }}
+                    className="w-full py-4 bg-white/5 hover:bg-white/10 text-gray-500 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border border-white/10"
+                 >
+                    Reset Statistiche
+                 </button>
+              </div>
+           </div>
         </div>
 
-        <div className="flex-1 p-6 space-y-3 overflow-y-auto custom-scrollbar">
-          {renderEventRow('shotsIn', 'Tiro in area', weights.shotsIn, <Target className="w-5 h-5" />, ipoActiveTeam)}
-          {renderEventRow('shotsOut', 'Tiro fuori', weights.shotsOut, <Zap className="w-5 h-5" />, ipoActiveTeam)}
-          {renderEventRow('penalties', 'Rigore', weights.penalties, <CheckCircle2 className="w-5 h-5" />, ipoActiveTeam)}
-          {renderEventRow('freeKicks', 'Punizione', weights.freeKicks, <MousePointer2 className="w-4 h-4 rotate-45" />, ipoActiveTeam)}
-          {renderEventRow('corners', 'Corner', weights.corners, <Trophy className="w-5 h-5" />, ipoActiveTeam)}
-          {renderEventRow('crosses', 'Cross/Traversone', weights.crosses, <Activity className="w-5 h-5" />, ipoActiveTeam)}
-        </div>
+        <div className="lg:col-span-8 bg-white/[0.01] border border-white/[0.03] rounded-[3rem] p-8">
+           <div className="flex items-center justify-between mb-10">
+              <div>
+                <h3 className="text-xl font-black text-white uppercase tracking-tight">Pannello Eventi</h3>
+                <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest mt-1">Click per incrementare l'indice IPO</p>
+              </div>
+              <div className="flex items-center gap-2 px-4 py-2 bg-blue-500/10 rounded-xl">
+                 <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest">LIVE TRACKING</span>
+                 <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+              </div>
+           </div>
+           
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {renderEventRow('shotsIn', 'Tiro in area', weights.shotsIn, <Target className="w-5 h-5" />, ipoActiveTeam)}
+              {renderEventRow('shotsOut', 'Tiro fuori/respinto', weights.shotsOut, <Zap className="w-5 h-5" />, ipoActiveTeam)}
+              {renderEventRow('penalties', 'Calcio di Rigore', weights.penalties, <CheckCircle2 className="w-5 h-5" />, ipoActiveTeam)}
+              {renderEventRow('freeKicks', 'Calcio di Punizione', weights.freeKicks, <Activity className="w-5 h-5" />, ipoActiveTeam)}
+              {renderEventRow('corners', 'Calcio d\'angolo', weights.corners, <RotateCw className="w-5 h-5" />, ipoActiveTeam)}
+              {renderEventRow('crosses', 'Cross/Traversone', weights.crosses, <ChevronUp className="w-5 h-5" />, ipoActiveTeam)}
+           </div>
 
-        <div className="p-6 bg-black/40 border-t border-white/5 flex justify-between items-center">
-          <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Totale IPO {ipoActiveTeam === 'home' ? teamName : awayTeam}</span>
-          <div className="text-3xl font-black text-blue-500">
-            {(ipoActiveTeam === 'home' ? ipo : ipoAway).toFixed(1)}
-          </div>
+           <div className="mt-10 pt-8 border-t border-white/[0.03] flex items-center justify-between">
+              <p className="text-[9px] font-bold text-gray-700 uppercase tracking-[0.2em]">Algoritmo IPO v3.4 Dynamic Weighting</p>
+              <div className="flex items-center gap-4">
+                 <span className="text-[10px] font-black text-gray-500 uppercase">Totale</span>
+                 <span className="text-3xl font-black text-white">{(ipoActiveTeam === 'home' ? ipo : ipoAway).toFixed(1)}</span>
+              </div>
+           </div>
         </div>
       </div>
     </div>
