@@ -1024,6 +1024,28 @@ export default function App() {
             </div>
           </div>
 
+          {/* Tab Switcher */}
+          <div className="flex items-center bg-white/[0.03] border border-white/5 rounded-2xl p-1 gap-1">
+            <button
+              onClick={() => setActiveTab('xg')}
+              className={cn(
+                "px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                activeTab === 'xg' ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20" : "text-gray-500 hover:text-white"
+              )}
+            >
+              Campo
+            </button>
+            <button
+              onClick={() => setActiveTab('ipo')}
+              className={cn(
+                "px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                activeTab === 'ipo' ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20" : "text-gray-500 hover:text-white"
+              )}
+            >
+              IPO
+            </button>
+          </div>
+
           <div className="flex items-center gap-8">
             <div className="hidden lg:flex items-center bg-white/[0.02] border border-white/5 rounded-2xl px-5 py-2 gap-6">
               <div className="flex items-center gap-2.5">
