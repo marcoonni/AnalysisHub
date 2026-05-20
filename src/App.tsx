@@ -160,24 +160,20 @@ interface ErrorBoundaryState {
 const AppLogo = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 100 100" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
     <defs>
-      <linearGradient id="modern-g1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <linearGradient id="logo-blue" x1="0%" y1="0%" x2="100%" y2="100%">
         <stop offset="0%" stopColor="#3b82f6" />
         <stop offset="100%" stopColor="#1d4ed8" />
       </linearGradient>
-      <linearGradient id="modern-g2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <linearGradient id="logo-neon" x1="0%" y1="0%" x2="100%" y2="100%">
         <stop offset="0%" stopColor="#10b981" />
         <stop offset="100%" stopColor="#059669" />
       </linearGradient>
-      <linearGradient id="modern-g3" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#f59e0b" />
-        <stop offset="100%" stopColor="#d97706" />
+      <linearGradient id="logo-rainbow" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#60a5fa" />
+        <stop offset="50%" stopColor="#3b82f6" />
+        <stop offset="100%" stopColor="#10b981" />
       </linearGradient>
-      <linearGradient id="ring-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.8" />
-        <stop offset="50%" stopColor="#10b981" stopOpacity="0.8" />
-        <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
-      </linearGradient>
-      <filter id="glow-modern" x="-30%" y="-30%" width="160%" height="160%">
+      <filter id="premium-glow" x="-30%" y="-30%" width="160%" height="160%">
         <feGaussianBlur stdDeviation="3.5" result="blur" />
         <feMerge>
           <feMergeNode in="blur" />
@@ -186,66 +182,37 @@ const AppLogo = ({ className }: { className?: string }) => (
       </filter>
     </defs>
 
-    {/* Technical Radar Circles */}
+    {/* Elegant background grid overlay representing a technical tactical pitch */}
     <circle cx="50" cy="50" r="44" stroke="currentColor" strokeWidth="0.5" strokeOpacity="0.08" />
-    <circle cx="50" cy="50" r="32" stroke="currentColor" strokeWidth="0.5" strokeOpacity="0.04" />
+    <path d="M 50 6 V 94 M 6 50 H 94" stroke="currentColor" strokeWidth="0.5" strokeOpacity="0.05" />
+    <circle cx="50" cy="50" r="14" stroke="currentColor" strokeWidth="0.5" strokeOpacity="0.06" fill="none" />
 
-    {/* Elegant futuristic curved trajectory loop (infinity/mobius feel) */}
+    {/* Technical vertical data bars forming an ascending chart trajectory */}
+    {/* Bar 1: Base stats (slanted, technical pill) */}
+    <rect x="29" y="44" width="7" height="32" rx="3.5" transform="rotate(-12 29 44)" fill="url(#logo-blue)" fillOpacity="0.85" />
+    
+    {/* Bar 2: Expected Goals buildup */}
+    <rect x="44" y="32" width="7" height="44" rx="3.5" transform="rotate(-12 44 32)" fill="url(#logo-blue)" />
+    
+    {/* Bar 3: Real conversion (emerald highlight) */}
+    <rect x="59" y="24" width="7" height="52" rx="3.5" transform="rotate(-12 59 24)" fill="url(#logo-neon)" />
+
+    {/* The Majestic Trajectory Arc - represents the perfect curvy kick cutting through the data */}
     <path 
-      d="M30 65 C18 53, 18 35, 32 25 C46 15, 62 21, 70 35 C78 49, 74 67, 58 75 C42 83, 24 73, 22 55" 
-      stroke="url(#ring-grad)" 
-      strokeWidth="3.5" 
+      d="M 18 80 C 26 58, 54 26, 76 22" 
+      stroke="url(#logo-rainbow)" 
+      strokeWidth="4" 
       strokeLinecap="round"
-      fill="none"
-      filter="url(#glow-modern)"
+      filter="url(#premium-glow)"
     />
 
-    {/* Hexagonal central core, styled with glassmorphic transparency */}
-    <polygon 
-      points="50,28 69,39 69,61 50,72 31,61 31,39" 
-      fill="currentColor" 
-      fillOpacity="0.03" 
-      stroke="currentColor" 
-      strokeWidth="0.75" 
-      strokeOpacity="0.15" 
-    />
+    {/* Precise technical intersection dots representing tactical position points */}
+    <circle cx="21" cy="72" r="2.5" fill="currentColor" fillOpacity="0.25" />
+    <circle cx="41" cy="46" r="2.5" fill="currentColor" fillOpacity="0.25" />
 
-    {/* Overlapping, crisp geometric translucent shards */}
-    {/* Left Blue Shard (Process/Buildup) */}
-    <path 
-      d="M50 28 L69 39 L50 50 Z" 
-      fill="url(#modern-g1)" 
-      fillOpacity="0.8" 
-    />
-    {/* Bottom Green Shard (Real Conversion) */}
-    <path 
-      d="M50 50 L69 61 L50 72 Z" 
-      fill="url(#modern-g2)" 
-      fillOpacity="0.85" 
-    />
-    {/* Right Accent Yellow Sharp Shard (High Performance/Value) */}
-    <path 
-      d="M31 39 L50 50 L31 61 Z" 
-      fill="url(#modern-g3)" 
-      fillOpacity="0.4" 
-    />
-
-    {/* Connection lines (data plexus) */}
-    <line x1="50" y1="28" x2="50" y2="72" stroke="white" strokeWidth="0.75" strokeOpacity="0.25" />
-    <line x1="31" y1="39" x2="69" y2="61" stroke="white" strokeWidth="0.75" strokeOpacity="0.25" />
-    <line x1="31" y1="61" x2="69" y2="39" stroke="white" strokeWidth="0.75" strokeOpacity="0.25" />
-
-    {/* Central Pulsing Tech Core */}
-    <circle cx="50" cy="50" r="4.5" fill="white" />
-    <circle cx="50" cy="50" r="2" fill="#3b82f6" />
-
-    {/* Highlighted active nodes (Data checkpoints) */}
-    <circle cx="50" cy="28" r="2" fill="white" />
-    <circle cx="69" cy="39" r="2" fill="white" />
-    <circle cx="69" cy="61" r="2" fill="#10b981" filter="url(#glow-modern)" />
-    <circle cx="50" cy="72" r="2" fill="white" />
-    <circle cx="31" cy="61" r="2" fill="white" />
-    <circle cx="31" cy="39" r="2" fill="white" />
+    {/* Dynamic Shot / Breakaway Ball Target Node representing peak success */}
+    <circle cx="76" cy="22" r="5.5" fill="white" filter="url(#premium-glow)" />
+    <circle cx="76" cy="22" r="2.5" fill="#10b981" />
   </svg>
 );
 
@@ -1342,57 +1309,151 @@ export default function App() {
             {/* Bento Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
               {[
-                { label: 'Expected Goals', value: displayXG, icon: Target, color: 'blue', detail: 'xG', decimals: 2 },
-                { label: 'Gol Reali', value: displayGoals, icon: Trophy, color: 'yellow', detail: 'Gol', decimals: 0 },
-                { label: 'xG/Tiro', value: displayXGPerShot, icon: Activity, color: 'emerald', detail: 'Qualità', decimals: 2 },
-                { label: 'Indice IPO', value: ipo, icon: Zap, color: 'indigo', detail: ipo >= ipoAway ? 'Dominio' : 'In Difesa', decimals: 1 }
+                { 
+                  label: 'Expected Goals', 
+                  value: displayXG, 
+                  icon: Target, 
+                  color: 'blue', 
+                  detail: 'xG', 
+                  decimals: 2,
+                  glow: 'rgba(59, 130, 246, 0.15)',
+                  badgeClass: 'text-blue-500 bg-blue-500/10 border-blue-500/20',
+                  aux: (
+                    <div className="mt-3 pt-3 border-t border-gray-500/10 flex items-center justify-between text-[9px] font-mono tracking-wider opacity-60">
+                      <span>BUILDACTIVE RATIO</span>
+                      <span>{(displayXG / Math.max(1, shots.length)).toFixed(2)} AVG</span>
+                    </div>
+                  )
+                },
+                { 
+                  label: 'Gol Reali', 
+                  value: displayGoals, 
+                  icon: Trophy, 
+                  color: 'yellow', 
+                  detail: 'Gol', 
+                  decimals: 0,
+                  glow: 'rgba(234, 179, 8, 0.15)',
+                  badgeClass: 'text-yellow-500 bg-yellow-500/10 border-yellow-500/20',
+                  aux: (
+                    <div className="mt-3 pt-3 border-t border-gray-500/10 flex items-center justify-between text-[9px] font-mono tracking-wider opacity-60">
+                      <span>CONVERSINE RATE</span>
+                      <span>{displayGoals > 0 && displayXG > 0 ? `${Math.round((displayGoals / displayXG) * 100)}%` : '0%'}</span>
+                    </div>
+                  )
+                },
+                { 
+                  label: 'xG/Tiro', 
+                  value: displayXGPerShot, 
+                  icon: Activity, 
+                  color: 'emerald', 
+                  detail: 'Qualità', 
+                  decimals: 2,
+                  glow: 'rgba(16, 185, 129, 0.15)',
+                  badgeClass: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
+                  aux: (
+                    <div className="mt-3 pt-3 border-t border-gray-500/10 flex flex-col gap-1">
+                      <div className="flex items-center justify-between text-[9px] font-mono tracking-wider opacity-60">
+                        <span>QUALITÀ TIRO</span>
+                        <span>{displayXGPerShot > 0.15 ? 'ALTA' : displayXGPerShot > 0.08 ? 'MED' : 'BASSA'}</span>
+                      </div>
+                      <div className="h-1 w-full bg-gray-500/10 rounded-full overflow-hidden mt-1">
+                        <div 
+                          className="h-full bg-emerald-500 rounded-full transition-all duration-1000" 
+                          style={{ width: `${Math.min(100, displayXGPerShot * 400)}%` }} 
+                        />
+                      </div>
+                    </div>
+                  )
+                },
+                { 
+                  label: 'Indice IPO', 
+                  value: ipo, 
+                  icon: Zap, 
+                  color: 'indigo', 
+                  detail: ipo >= ipoAway ? 'Dominio' : 'In Difesa', 
+                  decimals: 1,
+                  glow: 'rgba(99, 102, 241, 0.15)',
+                  badgeClass: ipo >= ipoAway ? 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20' : 'text-red-500 bg-red-500/10 border-red-500/20',
+                  aux: (
+                    <div className="mt-3 pt-3 border-t border-gray-500/10 flex flex-col gap-1">
+                      <div className="flex items-center justify-between text-[9px] font-mono tracking-wider opacity-60">
+                        <span>GAP AVVERSARIO</span>
+                        <span>{(ipo - ipoAway).toFixed(1)}</span>
+                      </div>
+                      <div className="h-1 w-full bg-gray-500/10 rounded-full overflow-hidden mt-1 flex">
+                        <div 
+                          className="h-full bg-indigo-500 transition-all duration-1000" 
+                          style={{ width: `${(ipo / Math.max(1, ipo + ipoAway)) * 100}%` }} 
+                        />
+                        <div 
+                          className="h-full bg-red-500 transition-all duration-1000" 
+                          style={{ width: `${(ipoAway / Math.max(1, ipo + ipoAway)) * 100}%` }} 
+                        />
+                      </div>
+                    </div>
+                  )
+                }
               ].map((stat, i) => (
                 <motion.div 
                   key={stat.label}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.1 }}
+                  whileHover={{ 
+                    y: -4, 
+                    boxShadow: theme === 'dark' ? `0 15px 30px -10px ${stat.glow}` : '0 10px 25px -10px rgba(0,0,0,0.05)',
+                    borderColor: theme === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)' 
+                  }}
                   className={cn(
                     "border rounded-[2rem] p-6 group transition-all duration-500 relative overflow-hidden",
                     theme === 'dark' 
-                      ? "bg-white/[0.02] border-white/[0.05] hover:bg-white/[0.04] hover:border-white/10" 
-                      : "bg-white border-gray-100 shadow-sm hover:shadow-md hover:border-gray-200"
+                      ? "bg-white/[0.02] border-white/[0.05]" 
+                      : "bg-white border-gray-100 shadow-sm"
                   )}
                 >
+                  {/* Subtle technical corner accents */}
+                  <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-white/5 group-hover:border-white/20 transition-colors pointer-events-none" />
+                  <div className="absolute top-0 right-0 w-3 h-3 border-t border-r border-white/5 group-hover:border-white/20 transition-colors pointer-events-none" />
+                  <div className="absolute bottom-0 left-0 w-3 h-3 border-b border-l border-white/5 group-hover:border-white/20 transition-colors pointer-events-none" />
+                  <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-white/5 group-hover:border-white/20 transition-colors pointer-events-none" />
+
                   <div className="flex items-center justify-between mb-4 relative z-10">
                     <div className={cn(
-                      "w-10 h-10 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110 duration-500",
-                      stat.color === 'blue' ? "bg-blue-500/10 text-blue-500" :
-                      stat.color === 'yellow' ? "bg-yellow-500/10 text-yellow-500" :
-                      stat.color === 'emerald' ? "bg-emerald-500/10 text-emerald-500" :
-                      "bg-indigo-500/10 text-indigo-500"
+                      "w-11 h-11 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110 duration-500 border",
+                      stat.color === 'blue' ? "bg-blue-500/10 border-blue-500/25 text-blue-500" :
+                      stat.color === 'yellow' ? "bg-yellow-500/10 border-yellow-500/25 text-yellow-500" :
+                      stat.color === 'emerald' ? "bg-emerald-500/10 border-emerald-500/25 text-emerald-500" :
+                      "bg-indigo-500/10 border-indigo-500/25 text-indigo-500"
                     )}>
-                      <stat.icon className="w-5 h-5" />
+                    <stat.icon className="w-5 h-5" />
                     </div>
                     {stat.label === 'Expected Goals' && (
-                      <div className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse" />
+                      <div className="flex items-center gap-1.5 bg-blue-500/10 border border-blue-500/20 px-2.5 py-1 rounded-full">
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                        <span className="text-[7px] font-black text-blue-500 uppercase tracking-widest">Live Model</span>
+                      </div>
                     )}
                   </div>
                   <div className="space-y-1 relative z-10">
-                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{stat.label}</p>
+                    <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">{stat.label}</p>
                     <div className="flex items-baseline gap-2">
-                      <span className={cn("text-3xl font-black tabular-nums tracking-tight", theme === 'dark' ? "text-white" : "text-gray-900")}>
+                      <span className={cn("text-4xl font-black tracking-tight leading-none tabular-nums", theme === 'dark' ? "text-white" : "text-gray-900")}>
                         <AnimatedCounter value={stat.value} decimals={stat.decimals} />
                       </span>
                       <span className={cn(
-                        "text-[10px] font-black uppercase tracking-tighter px-2 py-0.5 rounded-full",
-                        stat.color === 'blue' ? "text-blue-500/60 bg-blue-500/5" :
-                        stat.color === 'yellow' ? "text-yellow-500/60 bg-yellow-500/5" :
-                        stat.color === 'emerald' ? "text-emerald-500/60 bg-emerald-500/5" :
-                        (ipo >= ipoAway ? "text-emerald-500 bg-emerald-500/5" : "text-red-500 bg-red-500/5")
+                        "text-[9px] font-black uppercase tracking-wider px-2 header-tag border rounded-md font-mono",
+                        stat.badgeClass
                       )}>
                         {stat.detail}
                       </span>
                     </div>
                   </div>
-                  {/* Subtle background decoration */}
+                  {/* Auxiliary technical details */}
+                  {stat.aux}
+
+                  {/* Subtle pulsing background decoration */}
                   <div className={cn(
-                    "absolute -right-4 -bottom-4 w-24 h-24 rounded-full blur-3xl opacity-0 group-hover:opacity-20 transition-opacity duration-1000",
+                    "absolute -right-4 -bottom-4 w-28 h-28 rounded-full blur-3xl opacity-0 group-hover:opacity-15 transition-opacity duration-1000",
                     stat.color === 'blue' ? "bg-blue-500" :
                     stat.color === 'yellow' ? "bg-yellow-500" :
                     stat.color === 'emerald' ? "bg-emerald-500" :
@@ -1440,9 +1501,11 @@ export default function App() {
                     ref={pitchRef}
                     onClick={handlePitchClick}
                     className={cn(
-                      "relative aspect-[34/17] w-full border rounded-[2rem] overflow-hidden shadow-2xl cursor-crosshair transition-all duration-1000",
-                      theme === 'dark' ? "bg-[#0a0a0b] border-white/5" : "bg-gray-50 border-gray-200",
-                      isTimerRunning ? "shadow-[0_0_80px_-20px_rgba(59,130,246,0.15)] ring-1 ring-blue-500/20" : ""
+                      "relative aspect-[34/17] w-full border rounded-[2rem] overflow-hidden cursor-crosshair transition-all duration-1000",
+                      theme === 'dark' 
+                        ? "bg-[#09090a] border-white/5 shadow-2xl" 
+                        : "bg-gray-50 border-gray-200 shadow-md",
+                      isTimerRunning ? "shadow-[0_0_80px_-20px_rgba(59,130,246,0.25)] ring-2 ring-blue-500/35" : ""
                     )}
                   >
                     {/* Minimal Markings */}
@@ -1479,6 +1542,49 @@ export default function App() {
                       )}
                     </AnimatePresence>
 
+                    {/* Selected Shot Laser Targeting Guides & Radar Pulse */}
+                    {selectedShot && (
+                      <div className="absolute inset-0 pointer-events-none z-10">
+                        {/* Horizontal dashed targeting line */}
+                        <div 
+                          className="absolute left-0 right-0 border-t border-dashed border-blue-500/40" 
+                          style={{ top: `${(selectedShot.x / DEFAULT_PITCH.height) * 100}%` }}
+                        />
+                        {/* Vertical dashed targeting line */}
+                        <div 
+                          className="absolute top-0 bottom-0 border-l border-dashed border-blue-500/40" 
+                          style={{ left: `${(selectedShot.y / DEFAULT_PITCH.width) * 100}%` }}
+                        />
+                        {/* Radar Range Rings */}
+                        <div 
+                          className="absolute w-12 h-12 -ml-6 -mt-6 border border-blue-500/20 rounded-full animate-ping opacity-75"
+                          style={{ 
+                            top: `${(selectedShot.x / DEFAULT_PITCH.height) * 100}%`, 
+                            left: `${(selectedShot.y / DEFAULT_PITCH.width) * 100}%` 
+                          }}
+                        />
+                        <div 
+                          className="absolute w-8 h-8 -ml-4 -mt-4 border border-dashed border-blue-500/60 rounded-full animate-[spin_10s_linear_infinite]"
+                          style={{ 
+                            top: `${(selectedShot.x / DEFAULT_PITCH.height) * 100}%`, 
+                            left: `${(selectedShot.y / DEFAULT_PITCH.width) * 100}%` 
+                          }}
+                        />
+                        {/* Interactive Coordinate Indicator */}
+                        <div 
+                          className="absolute flex items-center gap-1.5 px-2 py-0.5 rounded bg-gray-950/90 text-white border border-white/10 text-[7px] font-mono shadow-2xl"
+                          style={{ 
+                            top: `${Math.min(92, (selectedShot.x / DEFAULT_PITCH.height) * 100 + 4)}%`, 
+                            left: `${Math.min(88, (selectedShot.y / DEFAULT_PITCH.width) * 100 + 3)}%` 
+                          }}
+                        >
+                          <span>X:{(selectedShot.x).toFixed(1)}</span>
+                          <span className="opacity-40">|</span>
+                          <span>Y:{(selectedShot.y).toFixed(1)}</span>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Shots */}
                     {shots.map((shot) => (
                       <motion.div
@@ -1493,7 +1599,7 @@ export default function App() {
                         className={cn(
                           "absolute w-4 h-4 -ml-2 -mt-2 rounded-full flex items-center justify-center cursor-pointer shadow-xl transition-all",
                           shot.isGoal ? "bg-yellow-400 ring-4 ring-yellow-400/20" : "bg-white/80 ring-2 ring-white/10",
-                          selectedShot?.id === shot.id ? "ring-blue-500 ring-opacity-100 z-50 scale-125" : ""
+                          selectedShot?.id === shot.id ? "ring-blue-500 ring-2 ring-offset-2 ring-offset-black z-50 scale-125" : ""
                         )}
                         style={{ 
                           top: `${(shot.x / DEFAULT_PITCH.height) * 100}%`, 
@@ -1503,7 +1609,7 @@ export default function App() {
                         {shot.isGoal ? (
                           <Trophy className="w-1.5 h-1.5 text-black" />
                         ) : (
-                          <div className="w-1 h-1 bg-black/40 rounded-full" />
+                          <div className="w-1.5 h-1.5 bg-black/60 rounded-full" />
                         )}
                       </motion.div>
                     ))}
@@ -1538,14 +1644,29 @@ export default function App() {
 
               {/* Sidebar Action Zone */}
               <div className="lg:col-span-4 flex flex-col gap-6">
-                <section className="bg-white/[0.02] border border-white/[0.05] rounded-[2.5rem] p-7 transition-all hover:bg-white/[0.03]">
-                  <div className="flex items-center gap-4 mb-8">
-                    <div className="w-11 h-11 bg-white/[0.03] border border-white/5 rounded-2xl flex items-center justify-center text-blue-500 group-hover:scale-110 transition-transform">
+                <section className={cn(
+                  "border rounded-[2.5rem] p-7 transition-all duration-300 relative overflow-hidden",
+                  theme === 'dark' 
+                    ? "bg-white/[0.02] border-white/[0.05] hover:bg-white/[0.04]" 
+                    : "bg-white border-gray-100 shadow-sm hover:shadow-md hover:border-gray-200"
+                )}>
+                  {/* Background fine technical grids */}
+                  <div className="absolute top-0 right-0 w-20 h-20 border-b border-l border-gray-500/5 pointer-events-none" />
+
+                  <div className="flex items-center gap-4 mb-8 relative z-10">
+                    <div className={cn(
+                      "w-11 h-11 border rounded-2xl flex items-center justify-center transition-transform duration-500 shadow-inner",
+                      theme === 'dark' 
+                        ? "bg-white/[0.03] border-white/5 text-blue-400" 
+                        : "bg-gray-50 border-gray-200 text-blue-600"
+                    )}>
                       {selectedShot ? <Settings className="w-5 h-5 animate-spin-slow" /> : <Plus className="w-5 h-5 text-gray-400" />}
                     </div>
                     <div>
-                      <h3 className="text-sm font-black text-white uppercase tracking-wider">{selectedShot ? 'Modifica Evento' : 'Registra Tiro'}</h3>
-                      <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest mt-1">Dati real-time</p>
+                      <h3 className={cn("text-xs font-black uppercase tracking-wider", theme === 'dark' ? "text-white" : "text-gray-900")}>
+                        {selectedShot ? 'Modifica Evento' : 'Registra Tiro'}
+                      </h3>
+                      <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mt-1">Dati real-time</p>
                     </div>
                   </div>
 
@@ -2429,18 +2550,29 @@ function IPOView({
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.1 }}
+            whileHover={{ 
+              y: -4, 
+              boxShadow: theme === 'dark' ? '0 15px 30px -10px rgba(59,130,246,0.08)' : '0 10px 25px -10px rgba(0,0,0,0.02)',
+              borderColor: theme === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)' 
+            }}
             className={cn(
               "border rounded-[2.5rem] p-8 flex flex-col justify-between min-h-[220px] transition-all duration-500 relative overflow-hidden group",
-              theme === 'dark' ? "bg-white/[0.02] border-white/[0.05] hover:bg-white/[0.04]" : "bg-white border-gray-100 shadow-sm hover:shadow-md"
+              theme === 'dark' ? "bg-white/[0.02] border-white/[0.05]" : "bg-white border-gray-100 shadow-sm"
             )}
           >
+            {/* Subtle technical corner accents */}
+            <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-white/5 group-hover:border-white/20 transition-colors pointer-events-none" />
+            <div className="absolute top-0 right-0 w-3 h-3 border-t border-r border-white/5 group-hover:border-white/20 transition-colors pointer-events-none" />
+            <div className="absolute bottom-0 left-0 w-3 h-3 border-b border-l border-white/5 group-hover:border-white/20 transition-colors pointer-events-none" />
+            <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-white/5 group-hover:border-white/20 transition-colors pointer-events-none" />
+
             <div className="flex items-center justify-between mb-2 relative z-10">
               <p className="text-[9px] font-black text-gray-500 uppercase tracking-[0.2em]">{item.label}</p>
               <div className={cn(
-                "w-8 h-8 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110",
-                item.color === 'yellow' ? "bg-yellow-500/10 text-yellow-500" :
-                item.color === 'blue' ? "bg-blue-500/10 text-blue-500" :
-                "bg-emerald-500/10 text-emerald-500"
+                "w-8 h-8 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110 border",
+                item.color === 'yellow' ? "bg-yellow-500/10 border-yellow-500/20 text-yellow-500" :
+                item.color === 'blue' ? "bg-blue-500/10 border-blue-500/20 text-blue-500" :
+                "bg-emerald-500/10 border-emerald-500/20 text-emerald-500"
               )}>
                 <item.icon className="w-4 h-4" />
               </div>
