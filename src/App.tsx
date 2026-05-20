@@ -1068,30 +1068,32 @@ export default function App() {
           </div>
 
           <div className={cn(
-            "flex items-center border rounded-xl p-1 gap-1",
-            theme === 'dark' ? "bg-white/[0.03] border-white/5" : "bg-gray-50 border-gray-100"
+            "flex items-center border rounded-[1.25rem] p-1 gap-1",
+            theme === 'dark' ? "bg-white/[0.02] border-white/5" : "bg-gray-50 border-gray-100"
           )}>
             <button
               onClick={() => setActiveTab('xg')}
               className={cn(
-                "px-5 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
+                "px-5 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all duration-300 flex items-center gap-1.5 outline-none",
                 activeTab === 'xg' 
-                  ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20" 
-                  : (theme === 'dark' ? "text-gray-500 hover:text-white" : "text-gray-400 hover:text-gray-600")
+                  ? "bg-blue-600 text-white shadow-lg shadow-blue-600/25 scale-[1.02]" 
+                  : (theme === 'dark' ? "text-gray-500 hover:text-white hover:bg-white/[0.02]" : "text-gray-400 hover:text-gray-800 hover:bg-white")
               )}
             >
-              Campo
+              <Target className="w-3.5 h-3.5" />
+              <span>Analisi Campo</span>
             </button>
             <button
               onClick={() => setActiveTab('ipo')}
               className={cn(
-                "px-5 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
+                "px-5 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all duration-300 flex items-center gap-1.5 outline-none",
                 activeTab === 'ipo' 
-                  ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20" 
-                  : (theme === 'dark' ? "text-gray-500 hover:text-white" : "text-gray-400 hover:text-gray-600")
+                  ? "bg-blue-600 text-white shadow-lg shadow-blue-600/25 scale-[1.02]" 
+                  : (theme === 'dark' ? "text-gray-500 hover:text-white hover:bg-white/[0.02]" : "text-gray-400 hover:text-gray-800 hover:bg-white")
               )}
             >
-              IPO
+              <Activity className="w-3.5 h-3.5" />
+              <span>Indice IPO</span>
             </button>
           </div>
 
@@ -1542,6 +1544,56 @@ export default function App() {
                       )}
                     </AnimatePresence>
 
+                    {/* Selected Shot Trajectory Arc */}
+                    {selectedShot && (
+                      <svg className="absolute inset-0 w-full h-full pointer-events-none z-10 animate-fade-in" viewBox="0 0 68 34">
+                        <defs>
+                          <linearGradient id="shot-trajectory-grad" x1="0%" y1="100%" x2="0%" y2="0%">
+                            <stop offset="0%" stopColor={selectedShot.isGoal ? "#facc15" : "#3b82f6"} stopOpacity="0.8" />
+                            <stop offset="100%" stopColor="#ef4444" stopOpacity="1" />
+                          </linearGradient>
+                          <filter id="soft-glow" x="-20%" y="-20%" width="140%" height="140%">
+                            <feGaussianBlur in="SourceGraphic" stdDeviation="0.4" />
+                            <feMerge>
+                              <feMergeNode />
+                              <feMergeNode in="SourceGraphic" />
+                            </feMerge>
+                          </filter>
+                        </defs>
+                        {/* Shadow curve */}
+                        <path 
+                          d={`M ${selectedShot.y} ${selectedShot.x} C ${selectedShot.y} ${selectedShot.x * 0.7}, 34 ${selectedShot.x * 0.3}, 34 0`}
+                          fill="none"
+                          stroke="black"
+                          strokeOpacity="0.2"
+                          strokeWidth="0.8"
+                          className="blur-[1px]"
+                        />
+                        {/* Glow curve */}
+                        <motion.path 
+                          d={`M ${selectedShot.y} ${selectedShot.x} C ${selectedShot.y} ${selectedShot.x * 0.7}, 34 ${selectedShot.x * 0.3}, 34 0`}
+                          fill="none"
+                          stroke="url(#shot-trajectory-grad)"
+                          strokeWidth="0.5"
+                          filter="url(#soft-glow)"
+                          strokeDasharray="1.5 1"
+                          animate={{ strokeDashoffset: [0, -10] }}
+                          transition={{ repeat: Infinity, ease: "linear", duration: 1.5 }}
+                        />
+                        {/* Solid path accent */}
+                        <path 
+                          d={`M ${selectedShot.y} ${selectedShot.x} C ${selectedShot.y} ${selectedShot.x * 0.7}, 34 ${selectedShot.x * 0.3}, 34 0`}
+                          fill="none"
+                          stroke={selectedShot.isGoal ? "#facc15" : "#60a5fa"}
+                          strokeWidth="0.2"
+                          strokeOpacity="0.6"
+                        />
+                        {/* Goal impact pulse */}
+                        <circle cx="34" cy="0" r="1.5" fill={selectedShot.isGoal ? "#facc15" : "#ef4444"} className="animate-ping" fillOpacity="0.4" />
+                        <circle cx="34" cy="0" r="0.6" fill={selectedShot.isGoal ? "#facc15" : "#ef4444"} />
+                      </svg>
+                    )}
+
                     {/* Selected Shot Laser Targeting Guides & Radar Pulse */}
                     {selectedShot && (
                       <div className="absolute inset-0 pointer-events-none z-10">
@@ -1624,6 +1676,60 @@ export default function App() {
                         style={{ top: `${ripple.y}%`, left: `${ripple.x}%` }}
                       />
                     ))}
+
+                    {/* Selected Shot HUD Badge */}
+                    <AnimatePresence>
+                      {selectedShot && (
+                        <motion.div
+                          initial={{ opacity: 0, x: -15, scale: 0.95 }}
+                          animate={{ opacity: 1, x: 0, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.95 }}
+                          className={cn(
+                            "absolute bottom-4 left-4 z-40 w-52 border rounded-2xl p-4 backdrop-blur-md shadow-2xl flex flex-col gap-2 transition-colors pointer-events-auto",
+                            theme === 'dark' ? "bg-gray-950/85 border-white/10 text-white" : "bg-white/95 border-gray-200/80 text-gray-900"
+                          )}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-[8px] font-black text-blue-500 uppercase tracking-widest">Dettaglio Tiro</span>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedShot(null);
+                              }}
+                              className="text-gray-400 hover:text-white transition-colors p-0.5"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                          
+                          <div className="flex items-center gap-2.5">
+                            <div className={cn(
+                              "w-7 h-7 rounded-lg flex items-center justify-center border shrink-0",
+                              selectedShot.isGoal ? "bg-yellow-400/10 border-yellow-400/25 text-yellow-500" : "bg-blue-500/10 border-blue-500/25 text-blue-500"
+                            )}>
+                              {selectedShot.isGoal ? <Trophy className="w-3.5 h-3.5" /> : <Target className="w-3.5 h-3.5" />}
+                            </div>
+                            <div className="flex flex-col min-w-0">
+                              <span className="text-[11px] font-black uppercase leading-none truncate">{selectedShot.playerName || "Giocatore"}</span>
+                              <span className="text-[7px] text-gray-500 font-bold uppercase tracking-wider mt-1">Minuto {selectedShot.minute || 0}'</span>
+                            </div>
+                          </div>
+
+                          <div className={cn("h-px", theme === 'dark' ? "bg-white/5" : "bg-gray-200")} />
+
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <span className="text-[7px] text-gray-500 font-bold uppercase tracking-widest block mb-0.5">Probabilità xG</span>
+                              <span className="text-xs font-black text-blue-500">{selectedShot.xg ? selectedShot.xg.toFixed(3) : '0.000'}</span>
+                            </div>
+                            <div>
+                              <span className="text-[7px] text-gray-500 font-bold uppercase tracking-widest block mb-0.5">Strike style</span>
+                              <span className="text-[10px] font-bold uppercase tracking-tight truncate">{selectedShot.bodyPart === 'head' ? 'Testa' : 'Piede'}</span>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
 
                   <div className="mt-8 flex items-center justify-between px-2">
@@ -2583,6 +2689,84 @@ function IPOView({
           </motion.div>
         ))}
       </div>
+
+      {/* Power Balance Gauge */}
+      {(() => {
+        const totalIpo = ipo + ipoAway;
+        const homeRatio = totalIpo > 0 ? (ipo / totalIpo) : 0.5;
+        const awayRatio = totalIpo > 0 ? (ipoAway / totalIpo) : 0.5;
+        return (
+          <motion.div 
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className={cn(
+              "border rounded-[2.5rem] p-6 sm:p-8 relative overflow-hidden transition-all duration-500 shadow-lg",
+              theme === 'dark' ? "bg-white/[0.01] border-white/[0.03]" : "bg-white border-gray-50 shadow-sm"
+            )}
+          >
+            {/* Fine grids and design accents */}
+            <div className="absolute top-0 left-0 w-32 h-full border-r border-gray-500/5 pointer-events-none" />
+            <div className="absolute top-0 right-0 w-32 h-full border-l border-gray-500/5 pointer-events-none" />
+
+            <div className="flex flex-col gap-5 relative z-10">
+              <div className="flex items-center justify-between">
+                <div className="flex flex-col">
+                  <span className="text-[8px] font-black text-blue-500 uppercase tracking-[0.2em]">STATISTICS INSIGHTS</span>
+                  <h3 className={cn("text-xs font-black uppercase tracking-tight mt-1", theme === 'dark' ? "text-white" : "text-gray-900")}>Rapporto di Forza (IPO Ratio)</h3>
+                </div>
+                <div className="flex items-center gap-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-[7.5px] font-black text-emerald-500 uppercase tracking-widest leading-none">Equilibrio Dinamico</span>
+                </div>
+              </div>
+
+              {/* Progressive Splitter Bar */}
+              <div className="space-y-3">
+                <div className="h-4 w-full bg-inner-field-lines bg-gray-500/10 rounded-full overflow-hidden flex relative p-0.5 border border-white/5">
+                  <motion.div 
+                    className="h-full rounded-l-full bg-gradient-to-r from-blue-600 to-blue-500 relative flex items-center justify-end pr-2"
+                    initial={{ width: '50%' }}
+                    animate={{ width: `${homeRatio * 100}%` }}
+                    transition={{ type: 'spring', stiffness: 100, damping: 20 }}
+                  >
+                    {homeRatio > 0.15 && (
+                      <span className="text-[8px] font-black text-white/95 font-mono tracking-widest leading-none">{Math.round(homeRatio * 100)}%</span>
+                    )}
+                  </motion.div>
+                  <motion.div 
+                    className="h-full rounded-r-full bg-gradient-to-r from-red-500 to-red-600 relative flex items-center pl-2"
+                    initial={{ width: '50%' }}
+                    animate={{ width: `${awayRatio * 100}%` }}
+                    transition={{ type: 'spring', stiffness: 100, damping: 20 }}
+                  >
+                    {awayRatio > 0.15 && (
+                      <span className="text-[8px] font-black text-white/95 font-mono tracking-widest leading-none">{Math.round(awayRatio * 100)}%</span>
+                    )}
+                  </motion.div>
+                  
+                  {/* Absolute Center Indicator Mark */}
+                  <div className="absolute top-0 bottom-0 left-1/2 -ml-px w-0.5 bg-white/30 z-20 pointer-events-none" />
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between text-[9px] font-black uppercase tracking-widest font-mono p-1">
+                  <div className="flex items-center gap-2 text-blue-500">
+                    <span className="w-2 h-2 rounded-full bg-blue-500" />
+                    <span>{teamName} ({ipo.toFixed(1)})</span>
+                  </div>
+                  <div className="text-gray-500 text-center text-[8px] uppercase font-bold">
+                    {ipo > ipoAway ? `VANTAGGIO ${teamName}` : ipoAway > ipo ? `VANTAGGIO ${awayTeam || 'AVVERSARIO'}` : 'BILANCIATO'}
+                  </div>
+                  <div className="flex items-center gap-2 text-red-500">
+                    <span>({ipoAway.toFixed(1)}) {awayTeam || 'Avversario'}</span>
+                    <span className="w-2 h-2 rounded-full bg-red-500" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        );
+      })()}
 
       {/* Events Control Zone */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
