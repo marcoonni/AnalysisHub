@@ -1399,12 +1399,21 @@ export default function App() {
                     )}
                   >
                     {/* Minimal Markings */}
-                    <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-[0.07]" viewBox="0 0 68 34">
-                      <rect x="0" y="0" width="68" height="34" fill="none" stroke="currentColor" strokeWidth="0.15" />
-                      <rect x="13.84" y="0" width="40.32" height="16.5" fill="none" stroke="currentColor" strokeWidth="0.15" />
-                      <rect x="24.84" y="0" width="18.32" height="5.5" fill="none" stroke="currentColor" strokeWidth="0.15" />
-                      <circle cx="34" cy="11" r="0.2" fill="currentColor" />
-                      <path d="M 27.5 16.5 A 9.15 9.15 0 0 0 40.5 16.5" fill="none" stroke="currentColor" strokeWidth="0.15" />
+                    <svg className={cn("absolute inset-0 w-full h-full pointer-events-none transition-all", theme === 'dark' ? "text-white/30" : "text-blue-950/40")} viewBox="0 0 68 34">
+                      <defs>
+                        <pattern id="pitch-stripes" width="8" height="34" patternUnits="userSpaceOnUse">
+                          <rect width="4" height="34" fill="currentColor" fillOpacity={theme === 'dark' ? "0.06" : "0.04"} />
+                        </pattern>
+                      </defs>
+                      <rect x="0" y="0" width="68" height="34" fill="url(#pitch-stripes)" />
+                      <rect x="0" y="0" width="68" height="34" fill="none" stroke="currentColor" strokeWidth="0.28" />
+                      <rect x="13.84" y="0" width="40.32" height="16.5" fill="none" stroke="currentColor" strokeWidth="0.28" />
+                      <rect x="24.84" y="0" width="18.32" height="5.5" fill="none" stroke="currentColor" strokeWidth="0.28" />
+                      <circle cx="34" cy="11" r="0.3" fill="currentColor" />
+                      <path d="M 27.5 16.5 A 9.15 9.15 0 0 0 40.5 16.5" fill="none" stroke="currentColor" strokeWidth="0.28" />
+                      {/* Goalposts Highlight */}
+                      <circle cx="30.34" cy="0" r="0.4" fill="currentColor" />
+                      <circle cx="37.66" cy="0" r="0.4" fill="currentColor" />
                     </svg>
 
                     {/* Heatmap */}
