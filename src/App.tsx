@@ -109,6 +109,7 @@ interface MatchEvent {
   description: string;
   timestamp: number;
   value?: number;
+  shotId?: string;
 }
 
 // Utility for tailwind classes
@@ -451,12 +452,15 @@ export default function App() {
   const [heatmapScale, setHeatmapScale] = useState<'default' | 'viridis' | 'plasma' | 'hot'>('default');
   const [hoveredCell, setHoveredCell] = useState<{ r: number, c: number, xg: number } | null>(null);
 
-  const addMatchEvent = (event: Omit<MatchEvent, 'id' | 'timestamp' | 'minute'>) => {
+  const addMatchEvent = (event: Omit<MatchEvent, 'id' | 'timestamp' | 'minute'> & { minute?: number }) => {
     const newEvent: MatchEvent = {
       id: Math.random().toString(36).substr(2, 9),
-      minute: Math.floor(timerSeconds / 60),
+      minute: event.minute !== undefined ? event.minute : Math.floor(timerSeconds / 60),
       timestamp: Date.now(),
-      ...event
+      type: event.type,
+      description: event.description,
+      value: event.value,
+      shotId: event.shotId
     };
     setMatchEvents(prev => [newEvent, ...prev]);
   };
@@ -616,11 +620,14 @@ export default function App() {
     addMatchEvent({
       type: newShot.isGoal ? 'goal' : 'shot',
       description: `${newShot.isGoal ? 'GOL!' : 'Tiro'} - xG: ${newShot.xg.toFixed(2)} (${newShot.playerName})`,
-      value: newShot.xg
+      value: newShot.xg,
+      shotId: newShot.id,
+      minute: newShot.minute
     });
   };
 
   const updateShot = (id: string, updates: Partial<Shot>) => {
+    let finalShot: Shot | null = null;
     setShots(prev => prev.map(s => {
       if (s.id === id) {
         const updatedShot = { ...s, ...updates };
@@ -628,6 +635,7 @@ export default function App() {
         if (updates.x !== undefined || updates.y !== undefined || updates.bodyPart !== undefined || updates.assistType !== undefined) {
           updatedShot.xg = calculateXG(updatedShot.x, updatedShot.y, updatedShot.bodyPart, updatedShot.assistType, xgCoeffs);
         }
+        finalShot = updatedShot;
         return updatedShot;
       }
       return s;
@@ -636,11 +644,31 @@ export default function App() {
     if (selectedShot?.id === id) {
       setSelectedShot(prev => prev ? { ...prev, ...updates } : null);
     }
+
+    // Force update the match event for this shot
+    if (finalShot) {
+      const shot: Shot = finalShot;
+      setMatchEvents(prev => prev.map(e => {
+        if (e.shotId === id) {
+          return {
+            ...e,
+            minute: shot.minute,
+            type: shot.isGoal ? 'goal' : 'shot',
+            description: `${shot.isGoal ? 'GOL!' : 'Tiro'} - xG: ${shot.xg.toFixed(2)} (${shot.playerName})`,
+            value: shot.xg
+          };
+        }
+        return e;
+      }));
+    }
   };
 
   const removeShot = (id: string) => {
     setShots(prev => prev.filter(s => s.id !== id));
     if (selectedShot?.id === id) setSelectedShot(null);
+
+    // Remove the corresponding match event
+    setMatchEvents(prev => prev.filter(e => e.shotId !== id));
   };
 
   const exportToExcel = () => {
@@ -807,7 +835,8 @@ export default function App() {
         ipoEvents,
         ipoEventsAway,
         goals,
-        goalsAway
+        goalsAway,
+        matchEvents // Added for live feed state persistence
       };
 
       let matchId = currentMatchId;
@@ -878,6 +907,24 @@ export default function App() {
       }) as Shot);
       
       setShots(shotsData);
+
+      // Restore matchEvents with a robust fallback for old saved matches (backwards compatibility)
+      let loadedEvents = match.matchEvents || [];
+      if (loadedEvents.length === 0 && shotsData.length > 0) {
+        loadedEvents = shotsData.map(shot => ({
+          id: Math.random().toString(36).substr(2, 9),
+          minute: shot.minute || 0,
+          type: shot.isGoal ? 'goal' : 'shot',
+          description: `${shot.isGoal ? 'GOL!' : 'Tiro'} - xG: ${shot.xg.toFixed(2)} (${shot.playerName})`,
+          timestamp: shot.timestamp || Date.now(),
+          value: shot.xg,
+          shotId: shot.id
+        }));
+        // Sort reverse-chronologically so newest is first
+        loadedEvents.sort((a, b) => b.timestamp - a.timestamp);
+      }
+      setMatchEvents(loadedEvents);
+
       setShowMatchList(false);
       setSelectedShot(null);
       setShowToast({ message: "Partita caricata con successo!", type: 'success' });
@@ -898,21 +945,7 @@ export default function App() {
     setSelectedShot(null);
     
     // Remove the corresponding match event
-    setMatchEvents(prev => {
-      // Find the most recent event that matches this shot
-      const index = prev.findIndex(e => 
-        (e.type === 'shot' || e.type === 'goal') && 
-        e.description.includes(lastShot.playerName) &&
-        Math.abs(e.timestamp - lastShot.timestamp) < 5000 // Within 5 seconds
-      );
-      
-      if (index !== -1) {
-        const newEvents = [...prev];
-        newEvents.splice(index, 1);
-        return newEvents;
-      }
-      return prev;
-    });
+    setMatchEvents(prev => prev.filter(e => e.shotId !== lastShot.id));
     
     setShowToast({ message: 'Ultimo tiro annullato', type: 'success' });
   };
