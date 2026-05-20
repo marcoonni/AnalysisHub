@@ -42,7 +42,9 @@ import {
   ChevronUp,
   Sun,
   Moon,
-  Users
+  Users,
+  Folder,
+  FolderOpen
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Papa from 'papaparse';
@@ -299,9 +301,41 @@ export default function App() {
   const [showSquadModal, setShowSquadModal] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
   const [squadSearch, setSquadSearch] = useState('');
+  const [newFolderName, setNewFolderName] = useState('');
   const [squadRoleFilter, setSquadRoleFilter] = useState<'Tutti' | 'Portiere' | 'Difensore' | 'Centrocampista' | 'Attaccante'>('Tutti');
 
-  // Squad Players State - initialized with either localStorage or predefined defaults
+  // A list of Team Folders (cartelle della squadra) to store squad versions
+  const [teamFolders, setTeamFolders] = useState<{ id: string; name: string; players: Player[] }[]>(() => {
+    const saved = localStorage.getItem('team_folders');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+         console.error("Errore nel parse delle cartelle della squadra", e);
+      }
+    }
+    // Default BOLOGNA preset folder
+    const defaultPlayersList: Player[] = PREDEFINED_PLAYERS.map((name, index) => ({
+      id: `p-${index}`,
+      name: name,
+      role: (index === 0 || index === 8) ? 'Portiere' : (index % 3 === 0) ? 'Difensore' : (index % 3 === 1) ? 'Centrocampista' : 'Attaccante',
+      preferredFoot: index % 2 === 0 ? 'Destro' : 'Sinistro',
+      active: true
+    }));
+    return [
+      {
+        id: 'bologna-default',
+        name: 'BOLOGNA U18 DEFAULT',
+        players: defaultPlayersList
+      }
+    ];
+  });
+
+  const [activeFolderId, setActiveFolderId] = useState<string>(() => {
+    return localStorage.getItem('active_folder_id') || 'bologna-default';
+  });
+
+  // Squad Players State - initialized with either localStorage or active folder players
   const [squadPlayers, setSquadPlayers] = useState<Player[]>(() => {
     const saved = localStorage.getItem('squad_players');
     if (saved) {
@@ -311,21 +345,45 @@ export default function App() {
         console.error("Errore nel parse dei giocatori salvati", e);
       }
     }
+    // Fallback to active folder
+    const savedFolders = localStorage.getItem('team_folders');
+    if (savedFolders) {
+      try {
+        const parsed = JSON.parse(savedFolders);
+        const folderId = localStorage.getItem('active_folder_id') || 'bologna-default';
+        const found = parsed.find((f: any) => f.id === folderId);
+        if (found) return found.players;
+      } catch (e) {}
+    }
     // Default predefined players
     return PREDEFINED_PLAYERS.map((name, index) => ({
       id: `p-${index}`,
       name: name,
       role: (index === 0 || index === 8) ? 'Portiere' : (index % 3 === 0) ? 'Difensore' : (index % 3 === 1) ? 'Centrocampista' : 'Attaccante',
       preferredFoot: index % 2 === 0 ? 'Destro' : 'Sinistro',
-      number: String(index + 1),
       active: true
     }));
   });
 
-  // Persist squad players on change
+  // Persist structures
   useEffect(() => {
     localStorage.setItem('squad_players', JSON.stringify(squadPlayers));
-  }, [squadPlayers]);
+    // Keep active folder in sync with actual changes made to squadPlayers
+    setTeamFolders(prev => prev.map(f => f.id === activeFolderId ? { ...f, players: squadPlayers } : f));
+  }, [squadPlayers, activeFolderId]);
+
+  useEffect(() => {
+    localStorage.setItem('team_folders', JSON.stringify(teamFolders));
+  }, [teamFolders]);
+
+  useEffect(() => {
+    localStorage.setItem('active_folder_id', activeFolderId);
+    // When active folder changes, populate the player list from that folder
+    const found = teamFolders.find(f => f.id === activeFolderId);
+    if (found) {
+      setSquadPlayers(found.players);
+    }
+  }, [activeFolderId]);
 
   // Update player list whenever squad players or shots change
   useEffect(() => {
@@ -1874,7 +1932,7 @@ export default function App() {
                           {playerList.map(pName => {
                             const pObj = squadPlayers.find(sp => sp.name.toUpperCase() === pName.toUpperCase());
                             const displayLabel = pObj 
-                              ? `${pObj.name} ${pObj.number ? `(#${pObj.number}` : ''}${pObj.role ? ` - ${pObj.role}` : ''}${pObj.number ? ')' : ''}`
+                              ? `${pObj.name}${pObj.role ? ` - ${pObj.role}` : ''}`
                               : pName;
                             return <option key={pName} value={pName}>{displayLabel}</option>;
                           })}
@@ -2391,13 +2449,11 @@ export default function App() {
                 const formData = new FormData(e.currentTarget);
                 const nameInput = (formData.get('playerName') as string || '').trim().toUpperCase();
                 if (!nameInput) return;
-                
-                const newP: Player = {
+                      const newP: Player = {
                   id: `p-custom-${Math.random().toString(36).substr(2, 9)}`,
                   name: nameInput,
                   role: (formData.get('playerRole') || 'Centrocampista') as any,
                   preferredFoot: (formData.get('playerFoot') || 'Destro') as any,
-                  number: formData.get('playerNumber') as string || '',
                   active: true
                 };
 
@@ -2424,34 +2480,19 @@ export default function App() {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[9px] font-bold text-gray-500 uppercase tracking-widest block font-sans">Numero Maglia</label>
-                    <input 
-                      type="number"
-                      name="playerNumber"
-                      placeholder="Es. 10"
-                      className={cn(
-                        "w-full border rounded-xl py-3 px-4 text-xs font-bold placeholder:lowercase focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all",
-                        theme === 'dark' ? "bg-white/[0.02] border-white/5 text-white" : "bg-gray-50 border-gray-200 text-gray-900"
-                      )}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-[9px] font-bold text-gray-500 uppercase tracking-widest block font-sans">Piede Preferito</label>
-                    <select 
-                      name="playerFoot"
-                      className={cn(
-                        "w-full border rounded-xl py-3 px-4 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all appearance-none",
-                        theme === 'dark' ? "bg-white/[0.02] border-white/5 text-white" : "bg-gray-50 border-gray-200 text-gray-900"
-                      )}
-                    >
-                      <option value="Destro">Destro</option>
-                      <option value="Sinistro">Sinistro</option>
-                      <option value="Entrambi">Entrambi</option>
-                    </select>
-                  </div>
+                <div className="space-y-2">
+                  <label className="text-[9px] font-bold text-gray-500 uppercase tracking-widest block font-sans">Piede Preferito</label>
+                  <select 
+                    name="playerFoot"
+                    className={cn(
+                      "w-full border rounded-xl py-3 px-4 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all appearance-none",
+                      theme === 'dark' ? "bg-white/[0.02] border-white/5 text-white" : "bg-gray-50 border-gray-200 text-gray-900"
+                    )}
+                  >
+                    <option value="Destro">Destro</option>
+                    <option value="Sinistro">Sinistro</option>
+                    <option value="Entrambi">Entrambi</option>
+                  </select>
                 </div>
 
                 <div className="space-y-2">
@@ -2562,6 +2603,225 @@ export default function App() {
                 </div>
               </div>
 
+              {/* LA CARTELLA DELLA SQUADRA / TEAM FOLDER PROFILE MANAGEMENT */}
+              <div className={cn(
+                "px-6 py-4.5 border-b flex flex-col lg:flex-row lg:items-center justify-between gap-4 shrink-0",
+                theme === 'dark' ? "bg-[#070708]/30 border-white/[0.03]" : "bg-gray-50/50 border-gray-100"
+              )}>
+                {/* Left side: switch folder */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <FolderOpen className="w-4 h-4 text-amber-500 shrink-0" />
+                    <span className={cn("text-[9px] font-black uppercase tracking-widest block font-sans whitespace-nowrap", theme === 'dark' ? "text-gray-400" : "text-gray-500")}>
+                      Cartella Squadra Attiva:
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={activeFolderId}
+                      onChange={(e) => setActiveFolderId(e.target.value)}
+                      className={cn(
+                        "border rounded-xl py-2 px-3 text-xs font-black uppercase tracking-tight focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all",
+                        theme === 'dark' ? "bg-black/60 border-white/10 text-white" : "bg-white border-gray-200 text-gray-900"
+                      )}
+                    >
+                      {teamFolders.map(folder => (
+                        <option key={folder.id} value={folder.id}>
+                          📁 {folder.name} ({folder.players.length} Atleti)
+                        </option>
+                      ))}
+                    </select>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const current = teamFolders.find(f => f.id === activeFolderId);
+                        if (!current) return;
+                        const newName = prompt("Rinomina la cartella della squadra:", current.name);
+                        if (newName && newName.trim()) {
+                          const parsedName = newName.trim().toUpperCase();
+                          setTeamFolders(prev => prev.map(f => f.id === activeFolderId ? { ...f, name: parsedName } : f));
+                          setShowToast({ message: `Cartella rinominata in "${parsedName}"!`, type: 'success' });
+                        }
+                      }}
+                      className={cn(
+                        "px-3 py-2 border rounded-xl text-[8px] font-black uppercase tracking-wider transition-all whitespace-nowrap",
+                        theme === 'dark' ? "bg-white/5 hover:bg-white/10 text-gray-300 border-white/10" : "bg-white hover:bg-gray-100 text-gray-600 border-gray-200"
+                      )}
+                    >
+                      Rinomina
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (teamFolders.length <= 1) {
+                          setShowToast({ message: "Impossibile eliminare l'unica cartella del roster!", type: 'error' });
+                          return;
+                        }
+                        const current = teamFolders.find(f => f.id === activeFolderId);
+                        if (!current) return;
+                        if (confirm(`Sei sicuro di voler eliminare permanentemente la cartella della squadra "${current.name}" e tutti i suoi giocatori? L'azione è irreversibile.`)) {
+                          const remaining = teamFolders.filter(f => f.id !== activeFolderId);
+                          setTeamFolders(remaining);
+                          setActiveFolderId(remaining[0].id);
+                          setShowToast({ message: "Cartella della squadra eliminata", type: 'success' });
+                        }
+                      }}
+                      className={cn(
+                        "px-3 py-2 border rounded-xl text-[8px] font-black uppercase tracking-wider transition-all hover:bg-red-500/10 hover:text-red-400 whitespace-nowrap",
+                        theme === 'dark' ? "bg-white/5 text-gray-400 border-white/10" : "bg-white text-gray-500 border-gray-200"
+                      )}
+                    >
+                      Elimina
+                    </button>
+                  </div>
+                </div>
+
+                {/* Right side: quick create or import/export file */}
+                <div className="flex flex-wrap items-center gap-3">
+                  {/* Create Custom Folder */}
+                  <div className="flex items-center gap-2">
+                    <input 
+                      type="text"
+                      placeholder="NOME NUOVA CARTELLA..."
+                      value={newFolderName}
+                      onChange={(e) => setNewFolderName(e.target.value)}
+                      className={cn(
+                        "border rounded-xl py-2 px-3 text-[10px] font-bold uppercase placeholder:font-medium placeholder:lowercase focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all w-44",
+                        theme === 'dark' ? "bg-black/40 border-white/10 text-white" : "bg-white border-gray-200 text-gray-900"
+                      )}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const name = newFolderName.trim().toUpperCase();
+                        if (!name) {
+                          setShowToast({ message: "Digita un nome per la nuova cartella!", type: 'error' });
+                          return;
+                        }
+                        const newId = `folder-${Date.now()}`;
+                        const newFolder = {
+                          id: newId,
+                          name,
+                          players: [] // fully customizable blank roster!
+                        };
+                        setTeamFolders(prev => [...prev, newFolder]);
+                        setActiveFolderId(newId);
+                        setNewFolderName('');
+                        setShowToast({ message: `Cartella vuota "${name}" creata! Aggiungi i tuoi atleti.`, type: 'success' });
+                      }}
+                      className="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-[8px] font-black uppercase tracking-widest rounded-xl transition-all shadow-md shadow-blue-500/15"
+                    >
+                      + Crea Cartella
+                    </button>
+                  </div>
+
+                  {/* Divider */}
+                  <span className="w-[1px] h-5 bg-white/10 hidden sm:block" />
+
+                  {/* Export / Import actions binder */}
+                  <div className="flex items-center gap-2">
+                    {/* Export Roster Button */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const current = teamFolders.find(f => f.id === activeFolderId);
+                        if (!current) return;
+                        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(current));
+                        const downloadAnchor = document.createElement('a');
+                        downloadAnchor.setAttribute("href", dataStr);
+                        downloadAnchor.setAttribute("download", `${current.name.toLowerCase().replace(/\s+/g, '_')}_cartella_roster.json`);
+                        document.body.appendChild(downloadAnchor);
+                        downloadAnchor.click();
+                        downloadAnchor.remove();
+                        setShowToast({ message: "Cartella roster esportata in file con successo!", type: 'success' });
+                      }}
+                      title="Salva file roster (.json)"
+                      className={cn(
+                        "px-3.5 py-2 border rounded-xl text-[8px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5",
+                        theme === 'dark' ? "bg-white/5 hover:bg-white/10 text-emerald-400 border-white/10" : "bg-white hover:bg-emerald-50 text-emerald-650 border-gray-200"
+                      )}
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      Esporta File
+                    </button>
+
+                    {/* Import Roster File Form */}
+                    <label className={cn(
+                      "px-3.5 py-2 border rounded-xl text-[8px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer",
+                      theme === 'dark' ? "bg-white/5 hover:bg-white/10 text-amber-400 border-white/10" : "bg-white hover:bg-amber-50 text-amber-650 border-gray-200"
+                    )}>
+                      <Upload className="w-3.5 h-3.5" />
+                      Importa File
+                      <input 
+                        type="file"
+                        accept=".json"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          const reader = new FileReader();
+                          reader.onload = (event) => {
+                            try {
+                              const parsed = JSON.parse(event.target?.result as string);
+                              if (parsed && typeof parsed === 'object') {
+                                const players = parsed.players || parsed;
+                                if (Array.isArray(players) || (parsed && Array.isArray((parsed as any).players))) {
+                                  const targetPlayersList = Array.isArray(players) ? players : (parsed.players || []);
+                                  const sanitizedPlayers: Player[] = targetPlayersList.map((p: any, idx: number) => ({
+                                    id: p.id || `p-imp-${idx}-${Math.random().toString(36).substr(2, 5)}`,
+                                    name: (p.name || 'Senza Nome').toUpperCase(),
+                                    role: p.role || 'Centrocampista',
+                                    preferredFoot: p.preferredFoot || 'Destro',
+                                    active: p.active !== undefined ? p.active : true
+                                  }));
+                                  const folderName = (parsed.name || `ROSTER FILE ${new Date().toLocaleDateString()}`).toUpperCase();
+                                  const newId = `folder-import-${Date.now()}`;
+                                  setTeamFolders(prev => [
+                                    ...prev.filter(f => f.name !== folderName),
+                                    { id: newId, name: folderName, players: sanitizedPlayers }
+                                  ]);
+                                  setActiveFolderId(newId);
+                                  setShowToast({ message: `Cartella roster "${folderName}" caricata con successo!`, type: 'success' });
+                                } else {
+                                  throw new Error("I dati dei giocatori non sono in un formato valido.");
+                                }
+                              }
+                            } catch (err: any) {
+                              setShowToast({ message: `Errore caricamento: formato non valido`, type: 'error' });
+                            }
+                          };
+                          reader.readAsText(file);
+                          e.target.value = ''; // clean input
+                        }}
+                        className="hidden"
+                      />
+                    </label>
+
+                    {/* Clear all in current directory button */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const current = teamFolders.find(f => f.id === activeFolderId);
+                        if (!current) return;
+                        if (confirm(`Sei sicuro di voler svuotare completamente la cartella "${current.name}"? Tutti i giocatori verranno rimossi e potrai iniziare da zero.`)) {
+                          setSquadPlayers([]);
+                          setShowToast({ message: `Cartella "${current.name}" svuotata completamente!`, type: 'success' });
+                        }
+                      }}
+                      className={cn(
+                        "px-3.5 py-2 border rounded-xl text-[8px] font-black uppercase tracking-wider transition-all hover:bg-red-500/15 hover:text-red-400",
+                        theme === 'dark' ? "bg-white/5 text-gray-500 border-white/10" : "bg-white text-gray-400 border-gray-200"
+                      )}
+                      title="Svuota completamente i giocatori da questa cartella"
+                    >
+                      Svuota Cartella
+                    </button>
+                  </div>
+                </div>
+              </div>
+
               {/* Bento Content Panels */}
               <div className="p-6 sm:p-8 flex-1 overflow-y-auto no-scrollbar grid grid-cols-1 md:grid-cols-12 gap-8">
                 {/* Panel 1: Player Creator/Editor (5 cols) */}
@@ -2593,21 +2853,20 @@ export default function App() {
                           return;
                         }
 
-                        const number = formData.get('playerNumber') as string || '';
                         const role = formData.get('playerRole') as any;
                         const preferredFoot = formData.get('playerFoot') as any;
                         const active = formData.get('playerActive') === 'true';
 
                         if (editingPlayer) {
                           setSquadPlayers(prev => prev.map(p => p.id === editingPlayer.id ? {
-                            ...p, name, number, role, preferredFoot, active
+                            ...p, name, role, preferredFoot, active
                           } : p));
                           setEditingPlayer(null);
                           setShowToast({ message: `Giocatore ${name} aggiornato!`, type: 'success' });
                         } else {
                           const newP: Player = {
                             id: `p-${Date.now()}`,
-                            name, number, role, preferredFoot, active
+                            name, role, preferredFoot, active
                           };
                           setSquadPlayers(prev => [...prev, newP]);
                           setShowToast({ message: `Atleta ${name} aggiunto al roster!`, type: 'success' });
@@ -2630,36 +2889,20 @@ export default function App() {
                         />
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <label className="text-[8px] font-bold text-gray-500 uppercase tracking-widest block font-sans">Numero Maglia</label>
-                          <input 
-                            type="number"
-                            name="playerNumber"
-                            defaultValue={editingPlayer ? editingPlayer.number : ''}
-                            placeholder="Es. 9"
-                            className={cn(
-                              "w-full border rounded-xl py-3 px-4 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all",
-                              theme === 'dark' ? "bg-black/40 border-white/5 text-white" : "bg-white border-gray-200 text-gray-900"
-                            )}
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <label className="text-[8px] font-bold text-gray-500 uppercase tracking-widest block font-sans">Piede Preferito</label>
-                          <select 
-                            name="playerFoot"
-                            defaultValue={editingPlayer ? editingPlayer.preferredFoot : 'Destro'}
-                            className={cn(
-                              "w-full border rounded-xl py-3 px-4 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all appearance-none",
-                              theme === 'dark' ? "bg-black/40 border-white/5 text-white" : "bg-white border-gray-200 text-gray-900"
-                            )}
-                          >
-                            <option value="Destro">Destro</option>
-                            <option value="Sinistro">Sinistro</option>
-                            <option value="Entrambi">Entrambi</option>
-                          </select>
-                        </div>
+                      <div className="space-y-2">
+                        <label className="text-[8px] font-bold text-gray-500 uppercase tracking-widest block font-sans">Piede Preferito</label>
+                        <select 
+                          name="playerFoot"
+                          defaultValue={editingPlayer ? editingPlayer.preferredFoot : 'Destro'}
+                          className={cn(
+                            "w-full border rounded-xl py-3 px-4 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all appearance-none",
+                            theme === 'dark' ? "bg-black/40 border-white/5 text-white" : "bg-white border-gray-200 text-gray-900"
+                          )}
+                        >
+                          <option value="Destro">Destro</option>
+                          <option value="Sinistro">Sinistro</option>
+                          <option value="Entrambi">Entrambi</option>
+                        </select>
                       </div>
 
                       <div className="space-y-2">
@@ -2814,14 +3057,21 @@ export default function App() {
                             onClick={() => setEditingPlayer(player)}
                           >
                             <div className="flex items-center gap-3.5 min-w-0">
-                              {/* Shirt Number Badge */}
+                              {/* Player Position Avatar Badge (instead of shirt number) */}
                               <div className={cn(
-                                "w-8 h-8 rounded-xl font-mono text-xs font-black flex items-center justify-center border shrink-0",
-                                player.active 
-                                  ? (theme === 'dark' ? "bg-blue-500/10 border-blue-500/20 text-blue-400 group-hover:scale-105 transition-transform" : "bg-blue-50 border-blue-100 text-blue-600")
-                                  : "bg-gray-500/5 border-gray-500/10 text-gray-500"
+                                "w-8 h-8 rounded-xl font-sans text-[10px] font-black flex items-center justify-center border shrink-0 tracking-wider",
+                                !player.active 
+                                  ? "bg-gray-500/5 border-gray-500/10 text-gray-400"
+                                  : player.role === 'Portiere' ? "bg-purple-500/10 border-purple-500/20 text-purple-400"
+                                  : player.role === 'Difensore' ? "bg-yellow-500/10 border-yellow-500/20 text-yellow-500"
+                                  : player.role === 'Centrocampista' ? "bg-blue-500/10 border-blue-500/20 text-blue-400"
+                                  : player.role === 'Attaccante' ? "bg-red-500/10 border-red-500/20 text-red-400"
+                                  : "bg-gray-500/10 border-transparent text-gray-400"
                               )}>
-                                {player.number || '—'}
+                                {player.role === 'Portiere' ? 'GK' :
+                                 player.role === 'Difensore' ? 'DF' :
+                                 player.role === 'Centrocampista' ? 'MF' :
+                                 player.role === 'Attaccante' ? 'FW' : <UserIcon className="w-3 h-3" />}
                               </div>
 
                               <div className="flex flex-col min-w-0">
@@ -2911,7 +3161,6 @@ export default function App() {
                         name: name,
                         role: (index === 0 || index === 8) ? 'Portiere' : (index % 3 === 0) ? 'Difensore' : (index % 3 === 1) ? 'Centrocampista' : 'Attaccante',
                         preferredFoot: index % 2 === 0 ? 'Destro' : 'Sinistro',
-                        number: String(index + 1),
                         active: true
                       })));
                       setEditingPlayer(null);

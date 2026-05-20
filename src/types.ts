@@ -6,7 +6,6 @@ export interface Player {
   name: string;
   role: 'Portiere' | 'Difensore' | 'Centrocampista' | 'Attaccante' | 'Nessuno';
   preferredFoot: 'Destro' | 'Sinistro' | 'Entrambi';
-  number: string;
   active: boolean;
 }
 
