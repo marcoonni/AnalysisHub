@@ -46,15 +46,16 @@
           <div style="width: 64px; height: 64px; margin: 0 auto 24px; position: relative;">
             <div style="position: absolute; inset: 0; border: 2px solid rgba(59, 130, 246, 0.1); border-radius: 50%;"></div>
             <div style="position: absolute; inset: 0; border: 2px solid transparent; border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-            <svg viewBox="0 0 100 100" style="position: absolute; inset: 0; margin: auto; width: 32px; height: 32px; opacity: 0.9;">
-              {/* Slanted bars matching the main logo */}
-              <rect x="29" y="44" width="8" height="32" rx="4" transform="rotate(-12 29 44)" fill="#3b82f6" fillOpacity="0.85" />
-              <rect x="44" y="32" width="8" height="44" rx="4" transform="rotate(-12 44 32)" fill="#2563eb" />
-              <rect x="59" y="24" width="8" height="52" rx="4" transform="rotate(-12 59 24)" fill="#10b981" />
-              {/* Curve path */}
-              <path d="M 18 80 C 26 58, 54 26, 76 22" stroke="#60a5fa" strokeWidth="6" strokeLinecap="round" fill="none" />
-              <circle cx="76" cy="22" r="7" fill="#ffffff" />
-              <circle cx="76" cy="22" r="3" fill="#10b981" />
+            <svg viewBox="0 0 100 100" style="position: absolute; inset: 0; margin: auto; width: 34px; height: 34px; opacity: 0.95;">
+              <!-- Modern Curved Loop -->
+              <path d="M30 65 C18 53, 18 35, 32 25 C46 15, 62 21, 70 35 C78 49, 74 67, 58 75 C42 83, 24 73, 22 55" stroke="#3b82f6" strokeWidth="5" strokeLinecap="round" fill="none" opacity="0.85" />
+              <!-- Glass Shard geometries -->
+              <path d="M50 28 L69 39 L50 50 Z" fill="#2563eb" />
+              <path d="M50 50 L69 61 L50 72 Z" fill="#10b981" />
+              <path d="M31 39 L50 50 L31 61 Z" fill="#f59e0b" opacity="0.65" />
+              <!-- Core nodes -->
+              <circle cx="50" cy="50" r="3.5" fill="#ffffff" />
+              <circle cx="69" cy="61" r="3" fill="#10b981" />
             </svg>
           </div>
           <h1 style="font-weight: 900; font-size: 1.5rem; letter-spacing: -0.05em; margin: 0; text-transform: uppercase;">

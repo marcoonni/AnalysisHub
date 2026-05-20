@@ -160,20 +160,24 @@ interface ErrorBoundaryState {
 const AppLogo = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 100 100" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
     <defs>
-      <linearGradient id="logo-blue" x1="0%" y1="0%" x2="100%" y2="100%">
+      <linearGradient id="modern-g1" x1="0%" y1="0%" x2="100%" y2="100%">
         <stop offset="0%" stopColor="#3b82f6" />
         <stop offset="100%" stopColor="#1d4ed8" />
       </linearGradient>
-      <linearGradient id="logo-neon" x1="0%" y1="0%" x2="100%" y2="100%">
+      <linearGradient id="modern-g2" x1="0%" y1="0%" x2="100%" y2="100%">
         <stop offset="0%" stopColor="#10b981" />
         <stop offset="100%" stopColor="#059669" />
       </linearGradient>
-      <linearGradient id="logo-rainbow" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#60a5fa" />
-        <stop offset="50%" stopColor="#3b82f6" />
-        <stop offset="100%" stopColor="#10b981" />
+      <linearGradient id="modern-g3" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#f59e0b" />
+        <stop offset="100%" stopColor="#d97706" />
       </linearGradient>
-      <filter id="premium-glow" x="-30%" y="-30%" width="160%" height="160%">
+      <linearGradient id="ring-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.8" />
+        <stop offset="50%" stopColor="#10b981" stopOpacity="0.8" />
+        <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
+      </linearGradient>
+      <filter id="glow-modern" x="-30%" y="-30%" width="160%" height="160%">
         <feGaussianBlur stdDeviation="3.5" result="blur" />
         <feMerge>
           <feMergeNode in="blur" />
@@ -182,37 +186,66 @@ const AppLogo = ({ className }: { className?: string }) => (
       </filter>
     </defs>
 
-    {/* Elegant background grid overlay representing a technical tactical pitch */}
+    {/* Technical Radar Circles */}
     <circle cx="50" cy="50" r="44" stroke="currentColor" strokeWidth="0.5" strokeOpacity="0.08" />
-    <path d="M 50 6 V 94 M 6 50 H 94" stroke="currentColor" strokeWidth="0.5" strokeOpacity="0.05" />
-    <circle cx="50" cy="50" r="14" stroke="currentColor" strokeWidth="0.5" strokeOpacity="0.06" fill="none" />
+    <circle cx="50" cy="50" r="32" stroke="currentColor" strokeWidth="0.5" strokeOpacity="0.04" />
 
-    {/* Technical vertical data bars forming an ascending chart trajectory */}
-    {/* Bar 1: Base stats (slanted, technical pill) */}
-    <rect x="29" y="44" width="7" height="32" rx="3.5" transform="rotate(-12 29 44)" fill="url(#logo-blue)" fillOpacity="0.85" />
-    
-    {/* Bar 2: Expected Goals buildup */}
-    <rect x="44" y="32" width="7" height="44" rx="3.5" transform="rotate(-12 44 32)" fill="url(#logo-blue)" />
-    
-    {/* Bar 3: Real conversion (emerald highlight) */}
-    <rect x="59" y="24" width="7" height="52" rx="3.5" transform="rotate(-12 59 24)" fill="url(#logo-neon)" />
-
-    {/* The Majestic Trajectory Arc - represents the perfect curvy kick cutting through the data */}
+    {/* Elegant futuristic curved trajectory loop (infinity/mobius feel) */}
     <path 
-      d="M 18 80 C 26 58, 54 26, 76 22" 
-      stroke="url(#logo-rainbow)" 
-      strokeWidth="4" 
+      d="M30 65 C18 53, 18 35, 32 25 C46 15, 62 21, 70 35 C78 49, 74 67, 58 75 C42 83, 24 73, 22 55" 
+      stroke="url(#ring-grad)" 
+      strokeWidth="3.5" 
       strokeLinecap="round"
-      filter="url(#premium-glow)"
+      fill="none"
+      filter="url(#glow-modern)"
     />
 
-    {/* Precise technical intersection dots representing tactical position points */}
-    <circle cx="21" cy="72" r="2.5" fill="currentColor" fillOpacity="0.25" />
-    <circle cx="41" cy="46" r="2.5" fill="currentColor" fillOpacity="0.25" />
+    {/* Hexagonal central core, styled with glassmorphic transparency */}
+    <polygon 
+      points="50,28 69,39 69,61 50,72 31,61 31,39" 
+      fill="currentColor" 
+      fillOpacity="0.03" 
+      stroke="currentColor" 
+      strokeWidth="0.75" 
+      strokeOpacity="0.15" 
+    />
 
-    {/* Dynamic Shot / Breakaway Ball Target Node representing peak success */}
-    <circle cx="76" cy="22" r="5.5" fill="white" filter="url(#premium-glow)" />
-    <circle cx="76" cy="22" r="2.5" fill="#10b981" />
+    {/* Overlapping, crisp geometric translucent shards */}
+    {/* Left Blue Shard (Process/Buildup) */}
+    <path 
+      d="M50 28 L69 39 L50 50 Z" 
+      fill="url(#modern-g1)" 
+      fillOpacity="0.8" 
+    />
+    {/* Bottom Green Shard (Real Conversion) */}
+    <path 
+      d="M50 50 L69 61 L50 72 Z" 
+      fill="url(#modern-g2)" 
+      fillOpacity="0.85" 
+    />
+    {/* Right Accent Yellow Sharp Shard (High Performance/Value) */}
+    <path 
+      d="M31 39 L50 50 L31 61 Z" 
+      fill="url(#modern-g3)" 
+      fillOpacity="0.4" 
+    />
+
+    {/* Connection lines (data plexus) */}
+    <line x1="50" y1="28" x2="50" y2="72" stroke="white" strokeWidth="0.75" strokeOpacity="0.25" />
+    <line x1="31" y1="39" x2="69" y2="61" stroke="white" strokeWidth="0.75" strokeOpacity="0.25" />
+    <line x1="31" y1="61" x2="69" y2="39" stroke="white" strokeWidth="0.75" strokeOpacity="0.25" />
+
+    {/* Central Pulsing Tech Core */}
+    <circle cx="50" cy="50" r="4.5" fill="white" />
+    <circle cx="50" cy="50" r="2" fill="#3b82f6" />
+
+    {/* Highlighted active nodes (Data checkpoints) */}
+    <circle cx="50" cy="28" r="2" fill="white" />
+    <circle cx="69" cy="39" r="2" fill="white" />
+    <circle cx="69" cy="61" r="2" fill="#10b981" filter="url(#glow-modern)" />
+    <circle cx="50" cy="72" r="2" fill="white" />
+    <circle cx="31" cy="61" r="2" fill="white" />
+    <circle cx="31" cy="39" r="2" fill="white" />
   </svg>
 );
 
