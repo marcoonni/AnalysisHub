@@ -1,6 +1,15 @@
 export type BodyPart = 'foot' | 'head';
 export type AssistType = 'pass' | 'cross' | 'rebound' | 'none';
 
+export interface Player {
+  id: string;
+  name: string;
+  role: 'Portiere' | 'Difensore' | 'Centrocampista' | 'Attaccante' | 'Nessuno';
+  preferredFoot: 'Destro' | 'Sinistro' | 'Entrambi';
+  number: string;
+  active: boolean;
+}
+
 export interface Shot {
   id: string;
   x: number; // 0-34 (distance from goal line)

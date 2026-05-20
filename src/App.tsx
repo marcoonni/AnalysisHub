@@ -41,7 +41,8 @@ import {
   RotateCw,
   ChevronUp,
   Sun,
-  Moon
+  Moon,
+  Users
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Papa from 'papaparse';
@@ -50,7 +51,7 @@ import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
-import { Shot, BodyPart, AssistType, DEFAULT_PITCH } from './types';
+import { Shot, BodyPart, AssistType, DEFAULT_PITCH, Player } from './types';
 import { calculateXG, generateXGGrid, DEFAULT_XG_COEFFICIENTS, XGCoefficients } from './lib/xgModel';
 import { 
   auth, 
@@ -295,12 +296,44 @@ export default function App() {
   const [selectedShot, setSelectedShot] = useState<Shot | null>(null);
   const [playerList, setPlayerList] = useState<string[]>([]);
   const [isAddingNewPlayer, setIsAddingNewPlayer] = useState(false);
+  const [showSquadModal, setShowSquadModal] = useState(false);
+  const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
+  const [squadSearch, setSquadSearch] = useState('');
+  const [squadRoleFilter, setSquadRoleFilter] = useState<'Tutti' | 'Portiere' | 'Difensore' | 'Centrocampista' | 'Attaccante'>('Tutti');
 
-  // Update player list whenever shots change
+  // Squad Players State - initialized with either localStorage or predefined defaults
+  const [squadPlayers, setSquadPlayers] = useState<Player[]>(() => {
+    const saved = localStorage.getItem('squad_players');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error("Errore nel parse dei giocatori salvati", e);
+      }
+    }
+    // Default predefined players
+    return PREDEFINED_PLAYERS.map((name, index) => ({
+      id: `p-${index}`,
+      name: name,
+      role: (index === 0 || index === 8) ? 'Portiere' : (index % 3 === 0) ? 'Difensore' : (index % 3 === 1) ? 'Centrocampista' : 'Attaccante',
+      preferredFoot: index % 2 === 0 ? 'Destro' : 'Sinistro',
+      number: String(index + 1),
+      active: true
+    }));
+  });
+
+  // Persist squad players on change
   useEffect(() => {
-    const players = Array.from(new Set(shots.map(s => s.playerName))).filter(Boolean).sort();
-    setPlayerList(players);
-  }, [shots]);
+    localStorage.setItem('squad_players', JSON.stringify(squadPlayers));
+  }, [squadPlayers]);
+
+  // Update player list whenever squad players or shots change
+  useEffect(() => {
+    const shotPlayers = Array.from(new Set(shots.map(s => s.playerName))).filter(Boolean);
+    const activeSquadNames = squadPlayers.filter(p => p.active).map(p => p.name);
+    const combined = Array.from(new Set([...activeSquadNames, ...shotPlayers])).sort();
+    setPlayerList(combined);
+  }, [shots, squadPlayers]);
   
   // Auth & Database States
   const [user, setUser] = useState<User | null>(null);
@@ -1176,6 +1209,17 @@ export default function App() {
                   {theme === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
                 </button>
                 <button 
+                  onClick={() => setShowSquadModal(true)}
+                  className={cn(
+                    "p-2.5 rounded-xl border transition-all outline-none flex items-center gap-1.5 focus:outline-none",
+                    theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-500 hover:text-white" : "bg-gray-50 border-gray-100 text-gray-400 hover:text-gray-900"
+                  )}
+                  title="Scheda Squadra"
+                >
+                  <Users className="w-3.5 h-3.5 text-blue-500" />
+                  <span className="text-[9px] font-black uppercase tracking-wider hidden sm:inline">Roster</span>
+                </button>
+                <button 
                   onClick={() => setShowMatchList(true)}
                   className={cn(
                     "p-2.5 rounded-xl border transition-all outline-none",
@@ -1827,9 +1871,14 @@ export default function App() {
                           )}
                         >
                           <option value="">Seleziona...</option>
-                          {PREDEFINED_PLAYERS.map(p => <option key={p} value={p}>{p}</option>)}
-                          {playerList.filter(p => !PREDEFINED_PLAYERS.includes(p)).map(p => <option key={p} value={p}>{p}</option>)}
-                          <option value="ADD_NEW">+ Aggiungi Nuovo</option>
+                          {playerList.map(pName => {
+                            const pObj = squadPlayers.find(sp => sp.name.toUpperCase() === pName.toUpperCase());
+                            const displayLabel = pObj 
+                              ? `${pObj.name} ${pObj.number ? `(#${pObj.number}` : ''}${pObj.role ? ` - ${pObj.role}` : ''}${pObj.number ? ')' : ''}`
+                              : pName;
+                            return <option key={pName} value={pName}>{displayLabel}</option>;
+                          })}
+                          <option value="ADD_NEW">+ Aggiungi Nuovo...</option>
                         </select>
                         <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                       </div>
@@ -2288,6 +2337,629 @@ export default function App() {
                     className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-xl transition-all shadow-lg shadow-emerald-500/20 uppercase tracking-widest text-[10px]"
                   >
                     Applica
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Quick Add Player Modal */}
+      <AnimatePresence>
+        {isAddingNewPlayer && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => {
+                setIsAddingNewPlayer(false);
+                if (!selectedShot) setNewShotConfig(prev => ({ ...prev, playerName: '' }));
+              }}
+              className="absolute inset-0 bg-[#070708]/80 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              className={cn(
+                "relative w-full max-w-sm border rounded-[2rem] p-6 shadow-2xl flex flex-col gap-5",
+                theme === 'dark' ? "bg-[#0d0d0e] border-white/5 text-white" : "bg-white border-gray-150 text-gray-900"
+              )}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500">
+                    <UserPlus className="w-4 h-4" />
+                  </div>
+                  <h3 className="text-xs font-black uppercase tracking-wider">Aggiungi Giocatore</h3>
+                </div>
+                <button 
+                  onClick={() => {
+                    setIsAddingNewPlayer(false);
+                    if (!selectedShot) setNewShotConfig(prev => ({ ...prev, playerName: '' }));
+                  }}
+                  className="text-gray-400 hover:text-white transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.currentTarget);
+                const nameInput = (formData.get('playerName') as string || '').trim().toUpperCase();
+                if (!nameInput) return;
+                
+                const newP: Player = {
+                  id: `p-custom-${Math.random().toString(36).substr(2, 9)}`,
+                  name: nameInput,
+                  role: (formData.get('playerRole') || 'Centrocampista') as any,
+                  preferredFoot: (formData.get('playerFoot') || 'Destro') as any,
+                  number: formData.get('playerNumber') as string || '',
+                  active: true
+                };
+
+                setSquadPlayers(prev => [...prev, newP]);
+                if (selectedShot) {
+                  updateShot(selectedShot.id, { playerName: nameInput });
+                } else {
+                  setNewShotConfig(prev => ({ ...prev, playerName: nameInput }));
+                }
+                setIsAddingNewPlayer(false);
+                setShowToast({ message: `Giocatore ${nameInput} inserito!`, type: 'success' });
+              }} className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-[9px] font-bold text-gray-500 uppercase tracking-widest block font-sans">Nome e Cognome</label>
+                  <input 
+                    name="playerName"
+                    autoFocus
+                    required
+                    placeholder="Es. MARTINEZ"
+                    className={cn(
+                      "w-full border rounded-xl py-3 px-4 text-xs font-bold uppercase placeholder:lowercase focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all",
+                      theme === 'dark' ? "bg-white/[0.02] border-white/5 text-white" : "bg-gray-50 border-gray-200 text-gray-900"
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-bold text-gray-500 uppercase tracking-widest block font-sans">Numero Maglia</label>
+                    <input 
+                      type="number"
+                      name="playerNumber"
+                      placeholder="Es. 10"
+                      className={cn(
+                        "w-full border rounded-xl py-3 px-4 text-xs font-bold placeholder:lowercase focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all",
+                        theme === 'dark' ? "bg-white/[0.02] border-white/5 text-white" : "bg-gray-50 border-gray-200 text-gray-900"
+                      )}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-bold text-gray-500 uppercase tracking-widest block font-sans">Piede Preferito</label>
+                    <select 
+                      name="playerFoot"
+                      className={cn(
+                        "w-full border rounded-xl py-3 px-4 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all appearance-none",
+                        theme === 'dark' ? "bg-white/[0.02] border-white/5 text-white" : "bg-gray-50 border-gray-200 text-gray-900"
+                      )}
+                    >
+                      <option value="Destro">Destro</option>
+                      <option value="Sinistro">Sinistro</option>
+                      <option value="Entrambi">Entrambi</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[9px] font-bold text-gray-500 uppercase tracking-widest block font-sans">Ruolo</label>
+                  <select 
+                    name="playerRole"
+                    className={cn(
+                      "w-full border rounded-xl py-3 px-4 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all appearance-none",
+                      theme === 'dark' ? "bg-white/[0.02] border-white/5 text-white" : "bg-gray-50 border-gray-200 text-gray-900"
+                    )}
+                  >
+                    <option value="Attaccante">Attaccante</option>
+                    <option value="Centrocampista">Centrocampista</option>
+                    <option value="Difensore">Difensore</option>
+                    <option value="Portiere">Portiere</option>
+                  </select>
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full mt-4 py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
+                >
+                  Conferma e Seleziona
+                </button>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Scheda Squadra / Roster Management Modal */}
+      <AnimatePresence>
+        {showSquadModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => {
+                setShowSquadModal(false);
+                setEditingPlayer(null);
+              }}
+              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className={cn(
+                "relative w-full max-w-5xl border rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]",
+                theme === 'dark' ? "bg-[#0d0d0e] border-white/[0.05]" : "bg-white border-gray-150"
+              )}
+            >
+              {/* Modal Head */}
+              <div className={cn(
+                "p-6 sm:p-8 border-b flex items-center justify-between shrink-0",
+                theme === 'dark' ? "border-white/[0.03]" : "border-gray-100"
+              )}>
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-blue-500/10 rounded-2xl flex items-center justify-center text-blue-500">
+                    <Users className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h2 className={cn("text-base sm:text-lg font-black uppercase tracking-tight", theme === 'dark' ? "text-white" : "text-gray-900")}>Scheda Squadra & Roster</h2>
+                    <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mt-1">Gestione e Anagrafica dei Giocatori</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => {
+                    setShowSquadModal(false);
+                    setEditingPlayer(null);
+                  }}
+                  className={cn(
+                    "w-12 h-12 rounded-2xl flex items-center justify-center transition-all outline-none",
+                    theme === 'dark' ? "bg-white/[0.03] hover:bg-white/[0.06] text-gray-500 hover:text-white" : "bg-gray-50 hover:bg-gray-100 text-gray-500 hover:text-gray-900"
+                  )}
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Roster Quick Stats Ribbons */}
+              <div className={cn(
+                "px-6 py-4 border-b grid grid-cols-2 md:grid-cols-5 gap-4 shrink-0 overflow-x-auto",
+                theme === 'dark' ? "bg-[#070708]/40 border-white/[0.03] text-gray-400" : "bg-gray-50/50 border-gray-100 text-gray-600"
+              )}>
+                <div className="flex flex-col">
+                  <span className="text-[8px] font-black uppercase tracking-widest text-gray-500">Totale Atleti</span>
+                  <span className={cn("text-sm font-black mt-1", theme === 'dark' ? "text-white" : "text-gray-900")}>{squadPlayers.length} Giocatori</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[8px] font-black uppercase tracking-widest text-emerald-500">Attivi (in campo)</span>
+                  <span className="text-sm font-black text-emerald-500 mt-1">{squadPlayers.filter(p => p.active).length} Selezionabili</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[8px] font-black uppercase tracking-widest text-red-400">Attaccanti</span>
+                  <span className={cn("text-sm font-semibold mt-1", theme === 'dark' ? "text-white/80" : "text-gray-800")}>{squadPlayers.filter(p => p.role === 'Attaccante').length}</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[8px] font-black uppercase tracking-widest text-blue-400">Centrocampisti</span>
+                  <span className={cn("text-sm font-semibold mt-1", theme === 'dark' ? "text-white/80" : "text-gray-800")}>{squadPlayers.filter(p => p.role === 'Centrocampista').length}</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[8px] font-black uppercase tracking-widest text-yellow-500">Difensori / GK</span>
+                  <span className={cn("text-sm font-semibold mt-1", theme === 'dark' ? "text-white/80" : "text-gray-800")}>
+                    {squadPlayers.filter(p => p.role === 'Difensore').length} D • {squadPlayers.filter(p => p.role === 'Portiere').length} P
+                  </span>
+                </div>
+              </div>
+
+              {/* Bento Content Panels */}
+              <div className="p-6 sm:p-8 flex-1 overflow-y-auto no-scrollbar grid grid-cols-1 md:grid-cols-12 gap-8">
+                {/* Panel 1: Player Creator/Editor (5 cols) */}
+                <div className="md:col-span-5 flex flex-col gap-6">
+                  <div className={cn(
+                    "border rounded-3xl p-6 relative overflow-hidden",
+                    theme === 'dark' ? "bg-white/[0.01] border-white/5" : "bg-gray-50 border-gray-150"
+                  )}>
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className={cn(
+                        "w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black",
+                        editingPlayer ? "bg-yellow-500/10 text-yellow-500" : "bg-blue-500/10 text-blue-500"
+                      )}>
+                        {editingPlayer ? '✎' : '+'}
+                      </div>
+                      <h3 className={cn("text-xs font-black uppercase tracking-wider", theme === 'dark' ? "text-white" : "text-gray-900")}>
+                        {editingPlayer ? 'Modifica Atleta' : 'Aggiungi Atleta'}
+                      </h3>
+                    </div>
+
+                    <form 
+                      key={editingPlayer ? editingPlayer.id : 'new-player'}
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        const formData = new FormData(e.currentTarget);
+                        const name = (formData.get('playerName') as string || '').trim().toUpperCase();
+                        if (!name) {
+                          setShowToast({ message: "Il nome non può essere vuoto", type: 'error' });
+                          return;
+                        }
+
+                        const number = formData.get('playerNumber') as string || '';
+                        const role = formData.get('playerRole') as any;
+                        const preferredFoot = formData.get('playerFoot') as any;
+                        const active = formData.get('playerActive') === 'true';
+
+                        if (editingPlayer) {
+                          setSquadPlayers(prev => prev.map(p => p.id === editingPlayer.id ? {
+                            ...p, name, number, role, preferredFoot, active
+                          } : p));
+                          setEditingPlayer(null);
+                          setShowToast({ message: `Giocatore ${name} aggiornato!`, type: 'success' });
+                        } else {
+                          const newP: Player = {
+                            id: `p-${Date.now()}`,
+                            name, number, role, preferredFoot, active
+                          };
+                          setSquadPlayers(prev => [...prev, newP]);
+                          setShowToast({ message: `Atleta ${name} aggiunto al roster!`, type: 'success' });
+                        }
+                        e.currentTarget.reset();
+                      }}
+                      className="space-y-4"
+                    >
+                      <div className="space-y-2">
+                        <label className="text-[8px] font-bold text-gray-500 uppercase tracking-widest block font-sans">Nome e Cognome</label>
+                        <input 
+                          name="playerName"
+                          required
+                          defaultValue={editingPlayer ? editingPlayer.name : ''}
+                          placeholder="Es. COPPOLA"
+                          className={cn(
+                            "w-full border rounded-xl py-3 px-4 text-xs font-bold uppercase placeholder:lowercase focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all",
+                            theme === 'dark' ? "bg-black/40 border-white/5 text-white" : "bg-white border-gray-200 text-gray-900"
+                          )}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <label className="text-[8px] font-bold text-gray-500 uppercase tracking-widest block font-sans">Numero Maglia</label>
+                          <input 
+                            type="number"
+                            name="playerNumber"
+                            defaultValue={editingPlayer ? editingPlayer.number : ''}
+                            placeholder="Es. 9"
+                            className={cn(
+                              "w-full border rounded-xl py-3 px-4 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all",
+                              theme === 'dark' ? "bg-black/40 border-white/5 text-white" : "bg-white border-gray-200 text-gray-900"
+                            )}
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-[8px] font-bold text-gray-500 uppercase tracking-widest block font-sans">Piede Preferito</label>
+                          <select 
+                            name="playerFoot"
+                            defaultValue={editingPlayer ? editingPlayer.preferredFoot : 'Destro'}
+                            className={cn(
+                              "w-full border rounded-xl py-3 px-4 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all appearance-none",
+                              theme === 'dark' ? "bg-black/40 border-white/5 text-white" : "bg-white border-gray-200 text-gray-900"
+                            )}
+                          >
+                            <option value="Destro">Destro</option>
+                            <option value="Sinistro">Sinistro</option>
+                            <option value="Entrambi">Entrambi</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-[8px] font-bold text-gray-500 uppercase tracking-widest block font-sans">Ruolo Principale</label>
+                        <select 
+                          name="playerRole"
+                          defaultValue={editingPlayer ? editingPlayer.role : 'Centrocampista'}
+                          className={cn(
+                            "w-full border rounded-xl py-3 px-4 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all appearance-none",
+                            theme === 'dark' ? "bg-black/40 border-white/5 text-white" : "bg-white border-gray-200 text-gray-900"
+                          )}
+                        >
+                          <option value="Attaccante">Attaccante</option>
+                          <option value="Centrocampista">Centrocampista</option>
+                          <option value="Difensore">Difensore</option>
+                          <option value="Portiere">Portiere</option>
+                          <option value="Nessuno">Nessuno</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-[8px] font-bold text-gray-500 uppercase tracking-widest block font-sans">Status Attivo</label>
+                        <select 
+                          name="playerActive"
+                          defaultValue={editingPlayer ? (editingPlayer.active ? 'true' : 'false') : 'true'}
+                          className={cn(
+                            "w-full border rounded-xl py-3 px-4 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all appearance-none",
+                            theme === 'dark' ? "bg-black/40 border-white/5 text-white" : "bg-white border-gray-200 text-gray-900"
+                          )}
+                        >
+                          <option value="true">Attivo (Disponibile in partita)</option>
+                          <option value="false">Inattivo (Nascosto)</option>
+                        </select>
+                      </div>
+
+                      <div className="flex gap-2 pt-2">
+                        {editingPlayer && (
+                          <button
+                            type="button"
+                            onClick={() => setEditingPlayer(null)}
+                            className={cn(
+                              "flex-1 py-3.5 border rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                              theme === 'dark' ? "bg-white/5 hover:bg-white/10 text-gray-400 border-white/10" : "bg-gray-105 hover:bg-gray-200 text-gray-600 border-gray-200"
+                            )}
+                          >
+                            Annulla
+                          </button>
+                        )}
+                        <button
+                          type="submit"
+                          className={cn(
+                            "flex-[2] py-3.5 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                            editingPlayer ? "bg-yellow-500 hover:bg-yellow-400 text-black shadow-lg shadow-yellow-500/10" : "bg-blue-600 hover:bg-blue-500 shadow-md shadow-blue-500/10"
+                          )}
+                        >
+                          {editingPlayer ? 'Salva Modifiche' : 'Salva Atleta'}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+
+                {/* Panel 2: Player List and Filtering (7 cols) */}
+                <div className="md:col-span-7 flex flex-col gap-5">
+                  {/* Tool bar */}
+                  <div className="flex flex-col sm:flex-row gap-4 items-center justify-between shrink-0">
+                    {/* Search Field */}
+                    <div className="relative w-full sm:w-64">
+                      <input 
+                        type="text"
+                        value={squadSearch}
+                        onChange={(e) => setSquadSearch(e.target.value)}
+                        placeholder="Cerca atleti per nome..."
+                        className={cn(
+                          "w-full border rounded-2xl py-3.5 pl-10 pr-4 text-xs font-bold placeholder:font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all",
+                          theme === 'dark' ? "bg-[#0d0d0e] border-white/5 text-white" : "bg-gray-50 border-gray-200 text-gray-900"
+                        )}
+                      />
+                      <Target className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                      {squadSearch && (
+                        <button 
+                          onClick={() => setSquadSearch('')}
+                          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Role Filter Tabs */}
+                    <div className={cn(
+                      "flex p-1 rounded-xl border gap-1 overflow-x-auto w-full sm:w-auto",
+                      theme === 'dark' ? "bg-[#0d0d0e] border-white/5" : "bg-gray-100 border-gray-200"
+                    )}>
+                      {['Tutti', 'Portiere', 'Difensore', 'Centrocampista', 'Attaccante'].map((roleOpt) => (
+                        <button
+                          key={roleOpt}
+                          onClick={() => setSquadRoleFilter(roleOpt as any)}
+                          className={cn(
+                            "px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-wider transition-all whitespace-nowrap",
+                            squadRoleFilter === roleOpt 
+                              ? "bg-blue-600 text-white shadow-md shadow-blue-600/15" 
+                              : (theme === 'dark' ? "text-gray-500 hover:text-white" : "text-gray-400 hover:text-gray-900")
+                          )}
+                        >
+                          {roleOpt === 'Tutti' ? 'Tutti' : roleOpt.substring(0, 3)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Player list actual container */}
+                  <div className={cn(
+                    "border rounded-3xl overflow-hidden flex-1 flex flex-col min-h-[300px]",
+                    theme === 'dark' ? "bg-white/[0.01] border-white/5" : "bg-white border-gray-100"
+                  )}>
+                    <div className={cn(
+                      "p-4 border-b flex items-center justify-between text-[8px] font-black text-gray-500 uppercase tracking-widest",
+                      theme === 'dark' ? "border-white/5" : "border-gray-50"
+                    )}>
+                      <span>Dati Anagrafici Atleta</span>
+                      <span>Stato / Azioni</span>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto max-h-[350px] no-scrollbar divide-y divide-white/5">
+                      {(() => {
+                        const filtered = squadPlayers.filter(p => {
+                          const matchesSearch = p.name.toUpperCase().includes(squadSearch.trim().toUpperCase());
+                          const matchesRole = squadRoleFilter === 'Tutti' ? true : p.role === squadRoleFilter;
+                          return matchesSearch && matchesRole;
+                        });
+
+                        if (filtered.length === 0) {
+                          return (
+                            <div className="py-20 text-center flex flex-col items-center justify-center">
+                              <UserIcon className="w-10 h-10 text-gray-500/30 mb-3" />
+                              <p className="text-[9px] text-gray-500 font-black uppercase tracking-widest">Nessun atleta trovato</p>
+                              <p className="text-[7.5px] text-gray-600 font-bold uppercase mt-1">Verifica i filtri o inserisci un nuovo giocatore</p>
+                            </div>
+                          );
+                        }
+
+                        return filtered.map((player) => (
+                          <div 
+                            key={player.id}
+                            className={cn(
+                              "p-4 flex items-center justify-between group transition-all duration-300 hover:bg-blue-500/[0.02]/20 cursor-pointer",
+                              editingPlayer?.id === player.id 
+                                ? (theme === 'dark' ? "bg-yellow-500/5 hover:bg-yellow-500/5 border-l-2 border-yellow-500" : "bg-yellow-500/[0.03] border-l-2 border-yellow-500") 
+                                : ""
+                            )}
+                            onClick={() => setEditingPlayer(player)}
+                          >
+                            <div className="flex items-center gap-3.5 min-w-0">
+                              {/* Shirt Number Badge */}
+                              <div className={cn(
+                                "w-8 h-8 rounded-xl font-mono text-xs font-black flex items-center justify-center border shrink-0",
+                                player.active 
+                                  ? (theme === 'dark' ? "bg-blue-500/10 border-blue-500/20 text-blue-400 group-hover:scale-105 transition-transform" : "bg-blue-50 border-blue-100 text-blue-600")
+                                  : "bg-gray-500/5 border-gray-500/10 text-gray-500"
+                              )}>
+                                {player.number || '—'}
+                              </div>
+
+                              <div className="flex flex-col min-w-0">
+                                <span className={cn("text-xs font-black uppercase leading-none truncate", player.active ? (theme === 'dark' ? "text-white" : "text-gray-900") : "text-gray-500 line-through")}>
+                                  {player.name}
+                                </span>
+                                <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                                  {/* Role Pill */}
+                                  <span className={cn(
+                                    "text-[7px] font-black uppercase px-2 py-0.5 rounded-full border leading-none tracking-widest",
+                                    player.role === 'Portiere' ? "bg-purple-500/10 border-purple-500/20 text-purple-400" :
+                                    player.role === 'Difensore' ? "bg-yellow-500/10 border-yellow-500/20 text-yellow-500" :
+                                    player.role === 'Centrocampista' ? "bg-blue-500/10 border-blue-500/20 text-blue-400" :
+                                    player.role === 'Attaccante' ? "bg-red-500/10 border-red-500/20 text-red-500" : "bg-gray-500/10 border-transparent text-gray-400"
+                                  )}>
+                                    {player.role || 'Nessuno'}
+                                  </span>
+
+                                  {/* Preferred foot */}
+                                  <span className="text-[7.5px] font-bold text-gray-500 uppercase tracking-widest leading-none">
+                                    {player.preferredFoot || 'Destro'}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Selectable toggle switch + delete buttons */}
+                            <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
+                              {/* Quick Selectable Toggle */}
+                              <button
+                                onClick={() => {
+                                  setSquadPlayers(prev => prev.map(p => p.id === player.id ? { ...p, active: !p.active } : p));
+                                  setShowToast({ 
+                                    message: `${player.name} ${!player.active ? 'attivato' : 'disattivato'}`, 
+                                    type: 'success' 
+                                  });
+                                }}
+                                className={cn(
+                                  "w-11 h-6 rounded-full p-0.5 transition-colors focus:outline-none flex items-center relative",
+                                  player.active ? "bg-emerald-500" : (theme === 'dark' ? "bg-white/10" : "bg-gray-250")
+                                )}
+                              >
+                                <motion.div 
+                                  layout
+                                  transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                                  className="w-5 h-5 rounded-full bg-white shadow-sm"
+                                  style={{ position: 'absolute', left: player.active ? '20px' : '2px' }}
+                                />
+                              </button>
+
+                              {/* Delete button */}
+                              <button
+                                onClick={() => {
+                                  if (confirm(`Rimuovere l'atleta ${player.name} dal roster?`)) {
+                                    setSquadPlayers(prev => prev.filter(p => p.id !== player.id));
+                                    if (editingPlayer?.id === player.id) setEditingPlayer(null);
+                                    setShowToast({ message: `Atleta rimosso`, type: 'success' });
+                                  }
+                                }}
+                                className={cn(
+                                  "p-2 rounded-xl transition-all border shrink-0",
+                                  theme === 'dark' ? "border-transparent bg-white/[0.01] hover:bg-red-500/10 text-gray-500 hover:text-red-400" : "border-gray-50 bg-gray-50 hover:bg-red-50 text-gray-400 hover:text-red-650"
+                                )}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        ));
+                      })()}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Footer Controls */}
+              <div className={cn(
+                "p-6 border-t flex flex-col sm:flex-row items-center justify-between gap-4 shrink-0 shrink-none",
+                theme === 'dark' ? "border-white/[0.03] bg-white/[0.01]" : "border-gray-100 bg-gray-50/50"
+              )}>
+                <button
+                  onClick={() => {
+                    if (confirm("Sei sicuro di voler ripristinare il roster predefinito del Bologna? Tutti i giocatori personalizzati verranno rimpiazzati.")) {
+                      localStorage.removeItem('squad_players');
+                      setSquadPlayers(PREDEFINED_PLAYERS.map((name, index) => ({
+                        id: `p-${index}`,
+                        name: name,
+                        role: (index === 0 || index === 8) ? 'Portiere' : (index % 3 === 0) ? 'Difensore' : (index % 3 === 1) ? 'Centrocampista' : 'Attaccante',
+                        preferredFoot: index % 2 === 0 ? 'Destro' : 'Sinistro',
+                        number: String(index + 1),
+                        active: true
+                      })));
+                      setEditingPlayer(null);
+                      setShowToast({ message: "Roster Bologna ripristinato con successo!", type: 'success' });
+                    }
+                  }}
+                  className={cn(
+                    "px-5 py-3 border rounded-xl text-[9px] font-black uppercase tracking-wider transition-all flex items-center gap-2",
+                    theme === 'dark' ? "bg-white/5 hover:bg-white/10 text-gray-400 border-white/10" : "bg-white hover:bg-gray-100 text-gray-650 border-gray-200"
+                  )}
+                >
+                  <RotateCcw className="w-3.5 h-3.5 text-blue-500" />
+                  Ripristina Default Bologna
+                </button>
+
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => {
+                      setSquadPlayers(prev => prev.map(p => ({ ...p, active: false })));
+                      setShowToast({ message: "Tutti gli atleti disattivati!", type: 'success' });
+                    }}
+                    className={cn(
+                      "px-4 py-3 border rounded-xl text-[9px] font-black uppercase tracking-wider transition-all",
+                      theme === 'dark' ? "bg-white/5 hover:bg-white/10 text-gray-500 border-white/10" : "bg-white hover:bg-gray-100 text-gray-500 border-gray-200"
+                    )}
+                  >
+                    Deseleziona Tutti
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSquadPlayers(prev => prev.map(p => ({ ...p, active: true })));
+                      setShowToast({ message: "Tutti gli atleti attivati!", type: 'success' });
+                    }}
+                    className={cn(
+                      "px-4 py-3 border rounded-xl text-[9px] font-black uppercase tracking-wider transition-all",
+                      theme === 'dark' ? "bg-white/5 hover:bg-white/10 text-gray-505 border-white/10" : "bg-white hover:bg-gray-150 text-gray-505 border-gray-200"
+                    )}
+                  >
+                    Seleziona Tutti
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowSquadModal(false);
+                      setEditingPlayer(null);
+                    }}
+                    className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white text-[9px] font-black uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-blue-500/20"
+                  >
+                    Chiudi Roster
                   </button>
                 </div>
               </div>
