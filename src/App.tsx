@@ -161,31 +161,44 @@ const AppLogo = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 100 100" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
     <defs>
       <linearGradient id="logo-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#2563eb" />
-        <stop offset="100%" stopColor="#3b82f6" />
+        <stop offset="0%" stopColor="#3b82f6" />
+        <stop offset="100%" stopColor="#2563eb" />
       </linearGradient>
-      <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-        <feGaussianBlur stdDeviation="2" result="blur" />
+      <filter id="logo-glow" x="-40%" y="-40%" width="180%" height="180%">
+        <feGaussianBlur stdDeviation="4" result="blur" />
         <feComposite in="SourceGraphic" in2="blur" operator="over" />
       </filter>
     </defs>
-    {/* Minimalist Hexagonal Shield / Data Node */}
+    
+    {/* Abstract Connectivity Rings */}
+    <circle cx="50" cy="50" r="45" stroke="currentColor" strokeWidth="0.5" strokeOpacity="0.1" />
+    <circle cx="50" cy="50" r="38" stroke="currentColor" strokeWidth="0.5" strokeOpacity="0.05" />
+    
+    {/* Main Shape: Stylized Football Pentagon / Analytic Hub */}
     <path 
-      d="M50 5 L89 27.5 V72.5 L50 95 L11 72.5 V27.5 L50 5Z" 
+      d="M50 20 L76 38 V62 L50 80 L24 62 V38 L50 20Z" 
       fill="url(#logo-gradient)" 
-      filter="url(#glow)"
+      filter="url(#logo-glow)"
     />
+    
+    {/* Inner Geometric Accents */}
     <path 
-      d="M50 20 L76 35 V65 L50 80 L24 65 V35 L50 20Z" 
-      fill="white" 
-      fillOpacity="0.15"
+      d="M50 20 V80 M24 38 L76 62 M24 62 L76 38" 
+      stroke="white" 
+      strokeWidth="1.5" 
+      strokeOpacity="0.3"
+      strokeLinecap="round"
     />
+    
+    {/* Core Data Node */}
     <path 
-      d="M50 30 L67 40 V60 L50 70 L33 60 V40 L50 30Z" 
+      d="M50 35 L62 45 V55 L50 65 L38 55 V45 Z" 
       fill="white" 
       fillOpacity="0.9"
     />
-    <circle cx="50" cy="50" r="5" fill="#2563eb" />
+    
+    {/* Pulsing Status Dot */}
+    <circle cx="50" cy="50" r="3" fill="#2563eb" />
   </svg>
 );
 
