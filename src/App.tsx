@@ -160,45 +160,59 @@ interface ErrorBoundaryState {
 const AppLogo = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 100 100" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
     <defs>
-      <linearGradient id="logo-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <linearGradient id="logo-blue" x1="0%" y1="0%" x2="100%" y2="100%">
         <stop offset="0%" stopColor="#3b82f6" />
-        <stop offset="100%" stopColor="#2563eb" />
+        <stop offset="100%" stopColor="#1d4ed8" />
       </linearGradient>
-      <filter id="logo-glow" x="-40%" y="-40%" width="180%" height="180%">
-        <feGaussianBlur stdDeviation="4" result="blur" />
-        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+      <linearGradient id="logo-neon" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#10b981" />
+        <stop offset="100%" stopColor="#059669" />
+      </linearGradient>
+      <linearGradient id="logo-rainbow" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#60a5fa" />
+        <stop offset="50%" stopColor="#3b82f6" />
+        <stop offset="100%" stopColor="#10b981" />
+      </linearGradient>
+      <filter id="premium-glow" x="-30%" y="-30%" width="160%" height="160%">
+        <feGaussianBlur stdDeviation="3.5" result="blur" />
+        <feMerge>
+          <feMergeNode in="blur" />
+          <feMergeNode in="SourceGraphic" />
+        </feMerge>
       </filter>
     </defs>
+
+    {/* Elegant background grid overlay representing a technical tactical pitch */}
+    <circle cx="50" cy="50" r="44" stroke="currentColor" strokeWidth="0.5" strokeOpacity="0.08" />
+    <path d="M 50 6 V 94 M 6 50 H 94" stroke="currentColor" strokeWidth="0.5" strokeOpacity="0.05" />
+    <circle cx="50" cy="50" r="14" stroke="currentColor" strokeWidth="0.5" strokeOpacity="0.06" fill="none" />
+
+    {/* Technical vertical data bars forming an ascending chart trajectory */}
+    {/* Bar 1: Base stats (slanted, technical pill) */}
+    <rect x="29" y="44" width="7" height="32" rx="3.5" transform="rotate(-12 29 44)" fill="url(#logo-blue)" fillOpacity="0.85" />
     
-    {/* Abstract Connectivity Rings */}
-    <circle cx="50" cy="50" r="45" stroke="currentColor" strokeWidth="0.5" strokeOpacity="0.1" />
-    <circle cx="50" cy="50" r="38" stroke="currentColor" strokeWidth="0.5" strokeOpacity="0.05" />
+    {/* Bar 2: Expected Goals buildup */}
+    <rect x="44" y="32" width="7" height="44" rx="3.5" transform="rotate(-12 44 32)" fill="url(#logo-blue)" />
     
-    {/* Main Shape: Stylized Football Pentagon / Analytic Hub */}
+    {/* Bar 3: Real conversion (emerald highlight) */}
+    <rect x="59" y="24" width="7" height="52" rx="3.5" transform="rotate(-12 59 24)" fill="url(#logo-neon)" />
+
+    {/* The Majestic Trajectory Arc - represents the perfect curvy kick cutting through the data */}
     <path 
-      d="M50 20 L76 38 V62 L50 80 L24 62 V38 L50 20Z" 
-      fill="url(#logo-gradient)" 
-      filter="url(#logo-glow)"
-    />
-    
-    {/* Inner Geometric Accents */}
-    <path 
-      d="M50 20 V80 M24 38 L76 62 M24 62 L76 38" 
-      stroke="white" 
-      strokeWidth="1.5" 
-      strokeOpacity="0.3"
+      d="M 18 80 C 26 58, 54 26, 76 22" 
+      stroke="url(#logo-rainbow)" 
+      strokeWidth="4" 
       strokeLinecap="round"
+      filter="url(#premium-glow)"
     />
-    
-    {/* Core Data Node */}
-    <path 
-      d="M50 35 L62 45 V55 L50 65 L38 55 V45 Z" 
-      fill="white" 
-      fillOpacity="0.9"
-    />
-    
-    {/* Pulsing Status Dot */}
-    <circle cx="50" cy="50" r="3" fill="#2563eb" />
+
+    {/* Precise technical intersection dots representing tactical position points */}
+    <circle cx="21" cy="72" r="2.5" fill="currentColor" fillOpacity="0.25" />
+    <circle cx="41" cy="46" r="2.5" fill="currentColor" fillOpacity="0.25" />
+
+    {/* Dynamic Shot / Breakaway Ball Target Node representing peak success */}
+    <circle cx="76" cy="22" r="5.5" fill="white" filter="url(#premium-glow)" />
+    <circle cx="76" cy="22" r="2.5" fill="#10b981" />
   </svg>
 );
 
