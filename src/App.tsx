@@ -846,29 +846,25 @@ export default function App() {
         if (currentUser.email && currentUser.email.toLowerCase() === 'onnivellomarco@gmail.com') {
           setSubStatus({
             active: true,
-            plan: 'club_elite',
+            plan: '1 ANNO ELITE',
             expiryDate: '2100-01-01T00:00:00.000Z'
           });
         } else {
-          // Load subscription status
+          // Set default DEMO GRATUITA immediately so there is ZERO waiting time or blank screen
+          setSubStatus({
+            active: true,
+            plan: 'DEMO GRATUITA',
+            expiryDate: '2100-01-01T00:00:00.000Z'
+          });
+
+          // Load subscription status in background asynchronously
           const userDocRef = doc(db, 'users', currentUser.uid);
           getDoc(userDocRef).then((uDoc) => {
             if (uDoc.exists() && uDoc.data().subscription) {
               setSubStatus(uDoc.data().subscription);
-            } else {
-              setSubStatus({
-                active: true,
-                plan: 'DEMO GRATUITA',
-                expiryDate: '2100-01-01T00:00:00.000Z'
-              });
             }
           }).catch((err) => {
             console.error("Error fetching subscription:", err);
-            setSubStatus({
-              active: true,
-              plan: 'DEMO GRATUITA',
-              expiryDate: '2100-01-01T00:00:00.000Z'
-            });
           });
         }
 
@@ -994,7 +990,7 @@ export default function App() {
       const isAdmin = authEmail.toLowerCase() === 'onnivellomarco@gmail.com';
       const newSub = isAdmin ? {
         active: true,
-        plan: 'club_elite',
+        plan: '1 ANNO ELITE',
         expiryDate: '2100-01-01T00:00:00.000Z'
       } : {
         active: true,
@@ -1549,7 +1545,7 @@ export default function App() {
                       {selectedPaywallPlan === 'demo_free' && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
                     </div>
                     <div>
-                      <h4 className={cn("text-xs font-black uppercase tracking-wider text-emerald-500")}>VERSIONE DEMO (GRATUITA)</h4>
+                      <h4 className={cn("text-xs font-black uppercase tracking-wider text-emerald-500")}>DEMO GRATUITA</h4>
                       <p className="text-gray-500 text-[10px] leading-relaxed mt-1 max-w-sm">
                         Provala subito gratis. **Limite: in questa versione gratuita non è consentito creare, importare o modificare i giocatori nel roster.**
                       </p>
