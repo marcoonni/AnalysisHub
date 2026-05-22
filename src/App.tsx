@@ -312,6 +312,7 @@ export default function App() {
   const [couponCode, setCouponCode] = useState('');
   const [isCouponApplied, setIsCouponApplied] = useState(false);
   const [showSubscriptionStatusInfoModal, setShowSubscriptionStatusInfoModal] = useState(false);
+  const [forceShowPaywall, setForceShowPaywall] = useState(false);
 
   const isDemoMode = !!(subStatus && subStatus.active && (subStatus.plan === 'demo_free' || subStatus.plan === 'DEMO GRATUITA'));
 
@@ -855,11 +856,19 @@ export default function App() {
             if (uDoc.exists() && uDoc.data().subscription) {
               setSubStatus(uDoc.data().subscription);
             } else {
-              setSubStatus({ active: false, plan: null, expiryDate: null });
+              setSubStatus({
+                active: true,
+                plan: 'DEMO GRATUITA',
+                expiryDate: '2100-01-01T00:00:00.000Z'
+              });
             }
           }).catch((err) => {
             console.error("Error fetching subscription:", err);
-            setSubStatus({ active: false, plan: null, expiryDate: null });
+            setSubStatus({
+              active: true,
+              plan: 'DEMO GRATUITA',
+              expiryDate: '2100-01-01T00:00:00.000Z'
+            });
           });
         }
 
@@ -988,9 +997,9 @@ export default function App() {
         plan: 'club_elite',
         expiryDate: '2100-01-01T00:00:00.000Z'
       } : {
-        active: false,
-        plan: null,
-        expiryDate: null
+        active: true,
+        plan: 'DEMO GRATUITA',
+        expiryDate: '2100-01-01T00:00:00.000Z'
       };
 
       // Save user profile state in Firestore
@@ -1057,6 +1066,7 @@ export default function App() {
       }, { merge: true });
       
       setSubStatus(newSubscription);
+      setForceShowPaywall(false);
       setShowToast({ message: `Abbonamento ${selectedPlanLabel} attivato con successo!`, type: 'success' });
     } catch (error) {
       console.error("Error setting subscription in database:", error);
@@ -1464,7 +1474,7 @@ export default function App() {
             </p>
           </div>
         </div>
-      ) : subStatus && !subStatus.active ? (
+      ) : (subStatus && !subStatus.active) || forceShowPaywall ? (
         /* 1c. USER IS SIGNED IN BUT SUBSCRIPTION IS NOT ACTIVE - Pricing paywall wall with Card verification */
         <div className={cn(
           "min-h-screen w-full flex flex-col justify-between px-4 sm:px-8 py-8 relative overflow-hidden",
@@ -1481,6 +1491,16 @@ export default function App() {
               <span className="text-[10px] font-black uppercase tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-indigo-400">Licenza Abbonamento</span>
             </div>
             <div className="flex items-center gap-3">
+              {forceShowPaywall && (
+                <button
+                  onClick={() => setForceShowPaywall(false)}
+                  className={cn(
+                    "px-3.5 py-1.5 border rounded-xl text-[8px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5 cursor-pointer bg-emerald-500/10 border-emerald-500/20 text-emerald-500 hover:bg-emerald-500/20 animate-pulse"
+                  )}
+                >
+                  Torna alla Demo ➔
+                </button>
+              )}
               <span className="text-[10px] font-bold text-gray-400 hidden sm:inline-block">Utente: <strong className="text-gray-300 font-black">{user.displayName || user.email}</strong></span>
               <button
                 onClick={logout}
@@ -1981,18 +2001,28 @@ export default function App() {
               <div className="flex items-center gap-2">
                 {subStatus && subStatus.active && (
                   <button
-                    onClick={() => setShowSubscriptionStatusInfoModal(true)}
+                    onClick={() => {
+                      if (isDemoMode) {
+                        setForceShowPaywall(true);
+                      } else {
+                        setShowSubscriptionStatusInfoModal(true);
+                      }
+                    }}
                     className={cn(
                       "px-3 py-1.5 border rounded-xl transition-all outline-none flex items-center gap-1.5 focus:outline-none cursor-pointer",
-                      theme === 'dark' 
-                        ? "bg-amber-500/10 border-amber-500/20 text-amber-500 hover:bg-amber-500/20" 
-                        : "bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100"
+                      isDemoMode
+                        ? (theme === 'dark' 
+                            ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 animate-pulse" 
+                            : "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100 animate-pulse")
+                        : (theme === 'dark' 
+                            ? "bg-amber-500/10 border-amber-500/20 text-amber-500 hover:bg-amber-500/20" 
+                            : "bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100")
                     )}
-                    title="Dettagli Licenza Abbonamento"
+                    title={isDemoMode ? "Sei in modalità Demo. Clicca per sbloccare tutti i piani!" : "Dettagli Licenza Abbonamento"}
                   >
-                    <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                    <Sparkles className={cn("w-3.5 h-3.5 shrink-0", isDemoMode ? "text-emerald-400 animate-bounce" : "text-amber-500")} />
                     <span className="text-[9px] font-black uppercase tracking-wider hidden md:inline">
-                      Premium: {subStatus.plan ? subStatus.plan : 'EXPERT'}
+                      {isDemoMode ? "DEMO GRATUITA (Passa a Premium 🚀)" : `Premium: ${subStatus.plan ? subStatus.plan : 'EXPERT'}`}
                     </span>
                   </button>
                 )}
@@ -3379,13 +3409,14 @@ export default function App() {
                   >
                     Disdici
                   </button>
-                  <button
+                   <button
                     onClick={() => {
-                      setShowToast({ message: "Hai già attivato l'offerta migliore disponibile!", type: 'success' });
+                      setForceShowPaywall(true);
+                      setShowSubscriptionStatusInfoModal(false);
                     }}
-                    className="py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-black text-[9px] uppercase tracking-widest rounded-xl transition-all shadow-md shadow-blue-500/10 cursor-pointer"
+                    className="py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black text-[9px] uppercase tracking-widest rounded-xl transition-all shadow-md shadow-blue-500/10 cursor-pointer animate-pulse"
                   >
-                    Aggiorna
+                    Seleziona / Cambia Piano 🚀
                   </button>
                 </div>
               </div>
