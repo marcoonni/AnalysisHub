@@ -3607,7 +3607,7 @@ export default function App() {
                     >
                       {teamFolders.map(folder => (
                         <option key={folder.id} value={folder.id}>
-                          📁 {folder.name} ({folder.players.length} Atleti)
+                          📁 {isDemoMode ? 'TEAM' : folder.name} ({folder.players.length} Atleti)
                         </option>
                       ))}
                     </select>
