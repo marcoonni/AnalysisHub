@@ -44,7 +44,13 @@ import {
   Moon,
   Users,
   Folder,
-  FolderOpen
+  FolderOpen,
+  CreditCard,
+  Lock,
+  Mail,
+  Key,
+  Check,
+  Sparkles
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Papa from 'papaparse';
@@ -66,7 +72,9 @@ import {
 } from './firebase';
 import { 
   onAuthStateChanged, 
-  User 
+  User,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword
 } from 'firebase/auth';
 import { 
   collection, 
@@ -292,6 +300,19 @@ function useOnlineStatus() {
 
 export default function App() {
   const isOnline = useOnlineStatus();
+  
+  // Custom Subscription and Authentication States
+  const [subStatus, setSubStatus] = useState<{ active: boolean; plan: string | null; expiryDate: string | null } | null>(null);
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authError, setAuthError] = useState('');
+  const [isRegisteringView, setIsRegisteringView] = useState(false);
+  const [isSimulatingPayment, setIsSimulatingPayment] = useState(false);
+  const [selectedPaywallPlan, setSelectedPaywallPlan] = useState<'scout_pro' | 'club_elite' | 'match_expert'>('scout_pro');
+  const [couponCode, setCouponCode] = useState('');
+  const [isCouponApplied, setIsCouponApplied] = useState(false);
+  const [showSubscriptionStatusInfoModal, setShowSubscriptionStatusInfoModal] = useState(false);
+
   const [shots, setShots] = useState<Shot[]>([]);
   const [showHeatmap, setShowHeatmap] = useState(false);
   const [showGridValues, setShowGridValues] = useState(false);
@@ -818,6 +839,19 @@ export default function App() {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
+        // Load subscription status
+        const userDocRef = doc(db, 'users', currentUser.uid);
+        getDoc(userDocRef).then((uDoc) => {
+          if (uDoc.exists() && uDoc.data().subscription) {
+            setSubStatus(uDoc.data().subscription);
+          } else {
+            setSubStatus({ active: false, plan: null, expiryDate: null });
+          }
+        }).catch((err) => {
+          console.error("Error fetching subscription:", err);
+          setSubStatus({ active: false, plan: null, expiryDate: null });
+        });
+
         // Load matches for the user
         const q = query(
           collection(db, 'matches'), 
@@ -835,11 +869,10 @@ export default function App() {
           handleFirestoreError(error, OperationType.LIST, 'matches');
         });
 
-        // Store this in a way we can clean up if needed, but for now we'll just handle it
-        // Note: multiple logins without refresh might leak listeners if not handled correctly
       } else {
         setMatches([]);
         setShowMatchList(false);
+        setSubStatus(null);
       }
     });
     return () => unsubscribe();
@@ -895,6 +928,119 @@ export default function App() {
       setCurrentMatchId(null);
     } catch (error) {
       console.error("Errore logout:", error);
+    }
+  };
+
+  const loginWithEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError('');
+    if (!authEmail || !authPassword) {
+      setAuthError('Inserisci email e password.');
+      return;
+    }
+    setIsLoggingIn(true);
+    try {
+      await signInWithEmailAndPassword(auth, authEmail, authPassword);
+      setShowToast({ message: `Accesso verificato!`, type: 'success' });
+    } catch (err: any) {
+      console.error(err);
+      if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+        setAuthError('Email o password non corretti.');
+      } else if (err.code === 'auth/invalid-email') {
+        setAuthError('Formato email non valido.');
+      } else {
+        setAuthError(err.message || 'Errore durante l\'accesso.');
+      }
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  const registerWithEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError('');
+    if (!authEmail || !authPassword) {
+      setAuthError('Inserisci email e password.');
+      return;
+    }
+    if (authPassword.length < 6) {
+      setAuthError('La password deve essere di almeno 6 caratteri.');
+      return;
+    }
+    setIsLoggingIn(true);
+    try {
+      const res = await createUserWithEmailAndPassword(auth, authEmail, authPassword);
+      
+      const newSub = {
+        active: false,
+        plan: null,
+        expiryDate: null
+      };
+
+      // Save user profile state in Firestore
+      await setDoc(doc(db, 'users', res.user.uid), {
+        email: authEmail,
+        createdAt: new Date().toISOString(),
+        subscription: newSub
+      });
+      
+      setSubStatus(newSub);
+      setShowToast({ message: 'Registrazione completata! Benvenuto.', type: 'success' });
+    } catch (err: any) {
+      console.error(err);
+      if (err.code === 'auth/email-already-in-use') {
+        setAuthError('Questa email è già in uso.');
+      } else if (err.code === 'auth/invalid-email') {
+        setAuthError('Formato email non valido.');
+      } else {
+        setAuthError(err.message || 'Errore durante la registrazione.');
+      }
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  const handlePurchaseSubscription = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    setIsSimulatingPayment(true);
+    
+    // Simulate payment authorization
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    const expiry = new Date();
+    if (selectedPaywallPlan === 'match_expert') {
+      expiry.setFullYear(expiry.getFullYear() + 1);
+    } else {
+      expiry.setMonth(expiry.getMonth() + 1);
+    }
+    
+    const selectedPlanLabel = selectedPaywallPlan === 'scout_pro' 
+      ? 'SCOUT PRO' 
+      : selectedPaywallPlan === 'club_elite' 
+        ? 'CLUB ELITE' 
+        : 'MATCH EXPERT ANNUAL';
+
+    const newSubscription = {
+      active: true,
+      plan: selectedPlanLabel,
+      expiryDate: expiry.toISOString()
+    };
+    
+    try {
+      await setDoc(doc(db, 'users', user.uid), {
+        email: user.email,
+        subscription: newSubscription,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+      
+      setSubStatus(newSubscription);
+      setShowToast({ message: `Abbonamento ${selectedPlanLabel} attivato con successo!`, type: 'success' });
+    } catch (error) {
+      console.error("Error setting subscription in database:", error);
+      setShowToast({ message: "Errore durante l'attivazione dell'abbonamento.", type: 'error' });
+    } finally {
+      setIsSimulatingPayment(false);
     }
   };
 
@@ -1128,8 +1274,510 @@ export default function App() {
       "relative min-h-screen font-sans selection:bg-blue-500/30 overflow-x-hidden transition-colors duration-500",
       theme === 'dark' ? "bg-[#070708] text-gray-100" : "bg-white text-gray-900"
     )}>
-      {/* Global Loading Overlay */}
-      <AnimatePresence>
+      {/* 1. AUTH & SUBSCRIPTION SCREENS CONTROLLER */}
+      {user && subStatus === null ? (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-[#070708]">
+          <div className="relative">
+            <div className="w-16 h-16 border-2 border-blue-500/10 rounded-full" />
+            <div className="absolute inset-0 w-16 h-16 border-2 border-t-blue-500 rounded-full animate-spin" />
+            <Activity className="absolute inset-0 m-auto w-6 h-6 text-blue-500 animate-pulse" />
+          </div>
+          <div className="flex flex-col items-center gap-1 text-center">
+            <h3 className="text-white text-[10px] font-black uppercase tracking-[0.3em]">Verifica Abbonamento</h3>
+            <p className="text-gray-500 text-[9px] font-bold uppercase tracking-wider animate-pulse">Accesso sicuro in corso...</p>
+          </div>
+        </div>
+      ) : !user ? (
+        /* 1b. NO USER LOGGED IN - Show gorgeous Username/Password login or registration screen */
+        <div className={cn(
+          "min-h-screen w-full flex flex-col items-center justify-center px-4 py-12 relative overflow-hidden",
+          theme === 'dark' ? "bg-[#070708] text-gray-100" : "bg-gray-55 text-gray-900"
+        )}>
+          {/* Subtle ambient light rings for premium editorial style */}
+          <div className="absolute top-1/4 left-1/4 w-80 h-80 rounded-full bg-blue-500/10 blur-[120px] pointer-events-none" />
+          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 rounded-full bg-indigo-500/10 blur-[150px] pointer-events-none" />
+
+          {/* Theme switcher on login screen */}
+          <div className="absolute top-6 right-6 flex items-center gap-1">
+            <button
+              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              className={cn(
+                "p-2.5 rounded-xl border transition-all cursor-pointer",
+                theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-white border-gray-200 text-gray-500 hover:text-gray-900"
+              )}
+            >
+              {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
+          </div>
+
+          <div className="w-full max-w-md z-10 space-y-8">
+            <div className="text-center space-y-3">
+              <div className="inline-flex items-center gap-2 px-3 py-1 border rounded-full text-[8px] font-black uppercase tracking-widest text-blue-500 border-blue-500/20 bg-blue-500/5">
+                <Shield className="w-3 h-3" /> Piattaforma Scouting Dedicata
+              </div>
+              <h1 className="text-3xl font-black uppercase tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-505 to-emerald-400">
+                Match Analysis Lab
+              </h1>
+              <p className={cn("text-xs font-medium max-w-xs mx-auto", theme === 'dark' ? "text-gray-400" : "text-gray-650")}>
+                Analisi tiri avanzata, xG e bento dashboard per Match Analyst ed Esperti di Calcio.
+              </p>
+            </div>
+
+            <div className={cn(
+              "p-8 rounded-3xl border shadow-2xl space-y-6 transition-all",
+              theme === 'dark' ? "bg-[#0c0c0e]/85 border-white/3 shadow-black/80" : "bg-white border-gray-150 shadow-gray-200/50"
+            )}>
+              <div className="flex border-b border-white/5 pb-2">
+                <button
+                  type="button"
+                  onClick={() => { setIsRegisteringView(false); setAuthError(''); }}
+                  className={cn(
+                    "flex-1 pb-3 text-xs font-black uppercase tracking-widest transition-all text-center cursor-pointer",
+                    !isRegisteringView 
+                      ? "text-blue-500 border-b-2 border-blue-500" 
+                      : (theme === 'dark' ? "text-gray-500 hover:text-gray-300" : "text-gray-400 hover:text-gray-600")
+                  )}
+                >
+                  Accedi
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setIsRegisteringView(true); setAuthError(''); }}
+                  className={cn(
+                    "flex-1 pb-3 text-xs font-black uppercase tracking-widest transition-all text-center cursor-pointer",
+                    isRegisteringView 
+                      ? "text-blue-500 border-b-2 border-blue-500" 
+                      : (theme === 'dark' ? "text-gray-500 hover:text-gray-300" : "text-gray-400 hover:text-gray-600")
+                  )}
+                >
+                  Registrati
+                </button>
+              </div>
+
+              <form onSubmit={isRegisteringView ? registerWithEmail : loginWithEmail} className="space-y-4">
+                {authError && (
+                  <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-[10px] font-bold flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span>{authError}</span>
+                  </div>
+                )}
+
+                <div className="space-y-1.5 text-left">
+                  <label className="text-[8px] font-black uppercase tracking-widest text-gray-500 tracking-wider">Email Aziendale o Personale</label>
+                  <div className="relative">
+                    <Mail className="absolute left-4.5 top-3.5 w-4 h-4 text-gray-500" />
+                    <input
+                      type="email"
+                      required
+                      placeholder="es. nome@scout.it"
+                      value={authEmail}
+                      onChange={(e) => setAuthEmail(e.target.value)}
+                      className={cn(
+                        "w-full rounded-2xl py-3 px-11 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all border",
+                        theme === 'dark' ? "bg-black/40 border-white/5 text-white placeholder:text-gray-600 font-sans" : "bg-gray-50 border-gray-200 text-gray-900 placeholder:text-gray-400 font-sans"
+                      )}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5 text-left">
+                  <label className="text-[8px] font-black uppercase tracking-widest text-gray-500 tracking-wider">Password Secreta</label>
+                  <div className="relative">
+                    <Lock className="absolute left-4.5 top-3.5 w-4 h-4 text-gray-500" />
+                    <input
+                      type="password"
+                      required
+                      placeholder="••••••••"
+                      value={authPassword}
+                      onChange={(e) => setAuthPassword(e.target.value)}
+                      className={cn(
+                        "w-full rounded-2xl py-3 px-11 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all border",
+                        theme === 'dark' ? "bg-black/40 border-white/5 text-white placeholder:text-gray-600 font-sans" : "bg-gray-50 border-gray-200 text-gray-900 placeholder:text-gray-400 font-sans"
+                      )}
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isLoggingIn}
+                  className="w-full py-3.5 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 text-white font-black text-xs uppercase tracking-widest rounded-2xl transition-all shadow-xl shadow-blue-500/20 flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  {isLoggingIn ? (
+                    <div className="w-4 h-4 border-2 border-white/10 border-t-white rounded-full animate-spin" />
+                  ) : isRegisteringView ? (
+                    'Registrati e Inizia'
+                  ) : (
+                    'Accedi Ora'
+                  )}
+                </button>
+              </form>
+
+              {/* Login option separator */}
+              <div className="relative flex py-1 items-center">
+                <div className="flex-grow border-t border-white/5"></div>
+                <span className="flex-shrink mx-4 text-[8px] text-gray-500 uppercase font-black tracking-widest whitespace-nowrap">O ACCEDI RAPIDAMENTE CON</span>
+                <div className="flex-grow border-t border-white/5"></div>
+              </div>
+
+              <button
+                type="button"
+                onClick={login}
+                disabled={isLoggingIn}
+                className={cn(
+                  "w-full py-3 border rounded-2xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2.5 cursor-pointer",
+                  theme === 'dark' ? "bg-white/5 hover:bg-white/10 text-white border-white/10" : "bg-white hover:bg-gray-100 text-gray-750 border-gray-200"
+                )}
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" width="100%" height="100%">
+                  <path fill="#EA4335" d="M12.24 10.285V14.4h6.887c-.275 1.565-1.88 4.604-6.887 4.604-4.33 0-7.859-3.578-7.859-8s3.53-8 7.859-8c2.46 0 4.105 1.025 5.047 1.926l3.227-3.227C18.29 1.764 15.56 1 12.24 1 6.033 1 12.24s5.033 11.24 11.24 11.24c6.478 0 10.793-4.537 10.793-10.983 0-.74-.08-1.302-.176-1.712H12.24z"/>
+                </svg>
+                Google Authentication
+              </button>
+            </div>
+            
+            {/* Disclaimer */}
+            <p className="text-[10px] text-center text-gray-500 uppercase tracking-widest opacity-60">
+              Accesso Protetto da SSL & Firebase Auth
+            </p>
+          </div>
+        </div>
+      ) : subStatus && !subStatus.active ? (
+        /* 1c. USER IS SIGNED IN BUT SUBSCRIPTION IS NOT ACTIVE - Pricing paywall wall with Card verification */
+        <div className={cn(
+          "min-h-screen w-full flex flex-col justify-between px-4 sm:px-8 py-8 relative overflow-hidden",
+          theme === 'dark' ? "bg-[#070708] text-gray-100" : "bg-gray-50 text-gray-900"
+        )}>
+          {/* Subtle decoration elements */}
+          <div className="absolute top-0 right-1/4 w-[500px] h-[500px] rounded-full bg-indigo-500/5 blur-[120px] pointer-events-none" />
+          <div className="absolute -bottom-20 -left-20 w-80 h-80 rounded-full bg-emerald-500/5 blur-[100px] pointer-events-none" />
+
+          {/* Top Bar of the Paywall */}
+          <header className="w-full max-w-[1200px] mx-auto flex items-center justify-between gap-4 z-10 shrink-0 border-b border-white/5 pb-4">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-amber-500 animate-pulse" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-indigo-400">Licenza Abbonamento</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-[10px] font-bold text-gray-400 hidden sm:inline-block">Utente: <strong className="text-gray-300 font-black">{user.displayName || user.email}</strong></span>
+              <button
+                onClick={logout}
+                className={cn(
+                  "px-3.5 py-1.5 border rounded-xl text-[8px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5 cursor-pointer",
+                  theme === 'dark' ? "bg-white/5 hover:bg-white/10 text-gray-300 border-white/10" : "bg-white hover:bg-gray-100 text-gray-600 border-gray-200"
+                )}
+              >
+                <LogOut className="w-3.5 h-3.5" /> Esci
+              </button>
+            </div>
+          </header>
+
+          {/* Paywall Container */}
+          <main className="w-full max-w-[1200px] mx-auto py-10 z-10 flex-1 flex flex-col items-center justify-center gap-8">
+            <div className="text-center space-y-2">
+              <h2 className="text-3xl font-black uppercase tracking-tight sm:text-4xl text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">
+                Licenza Match Analysis Lab
+              </h2>
+              <p className={cn("text-xs font-semibold max-w-xl mx-auto", theme === 'dark' ? "text-gray-400" : "text-gray-600")}>
+                Scegli il piano ideale per le tue analisi e sblocca il calcolatore xG, i log di partita, la generazione PDF e la gestione cartelle del roster.
+              </p>
+            </div>
+
+            {/* Core Box: Grid with Plan options on left, Credit Card form on right */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 w-full">
+              {/* Left Side: Plan Selector Cards (7 columns) */}
+              <div className="lg:col-span-12 xl:col-span-7 space-y-4 text-left">
+                <span className="text-[9px] font-black uppercase tracking-widest text-blue-500 block font-sans">1. Scegli il tuo Piano</span>
+                
+                {/* Plan Option 1: Scout Pro */}
+                <div 
+                  onClick={() => setSelectedPaywallPlan('scout_pro')}
+                  className={cn(
+                    "p-5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-4 select-none relative overflow-hidden group/plan",
+                    selectedPaywallPlan === 'scout_pro' 
+                      ? "border-blue-500 bg-blue-500/[0.03] shadow-lg shadow-blue-500/5" 
+                      : (theme === 'dark' ? "border-white/5 bg-[#0d0d0f]/60 hover:border-white/10" : "border-gray-200 bg-white hover:border-gray-300")
+                  )}
+                >
+                  <div className="flex items-start gap-4">
+                    <div className={cn(
+                      "w-4 h-4 rounded-full border flex items-center justify-center mt-1 shrink-0",
+                      selectedPaywallPlan === 'scout_pro' ? "border-blue-500 bg-blue-500" : "border-gray-550"
+                    )}>
+                      {selectedPaywallPlan === 'scout_pro' && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
+                    </div>
+                    <div>
+                      <h4 className={cn("text-xs font-black uppercase tracking-wider", theme === 'dark' ? "text-white" : "text-gray-900")}>SCOUT PRO</h4>
+                      <p className="text-gray-500 text-[10px] leading-relaxed mt-1 max-w-sm">
+                        Perfetto per singoli allenatori e tesserati indipendenti. Accesso completo al tool xG ed export.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <span className={cn("text-sm font-black", theme === 'dark' ? "text-white font-sans" : "text-gray-900 font-sans")}>€14.99</span>
+                    <span className="text-[9px] text-gray-500 block font-bold font-sans">/ mese</span>
+                  </div>
+                </div>
+
+                {/* Plan Option 2: Club Elite */}
+                <div 
+                  onClick={() => setSelectedPaywallPlan('club_elite')}
+                  className={cn(
+                    "p-5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-4 select-none relative overflow-hidden group/plan",
+                    selectedPaywallPlan === 'club_elite' 
+                      ? "border-amber-500 bg-amber-500/[0.03] shadow-lg shadow-amber-500/5" 
+                      : (theme === 'dark' ? "border-white/5 bg-[#0d0d0f]/60 hover:border-white/10" : "border-gray-200 bg-white hover:border-gray-300")
+                  )}
+                >
+                  <div className="absolute top-0 right-0 bg-gradient-to-l from-amber-500 to-amber-600 text-white text-[7px] font-black uppercase tracking-widest px-3 py-1 rounded-bl-xl">
+                    Consigliato
+                  </div>
+
+                  <div className="flex items-start gap-4">
+                    <div className={cn(
+                      "w-4 h-4 rounded-full border flex items-center justify-center mt-1 shrink-0",
+                      selectedPaywallPlan === 'club_elite' ? "border-amber-500 bg-amber-500" : "border-gray-550"
+                    )}>
+                      {selectedPaywallPlan === 'club_elite' && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-black uppercase tracking-wider text-amber-500 flex items-center gap-1.5">
+                        CLUB ELITE <Sparkles className="w-3.5 h-3.5" />
+                      </h4>
+                      <p className="text-gray-500 text-[10px] leading-relaxed mt-1 max-w-sm">
+                        Per staff tecnici, scout e società calcistiche. Roster illimitati, report KPI avanzati, supporto prioritario.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <span className={cn("text-sm font-black", theme === 'dark' ? "text-white font-sans" : "text-gray-900 font-sans")}>€49.99</span>
+                    <span className="text-[9px] text-gray-500 block font-bold font-sans">/ mese</span>
+                  </div>
+                </div>
+
+                {/* Plan Option 3: Match Expert (Annuale) */}
+                <div 
+                  onClick={() => setSelectedPaywallPlan('match_expert')}
+                  className={cn(
+                    "p-5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-4 select-none relative overflow-hidden group/plan",
+                    selectedPaywallPlan === 'match_expert' 
+                      ? "border-emerald-500 bg-emerald-500/[0.03] shadow-lg shadow-emerald-500/5" 
+                      : (theme === 'dark' ? "border-white/5 bg-[#0d0d0f]/60 hover:border-white/10" : "border-gray-200 bg-white hover:border-gray-300")
+                  )}
+                >
+                  <div className="flex items-start gap-4">
+                    <div className={cn(
+                      "w-4 h-4 rounded-full border flex items-center justify-center mt-1 shrink-0",
+                      selectedPaywallPlan === 'match_expert' ? "border-emerald-500 bg-emerald-500" : "border-gray-550"
+                    )}>
+                      {selectedPaywallPlan === 'match_expert' && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-black uppercase tracking-wider text-emerald-500 flex items-center gap-2">
+                        MATCH EXPERT (ANNUALE)
+                        <span className="text-[7px] py-[1px] px-1.5 rounded-md bg-emerald-500/10 text-emerald-500 font-black">RISPARMIA 30%</span>
+                      </h4>
+                      <p className="text-gray-500 text-[10px] leading-relaxed mt-1 max-w-sm">
+                        Tutto incluso nel piano Club Elite strutturato su licenza annuale. Aggiornamenti coefficienti gratuiti.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <span className={cn("text-sm font-black", theme === 'dark' ? "text-white font-sans" : "text-gray-900 font-sans")}>€119.99</span>
+                    <span className="text-[9px] text-gray-500 block font-bold font-sans">/ anno</span>
+                  </div>
+                </div>
+
+                {/* Benefit checklist items */}
+                <div className={cn(
+                  "p-4.5 rounded-2xl border border-dashed text-left space-y-2",
+                  theme === 'dark' ? "border-white/10 bg-[#0c0c0e]/30" : "border-gray-200 bg-gray-50/50"
+                )}>
+                  <span className="text-[8px] font-black uppercase tracking-widest text-gray-500 block font-sans">Incluso in ogni licenza:</span>
+                  <div className="grid grid-cols-2 gap-2 text-[9px] font-bold text-gray-400">
+                    <div className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" /> Generatore Report PDF</div>
+                    <div className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" /> Calcolo xG dei Tiri</div>
+                    <div className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" /> Esportazione file Excel</div>
+                    <div className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" /> Cartelle Roster Squadre</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Side: Credit Card input card (5 columns) */}
+              <div className="lg:col-span-12 xl:col-span-5 lg:col-start-8 text-left">
+                <form onSubmit={handlePurchaseSubscription} className="space-y-4">
+                  <span className="text-[9px] font-black uppercase tracking-widest text-blue-500 block font-sans">2. Inserisci Dati di Pagamento</span>
+                  
+                  <div className={cn(
+                    "p-6 rounded-3xl border shadow-xl space-y-5 relative overflow-hidden",
+                    theme === 'dark' ? "bg-[#0c0c0e] border-white/5" : "bg-white border-gray-150 shadow-gray-200/50"
+                  )}>
+                    {/* Simulated Virtual Card Preview */}
+                    <div className="p-4.5 rounded-2xl bg-gradient-to-tr from-blue-700 via-indigo-600 to-indigo-800 text-white space-y-6 relative overflow-hidden shadow-lg shadow-indigo-600/15 text-left">
+                      <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-white/5 -mr-10 -mt-10 blur-xl" />
+                      <div className="flex items-center justify-between">
+                        <span className="text-[8px] font-black uppercase tracking-widest opacity-60">LICENZA PREMIUM</span>
+                        <CreditCard className="w-5 h-5 text-white/75" />
+                      </div>
+                      
+                      <div className="space-y-3">
+                        <div className="font-mono text-xs tracking-[0.2em] font-medium opacity-95">
+                          •••• •••• •••• 4242
+                        </div>
+                        <div className="flex justify-between items-end">
+                          <div>
+                            <span className="text-[7px] font-black uppercase tracking-widest block opacity-50 font-sans">Intestatario</span>
+                            <span className="text-[9px] font-black uppercase tracking-wider font-sans">MATCH ANALYST USER</span>
+                          </div>
+                          <div>
+                            <span className="text-[7px] font-black uppercase tracking-widest block opacity-50 font-sans">Scadenza</span>
+                            <span className="text-[9px] font-black uppercase tracking-wider font-mono">12/29</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Faux Card Inputs */}
+                    <div className="space-y-3 text-left">
+                      <div className="space-y-1">
+                        <label className="text-[8px] font-black uppercase tracking-widest text-gray-500 font-sans">Nome Titolare Carta</label>
+                        <input 
+                          type="text" 
+                          required 
+                          defaultValue="MATCH ANALYST USER"
+                          className={cn(
+                            "w-full rounded-xl py-2.5 px-3.5 text-xs font-black uppercase focus:outline-none focus:ring-2 focus:ring-blue-500/30 border",
+                            theme === 'dark' ? "bg-black/60 border-white/5 text-white font-sans" : "bg-gray-50 border-gray-200 text-gray-900 font-sans"
+                          )}
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[8px] font-black uppercase tracking-widest text-gray-500 font-sans">Numero Carta</label>
+                        <input 
+                          type="text" 
+                          required 
+                          maxLength={19}
+                          placeholder="4242 4242 4242 4242" 
+                          className={cn(
+                            "w-full rounded-xl py-2.5 px-3.5 text-xs font-bold font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/30 border",
+                            theme === 'dark' ? "bg-black/60 border-white/5 text-white font-mono" : "bg-gray-50 border-gray-200 text-gray-900 font-mono"
+                          )}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <label className="text-[8px] font-black uppercase tracking-widest text-gray-500 font-sans">Scadenza</label>
+                          <input 
+                            type="text" 
+                            required 
+                            maxLength={5}
+                            placeholder="MM/AA" 
+                            defaultValue="12/29"
+                            className={cn(
+                              "w-full rounded-xl py-2.5 px-3.5 text-xs font-bold font-mono text-center focus:outline-none focus:ring-2 focus:ring-blue-500/30 border",
+                              theme === 'dark' ? "bg-black/60 border-white/5 text-white font-mono" : "bg-gray-50 border-gray-200 text-gray-900 font-mono"
+                            )}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[8px] font-black uppercase tracking-widest text-gray-500 font-sans">CVC / CVV</label>
+                          <input 
+                            type="password" 
+                            required 
+                            maxLength={3}
+                            placeholder="•••" 
+                            defaultValue="123"
+                            className={cn(
+                              "w-full rounded-xl py-2.5 px-3.5 text-xs font-bold font-mono text-center focus:outline-none focus:ring-2 focus:ring-blue-500/30 border",
+                              theme === 'dark' ? "bg-black/60 border-white/5 text-white font-mono" : "bg-gray-50 border-gray-200 text-gray-900 font-mono"
+                            )}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Coupon input */}
+                      <div className="space-y-1.5">
+                        <label className="text-[8px] font-black uppercase tracking-widest text-gray-500 font-sans">Codice Promozionale / Coupon</label>
+                        <div className="flex gap-2">
+                          <input 
+                            type="text" 
+                            placeholder="es. BOLOGNAFREE" 
+                            value={couponCode}
+                            onChange={(e) => setCouponCode(e.target.value)}
+                            className={cn(
+                              "flex-1 rounded-xl py-2 px-3 text-xs font-black uppercase placeholder:normal-case placeholder:font-semibold focus:outline-none border",
+                              theme === 'dark' ? "bg-black/60 border-white/5 text-white font-sans" : "bg-gray-50 border-gray-200 text-gray-900 font-sans"
+                            )}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const code = couponCode.trim().toUpperCase();
+                              if (code === 'BOLOGNAFREE' || code === 'ASSIST2026' || code === 'FREE') {
+                                setIsCouponApplied(true);
+                                setShowToast({ message: "Coupon valido! Sconto 100% applicato alla licenza.", type: 'success' });
+                              } else {
+                                setShowToast({ message: "Codice promozionale non valido.", type: 'error' });
+                              }
+                            }}
+                            className={cn(
+                              "px-3 py-2 rounded-xl text-[8px] font-black uppercase tracking-widest border transition-all cursor-pointer font-sans",
+                              theme === 'dark' ? "bg-white/5 hover:bg-white/10 text-white border-white/10" : "bg-white hover:bg-gray-100 text-gray-700 border-gray-200"
+                            )}
+                          >
+                            Applica
+                          </button>
+                        </div>
+                        {isCouponApplied && (
+                          <span className="text-emerald-500 font-bold block text-[8px] uppercase tracking-wider mt-1 font-sans">
+                            ✓ Coupon applicato: Sconto del 100%!
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="border-t border-white/5 pt-4 flex items-center justify-between text-xs">
+                      <span className="text-gray-400 uppercase tracking-wider font-extrabold text-[9px] font-sans">Prezzo Finale:</span>
+                      <strong className={cn("text-base font-black font-sans", theme === 'dark' ? "text-white" : "text-gray-900")}>
+                        {isCouponApplied ? '€0.00' : (selectedPaywallPlan === 'scout_pro' ? '€14.99' : selectedPaywallPlan === 'club_elite' ? '€49.99' : '€119.99')}
+                      </strong>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={isSimulatingPayment}
+                      className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 disabled:from-gray-700 disabled:to-gray-800 text-white font-black text-xs uppercase tracking-widest rounded-2xl transition-all shadow-xl shadow-blue-500/10 flex items-center justify-center gap-2 cursor-pointer font-sans"
+                    >
+                      {isSimulatingPayment ? (
+                        <div className="w-4 h-4 border-2 border-white/10 border-t-white rounded-full animate-spin" />
+                      ) : (
+                        <span>Attiva Licenza Premium</span>
+                      )}
+                    </button>
+                    
+                    <span className="text-[8px] text-gray-500 block uppercase tracking-widest text-center mt-2 font-sans">
+                      🔒 Pagamento Crittografato SSL 256-Bit
+                    </span>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </main>
+
+          {/* Paywall Footer */}
+          <footer className="w-full text-center py-4 z-10 border-t border-white/5 shrink-0">
+            <p className="text-[8px] text-gray-400 uppercase tracking-widest font-semibold flex items-center justify-center gap-1.5 leading-none font-sans">
+              <Shield className="w-3.5 h-3.5 text-emerald-500 shrink-0" /> Match Analysis Lab Pro - Transazioni sicure protette nel rispetto delle normative PCI-DSS.
+            </p>
+          </footer>
+        </div>
+      ) : (
+        /* Render real application if logged in and active */
+        <>
+          {/* Global Loading Overlay */}
+          <AnimatePresence>
         {loadingMatchId && !showMatchList && (
           <motion.div 
             initial={{ opacity: 0 }}
@@ -1256,6 +1904,23 @@ export default function App() {
               <div className={cn("h-6 w-px mx-1", theme === 'dark' ? "bg-white/5" : "bg-gray-100")} />
 
               <div className="flex items-center gap-2">
+                {subStatus && subStatus.active && (
+                  <button
+                    onClick={() => setShowSubscriptionStatusInfoModal(true)}
+                    className={cn(
+                      "px-3 py-1.5 border rounded-xl transition-all outline-none flex items-center gap-1.5 focus:outline-none cursor-pointer",
+                      theme === 'dark' 
+                        ? "bg-amber-500/10 border-amber-500/20 text-amber-500 hover:bg-amber-500/20" 
+                        : "bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100"
+                    )}
+                    title="Dettagli Licenza Abbonamento"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                    <span className="text-[9px] font-black uppercase tracking-wider hidden md:inline">
+                      Premium: {subStatus.plan === 'scout_pro' ? 'SCOUT PRO' : subStatus.plan === 'club_elite' ? 'CLUB ELITE' : 'EXPERT'}
+                    </span>
+                  </button>
+                )}
                 <button 
                   onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
                   className={cn(
@@ -2523,6 +3188,133 @@ export default function App() {
         )}
       </AnimatePresence>
 
+      {/* Dynamic Subscription Details Modal */}
+      <AnimatePresence>
+        {showSubscriptionStatusInfoModal && subStatus && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowSubscriptionStatusInfoModal(false)}
+              className="absolute inset-0 bg-black/85 backdrop-blur-md"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              className={cn(
+                "relative z-[111] w-full max-w-md border rounded-[2rem] shadow-2xl p-6 overflow-hidden",
+                theme === 'dark' ? "bg-[#0c0c0e] border-white/10 text-white" : "bg-white border-gray-150 text-gray-900"
+              )}
+            >
+              <div className="absolute top-0 right-0 p-4">
+                <button 
+                  onClick={() => setShowSubscriptionStatusInfoModal(false)}
+                  className="p-1 text-gray-400 hover:text-gray-150 cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="space-y-6 text-left">
+                {/* Visual Header */}
+                <div className="flex items-center gap-3">
+                  <div className="p-3.5 bg-amber-500/10 rounded-2xl">
+                    <Sparkles className="w-6 h-6 text-amber-500 animate-pulse" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black uppercase tracking-wider">Gestione Abbonamento</h3>
+                    <p className="text-xs text-gray-400 font-bold">Configurazione Licenza Attiva</p>
+                  </div>
+                </div>
+
+                {/* Subscription Card Details */}
+                <div className={cn(
+                  "p-5 rounded-2xl border space-y-3.5",
+                  theme === 'dark' ? "bg-white/[0.02] border-white/5" : "bg-gray-50 border-gray-150"
+                )}>
+                  <div className="flex justify-between items-center pb-2 border-b border-white/5">
+                    <span className="text-[10px] uppercase font-black tracking-widest text-gray-500">Stato Licenza</span>
+                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 text-[8px] font-black uppercase tracking-wider">
+                      ATTIVO
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-gray-400 font-bold">Piano Selezionato:</span>
+                    <strong className="uppercase font-black text-[11px] text-blue-500">
+                      {subStatus.plan === 'scout_pro' ? 'SCOUT PRO' : subStatus.plan === 'club_elite' ? 'CLUB ELITE' : 'EXPERT'}
+                    </strong>
+                  </div>
+
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-gray-400 font-bold font-sans">Data Attivazione:</span>
+                    <span className="font-mono text-[10px] text-gray-300">
+                      Oggi
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-gray-400 font-bold font-sans">Prossimo Rinnovo:</span>
+                    <span className="font-mono text-[10px] text-gray-300">
+                      {subStatus.expiryDate ? new Date(subStatus.expiryDate).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'N/A'}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-gray-400 font-bold font-sans">Intestatario Account:</span>
+                    <span className="font-bold text-[10px] text-gray-300">
+                      {user.email}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Sub Features info list */}
+                <div className="space-y-2.5">
+                  <span className="text-[8px] font-black uppercase tracking-widest text-gray-500 block">Hai accesso completo a:</span>
+                  <div className="grid grid-cols-1 gap-1 px-1">
+                    <div className="flex items-center gap-1.5 text-[9px] font-semibold text-gray-400">
+                      <Check className="w-3.5 h-3.5 text-emerald-500" /> Creazione cartelle roster dei giocatori illimitati
+                    </div>
+                    <div className="flex items-center gap-1.5 text-[9px] font-semibold text-gray-400">
+                      <Check className="w-3.5 h-3.5 text-emerald-500" /> Export PDF dei report partita
+                    </div>
+                    <div className="flex items-center gap-1.5 text-[9px] font-semibold text-gray-400">
+                      <Check className="w-3.5 h-3.5 text-emerald-500" /> Calcolo xG dei tiri avanzato & Heatmap interattiva
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action controls inside the modal */}
+                <div className="grid grid-cols-2 gap-3.5 pt-2">
+                  <button
+                    onClick={() => {
+                      setShowToast({ message: "La disdetta dell'abbonamento è gestita dal nostro partner Stripe. Ti abbiamo inviato un'email con il link diretto.", type: 'success' });
+                      setShowSubscriptionStatusInfoModal(false);
+                    }}
+                    className={cn(
+                      "py-2.5 border rounded-xl text-[9px] font-black uppercase tracking-widest transition-all text-center hover:bg-red-500/5 hover:text-red-400 cursor-pointer",
+                      theme === 'dark' ? "border-white/5 text-gray-500" : "border-gray-200 text-gray-600"
+                    )}
+                  >
+                    Disdici
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowToast({ message: "Hai già attivato l'offerta migliore disponibile!", type: 'success' });
+                    }}
+                    className="py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-black text-[9px] uppercase tracking-widest rounded-xl transition-all shadow-md shadow-blue-500/10 cursor-pointer"
+                  >
+                    Aggiorna
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Scheda Squadra / Roster Management Modal */}
       <AnimatePresence>
         {showSquadModal && (
@@ -3411,6 +4203,8 @@ export default function App() {
             </motion.div>
         )}
       </AnimatePresence>
+        </>
+      )}
       <style dangerouslySetInnerHTML={{ __html: `
         .no-scrollbar::-webkit-scrollbar {
           display: none;
