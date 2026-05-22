@@ -311,7 +311,7 @@ export default function App() {
   const [authError, setAuthError] = useState('');
   const [isRegisteringView, setIsRegisteringView] = useState(false);
   const [isSimulatingPayment, setIsSimulatingPayment] = useState(false);
-  const [selectedPaywallPlan, setSelectedPaywallPlan] = useState<'demo_free' | '3_mesi' | '6_mesi' | '1_anno'>('demo_free');
+  const [selectedPaywallPlan, setSelectedPaywallPlan] = useState<'demo_free' | '1_mese' | '3_mesi' | '6_mesi' | '1_anno'>('demo_free');
   const [couponCode, setCouponCode] = useState('');
   const [isCouponApplied, setIsCouponApplied] = useState(false);
   const [showSubscriptionStatusInfoModal, setShowSubscriptionStatusInfoModal] = useState(false);
@@ -428,6 +428,12 @@ export default function App() {
     }
   }, [activeFolderId]);
 
+  // Team and Match configuration State variables
+  const [teamName, setTeamName] = useState('Bologna U18');
+  const [teamColor, setTeamColor] = useState('#eab308'); // Yellow-500
+  const [awayTeam, setAwayTeam] = useState('Avversario');
+  const [awayColor, setAwayColor] = useState('#3b82f6'); // Blue-500
+
   // Update player list whenever squad players or shots change
   useEffect(() => {
     const shotPlayers = Array.from(new Set(shots.map(s => s.playerName))).filter(Boolean);
@@ -435,16 +441,35 @@ export default function App() {
     const combined = Array.from(new Set([...activeSquadNames, ...shotPlayers])).sort();
     setPlayerList(combined);
   }, [shots, squadPlayers]);
+
+  // Handle Demo Mode overrides (Exactly 20 players "Player 1", ..., "Player 20", and Team name "TEAM")
+  useEffect(() => {
+    if (isDemoMode) {
+      if (teamName !== 'TEAM') {
+        setTeamName('TEAM');
+      }
+      const isCorrectDemoRoster = 
+        squadPlayers.length === 20 && 
+        squadPlayers.every((p, idx) => p.name === `Player ${idx + 1}`);
+        
+      if (!isCorrectDemoRoster) {
+        const demoRoster = Array.from({ length: 20 }, (_, i) => ({
+          id: `demo-${i + 1}`,
+          name: `Player ${i + 1}`,
+          role: ((i === 0 || i === 11) ? 'Portiere' : (i % 3 === 0) ? 'Difensore' : (i % 3 === 1) ? 'Centrocampista' : 'Attaccante') as Player['role'],
+          preferredFoot: ((i % 2 === 0) ? 'Destro' : 'Sinistro') as Player['preferredFoot'],
+          active: true
+        }));
+        setSquadPlayers(demoRoster);
+      }
+    }
+  }, [isDemoMode, squadPlayers, teamName]);
   
   // Auth & Database States
   const [matches, setMatches] = useState<Match[]>([]);
   const [showMatchList, setShowMatchList] = useState(false);
   const [showMatchSettings, setShowMatchSettings] = useState(false);
   const [currentMatchId, setCurrentMatchId] = useState<string | null>(null);
-  const [teamName, setTeamName] = useState('Bologna U18');
-  const [teamColor, setTeamColor] = useState('#eab308'); // Yellow-500
-  const [awayTeam, setAwayTeam] = useState('Avversario');
-  const [awayColor, setAwayColor] = useState('#3b82f6'); // Blue-500
   const [isSaving, setIsSaving] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [loadingMatchId, setLoadingMatchId] = useState<string | null>(null);
@@ -806,6 +831,10 @@ export default function App() {
 
   const exportToExcel = () => {
     try {
+      if (isDemoMode) {
+        setShowToast({ message: "L'esportazione dei report xG/Excel è disabilitata nella versione Demo Gratuita. Scegli un abbonamento Premium per sbloccare l'esportazione completa!", type: 'error' });
+        return;
+      }
       if (shots.length === 0 && matchEvents.length === 0) {
         setShowToast({ message: "Nessun dato da esportare.", type: 'error' });
         return;
@@ -1054,17 +1083,21 @@ export default function App() {
       expiry.setMonth(expiry.getMonth() + 6);
     } else if (selectedPaywallPlan === '3_mesi') {
       expiry.setMonth(expiry.getMonth() + 3);
+    } else if (selectedPaywallPlan === '1_mese') {
+      expiry.setMonth(expiry.getMonth() + 1);
     } else {
       expiry.setFullYear(expiry.getFullYear() + 10); // Demo has an extremely long duration
     }
     
     const selectedPlanLabel = selectedPaywallPlan === 'demo_free'
       ? 'DEMO GRATUITA'
-      : selectedPaywallPlan === '3_mesi'
-        ? '3 MESI PREMIUM'
-        : selectedPaywallPlan === '6_mesi'
-          ? '6 MESI PRO'
-          : '1 ANNO ELITE';
+      : selectedPaywallPlan === '1_mese'
+        ? '1 MESE PREMIUM'
+        : selectedPaywallPlan === '3_mesi'
+          ? '3 MESI PREMIUM'
+          : selectedPaywallPlan === '6_mesi'
+            ? '6 MESI PRO'
+            : '1 ANNO ELITE';
 
     const newSubscription = {
       active: true,
@@ -1565,13 +1598,43 @@ export default function App() {
                     <div>
                       <h4 className={cn("text-xs font-black uppercase tracking-wider text-emerald-500")}>DEMO GRATUITA</h4>
                       <p className="text-gray-500 text-[10px] leading-relaxed mt-1 max-w-sm">
-                        Provala subito gratis. **Limite: in questa versione gratuita non è consentito creare, importare o modificare i giocatori nel roster.**
+                        Provala subito gratis. **Attenzione: in questa versione non è consentito esportare dati o importare/sincronizzare roster esterni.**
                       </p>
                     </div>
                   </div>
                   <div className="text-right shrink-0">
                     <span className={cn("text-sm font-black text-emerald-500 font-sans")}>Gratis</span>
                     <span className="text-[9px] text-gray-500 block font-bold font-sans">/ per sempre</span>
+                  </div>
+                </div>
+
+                {/* Plan Option 0.5: 1 Mese Premium */}
+                <div 
+                  onClick={() => setSelectedPaywallPlan('1_mese')}
+                  className={cn(
+                    "p-5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-4 select-none relative overflow-hidden group/plan",
+                    selectedPaywallPlan === '1_mese' 
+                      ? "border-blue-400 bg-blue-400/[0.03] shadow-lg shadow-blue-400/5" 
+                      : (theme === 'dark' ? "border-white/5 bg-[#0d0d0f]/60 hover:border-white/10" : "border-gray-200 bg-white hover:border-gray-300")
+                  )}
+                >
+                  <div className="flex items-start gap-4">
+                    <div className={cn(
+                      "w-4 h-4 rounded-full border flex items-center justify-center mt-1 shrink-0",
+                      selectedPaywallPlan === '1_mese' ? "border-blue-400 bg-blue-400" : "border-gray-550"
+                    )}>
+                      {selectedPaywallPlan === '1_mese' && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
+                    </div>
+                    <div>
+                      <h4 className={cn("text-xs font-black uppercase tracking-wider text-blue-400")}>1 MESE PREMIUM</h4>
+                      <p className="text-gray-500 text-[10px] leading-relaxed mt-1 max-w-sm">
+                        Accesso completo mensile. Gestione dei giocatori sbloccata, export Excel/PDF, calcolatore xG e cartelle roster sbloccate.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <span className={cn("text-sm font-black", theme === 'dark' ? "text-white font-sans" : "text-gray-900 font-sans")}>€14.99</span>
+                    <span className="text-[9px] text-gray-500 block font-bold font-sans">/ mese</span>
                   </div>
                 </div>
 
@@ -1845,7 +1908,7 @@ export default function App() {
                     <div className="border-t border-white/5 pt-4 flex items-center justify-between text-xs font-sans">
                       <span className="text-gray-400 uppercase tracking-wider font-extrabold text-[9px]">Prezzo Finale:</span>
                       <strong className={cn("text-base font-black font-sans", theme === 'dark' ? "text-white" : "text-gray-900")}>
-                        {isCouponApplied ? '€0.00' : (selectedPaywallPlan === 'demo_free' ? '€0.00' : selectedPaywallPlan === '3_mesi' ? '€39.99' : selectedPaywallPlan === '6_mesi' ? '€69.99' : '€119.99')}
+                        {isCouponApplied ? '€0.00' : (selectedPaywallPlan === 'demo_free' ? '€0.00' : selectedPaywallPlan === '1_mese' ? '€14.99' : selectedPaywallPlan === '3_mesi' ? '€39.99' : selectedPaywallPlan === '6_mesi' ? '€69.99' : '€119.99')}
                       </strong>
                     </div>
 
@@ -3643,6 +3706,10 @@ export default function App() {
                     <button
                       type="button"
                       onClick={() => {
+                        if (isDemoMode) {
+                          setShowToast({ message: "L'esportazione del roster è disabilitata nella versione Demo Gratuita. Gestisci i tuoi atleti senza limitazioni con un abbonamento Premium!", type: 'error' });
+                          return;
+                        }
                         const current = teamFolders.find(f => f.id === activeFolderId);
                         if (!current) return;
                         const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(current));
