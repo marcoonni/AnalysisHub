@@ -839,18 +839,27 @@ export default function App() {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
-        // Load subscription status
-        const userDocRef = doc(db, 'users', currentUser.uid);
-        getDoc(userDocRef).then((uDoc) => {
-          if (uDoc.exists() && uDoc.data().subscription) {
-            setSubStatus(uDoc.data().subscription);
-          } else {
+        // Special bypass for admin always-active access (onnivellomarco@gmail.com)
+        if (currentUser.email && currentUser.email.toLowerCase() === 'onnivellomarco@gmail.com') {
+          setSubStatus({
+            active: true,
+            plan: 'club_elite',
+            expiryDate: '2100-01-01T00:00:00.000Z'
+          });
+        } else {
+          // Load subscription status
+          const userDocRef = doc(db, 'users', currentUser.uid);
+          getDoc(userDocRef).then((uDoc) => {
+            if (uDoc.exists() && uDoc.data().subscription) {
+              setSubStatus(uDoc.data().subscription);
+            } else {
+              setSubStatus({ active: false, plan: null, expiryDate: null });
+            }
+          }).catch((err) => {
+            console.error("Error fetching subscription:", err);
             setSubStatus({ active: false, plan: null, expiryDate: null });
-          }
-        }).catch((err) => {
-          console.error("Error fetching subscription:", err);
-          setSubStatus({ active: false, plan: null, expiryDate: null });
-        });
+          });
+        }
 
         // Load matches for the user
         const q = query(
@@ -971,7 +980,12 @@ export default function App() {
     try {
       const res = await createUserWithEmailAndPassword(auth, authEmail, authPassword);
       
-      const newSub = {
+      const isAdmin = authEmail.toLowerCase() === 'onnivellomarco@gmail.com';
+      const newSub = isAdmin ? {
+        active: true,
+        plan: 'club_elite',
+        expiryDate: '2100-01-01T00:00:00.000Z'
+      } : {
         active: false,
         plan: null,
         expiryDate: null
