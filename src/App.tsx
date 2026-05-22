@@ -308,10 +308,12 @@ export default function App() {
   const [authError, setAuthError] = useState('');
   const [isRegisteringView, setIsRegisteringView] = useState(false);
   const [isSimulatingPayment, setIsSimulatingPayment] = useState(false);
-  const [selectedPaywallPlan, setSelectedPaywallPlan] = useState<'scout_pro' | 'club_elite' | 'match_expert'>('scout_pro');
+  const [selectedPaywallPlan, setSelectedPaywallPlan] = useState<'demo_free' | '3_mesi' | '6_mesi' | '1_anno'>('demo_free');
   const [couponCode, setCouponCode] = useState('');
   const [isCouponApplied, setIsCouponApplied] = useState(false);
   const [showSubscriptionStatusInfoModal, setShowSubscriptionStatusInfoModal] = useState(false);
+
+  const isDemoMode = !!(subStatus && subStatus.active && (subStatus.plan === 'demo_free' || subStatus.plan === 'DEMO GRATUITA'));
 
   const [shots, setShots] = useState<Shot[]>([]);
   const [showHeatmap, setShowHeatmap] = useState(false);
@@ -1023,17 +1025,23 @@ export default function App() {
     await new Promise(resolve => setTimeout(resolve, 1500));
     
     const expiry = new Date();
-    if (selectedPaywallPlan === 'match_expert') {
+    if (selectedPaywallPlan === '1_anno') {
       expiry.setFullYear(expiry.getFullYear() + 1);
+    } else if (selectedPaywallPlan === '6_mesi') {
+      expiry.setMonth(expiry.getMonth() + 6);
+    } else if (selectedPaywallPlan === '3_mesi') {
+      expiry.setMonth(expiry.getMonth() + 3);
     } else {
-      expiry.setMonth(expiry.getMonth() + 1);
+      expiry.setFullYear(expiry.getFullYear() + 10); // Demo has an extremely long duration
     }
     
-    const selectedPlanLabel = selectedPaywallPlan === 'scout_pro' 
-      ? 'SCOUT PRO' 
-      : selectedPaywallPlan === 'club_elite' 
-        ? 'CLUB ELITE' 
-        : 'MATCH EXPERT ANNUAL';
+    const selectedPlanLabel = selectedPaywallPlan === 'demo_free'
+      ? 'DEMO GRATUITA'
+      : selectedPaywallPlan === '3_mesi'
+        ? '3 MESI PREMIUM'
+        : selectedPaywallPlan === '6_mesi'
+          ? '6 MESI PRO'
+          : '1 ANNO ELITE';
 
     const newSubscription = {
       active: true,
@@ -1503,12 +1511,42 @@ export default function App() {
               <div className="lg:col-span-12 xl:col-span-7 space-y-4 text-left">
                 <span className="text-[9px] font-black uppercase tracking-widest text-blue-500 block font-sans">1. Scegli il tuo Piano</span>
                 
-                {/* Plan Option 1: Scout Pro */}
+                {/* Plan Option 0: Demo Gratuita */}
                 <div 
-                  onClick={() => setSelectedPaywallPlan('scout_pro')}
+                  onClick={() => setSelectedPaywallPlan('demo_free')}
                   className={cn(
                     "p-5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-4 select-none relative overflow-hidden group/plan",
-                    selectedPaywallPlan === 'scout_pro' 
+                    selectedPaywallPlan === 'demo_free' 
+                      ? "border-emerald-500 bg-emerald-500/[0.03] shadow-lg shadow-emerald-500/5" 
+                      : (theme === 'dark' ? "border-white/5 bg-[#0d0d0f]/60 hover:border-white/10" : "border-gray-200 bg-white hover:border-gray-300")
+                  )}
+                >
+                  <div className="flex items-start gap-4">
+                    <div className={cn(
+                      "w-4 h-4 rounded-full border flex items-center justify-center mt-1 shrink-0",
+                      selectedPaywallPlan === 'demo_free' ? "border-emerald-500 bg-emerald-500" : "border-gray-550"
+                    )}>
+                      {selectedPaywallPlan === 'demo_free' && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
+                    </div>
+                    <div>
+                      <h4 className={cn("text-xs font-black uppercase tracking-wider text-emerald-500")}>VERSIONE DEMO (GRATUITA)</h4>
+                      <p className="text-gray-500 text-[10px] leading-relaxed mt-1 max-w-sm">
+                        Provala subito gratis. **Limite: in questa versione gratuita non è consentito creare, importare o modificare i giocatori nel roster.**
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <span className={cn("text-sm font-black text-emerald-500 font-sans")}>Gratis</span>
+                    <span className="text-[9px] text-gray-500 block font-bold font-sans">/ per sempre</span>
+                  </div>
+                </div>
+
+                {/* Plan Option 1: 3 Mesi Premium */}
+                <div 
+                  onClick={() => setSelectedPaywallPlan('3_mesi')}
+                  className={cn(
+                    "p-5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-4 select-none relative overflow-hidden group/plan",
+                    selectedPaywallPlan === '3_mesi' 
                       ? "border-blue-500 bg-blue-500/[0.03] shadow-lg shadow-blue-500/5" 
                       : (theme === 'dark' ? "border-white/5 bg-[#0d0d0f]/60 hover:border-white/10" : "border-gray-200 bg-white hover:border-gray-300")
                   )}
@@ -1516,29 +1554,29 @@ export default function App() {
                   <div className="flex items-start gap-4">
                     <div className={cn(
                       "w-4 h-4 rounded-full border flex items-center justify-center mt-1 shrink-0",
-                      selectedPaywallPlan === 'scout_pro' ? "border-blue-500 bg-blue-500" : "border-gray-550"
+                      selectedPaywallPlan === '3_mesi' ? "border-blue-500 bg-blue-500" : "border-gray-550"
                     )}>
-                      {selectedPaywallPlan === 'scout_pro' && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
+                      {selectedPaywallPlan === '3_mesi' && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
                     </div>
                     <div>
-                      <h4 className={cn("text-xs font-black uppercase tracking-wider", theme === 'dark' ? "text-white" : "text-gray-900")}>SCOUT PRO</h4>
+                      <h4 className={cn("text-xs font-black uppercase tracking-wider", theme === 'dark' ? "text-white" : "text-gray-900")}>3 MESI PREMIUM</h4>
                       <p className="text-gray-500 text-[10px] leading-relaxed mt-1 max-w-sm">
-                        Perfetto per singoli allenatori e tesserati indipendenti. Accesso completo al tool xG ed export.
+                        Accesso illimitato per 3 mesi. Gestione completa dei giocatori, export Excel/PDF, calcolatore xG, cartelle roster sbloccate.
                       </p>
                     </div>
                   </div>
                   <div className="text-right shrink-0">
-                    <span className={cn("text-sm font-black", theme === 'dark' ? "text-white font-sans" : "text-gray-900 font-sans")}>€14.99</span>
-                    <span className="text-[9px] text-gray-500 block font-bold font-sans">/ mese</span>
+                    <span className={cn("text-sm font-black", theme === 'dark' ? "text-white font-sans" : "text-gray-900 font-sans")}>€39.99</span>
+                    <span className="text-[9px] text-gray-500 block font-bold font-sans">/ 3 mesi</span>
                   </div>
                 </div>
 
-                {/* Plan Option 2: Club Elite */}
+                {/* Plan Option 2: 6 Mesi Pro */}
                 <div 
-                  onClick={() => setSelectedPaywallPlan('club_elite')}
+                  onClick={() => setSelectedPaywallPlan('6_mesi')}
                   className={cn(
                     "p-5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-4 select-none relative overflow-hidden group/plan",
-                    selectedPaywallPlan === 'club_elite' 
+                    selectedPaywallPlan === '6_mesi' 
                       ? "border-amber-500 bg-amber-500/[0.03] shadow-lg shadow-amber-500/5" 
                       : (theme === 'dark' ? "border-white/5 bg-[#0d0d0f]/60 hover:border-white/10" : "border-gray-200 bg-white hover:border-gray-300")
                   )}
@@ -1550,49 +1588,49 @@ export default function App() {
                   <div className="flex items-start gap-4">
                     <div className={cn(
                       "w-4 h-4 rounded-full border flex items-center justify-center mt-1 shrink-0",
-                      selectedPaywallPlan === 'club_elite' ? "border-amber-500 bg-amber-500" : "border-gray-550"
+                      selectedPaywallPlan === '6_mesi' ? "border-amber-500 bg-amber-500" : "border-gray-550"
                     )}>
-                      {selectedPaywallPlan === 'club_elite' && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
+                      {selectedPaywallPlan === '6_mesi' && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
                     </div>
                     <div>
                       <h4 className="text-xs font-black uppercase tracking-wider text-amber-500 flex items-center gap-1.5">
-                        CLUB ELITE <Sparkles className="w-3.5 h-3.5" />
+                        6 MESI PRO <Sparkles className="w-3.5 h-3.5" />
                       </h4>
                       <p className="text-gray-500 text-[10px] leading-relaxed mt-1 max-w-sm">
-                        Per staff tecnici, scout e società calcistiche. Roster illimitati, report KPI avanzati, supporto prioritario.
+                        Strumento professionale per l'intera durata della stagione. Roster e cartelle illimitate, report avanzati, supporto prioritario.
                       </p>
                     </div>
                   </div>
                   <div className="text-right shrink-0">
-                    <span className={cn("text-sm font-black", theme === 'dark' ? "text-white font-sans" : "text-gray-900 font-sans")}>€49.99</span>
-                    <span className="text-[9px] text-gray-500 block font-bold font-sans">/ mese</span>
+                    <span className={cn("text-sm font-black", theme === 'dark' ? "text-white font-sans" : "text-gray-900 font-sans")}>€69.99</span>
+                    <span className="text-[9px] text-gray-500 block font-bold font-sans">/ 6 mesi</span>
                   </div>
                 </div>
 
-                {/* Plan Option 3: Match Expert (Annuale) */}
+                {/* Plan Option 3: 1 Anno Elite */}
                 <div 
-                  onClick={() => setSelectedPaywallPlan('match_expert')}
+                  onClick={() => setSelectedPaywallPlan('1_anno')}
                   className={cn(
                     "p-5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-4 select-none relative overflow-hidden group/plan",
-                    selectedPaywallPlan === 'match_expert' 
-                      ? "border-emerald-500 bg-emerald-500/[0.03] shadow-lg shadow-emerald-500/5" 
+                    selectedPaywallPlan === '1_anno' 
+                      ? "border-indigo-500 bg-indigo-500/[0.03] shadow-lg shadow-indigo-500/5" 
                       : (theme === 'dark' ? "border-white/5 bg-[#0d0d0f]/60 hover:border-white/10" : "border-gray-200 bg-white hover:border-gray-300")
                   )}
                 >
                   <div className="flex items-start gap-4">
                     <div className={cn(
                       "w-4 h-4 rounded-full border flex items-center justify-center mt-1 shrink-0",
-                      selectedPaywallPlan === 'match_expert' ? "border-emerald-500 bg-emerald-500" : "border-gray-550"
+                      selectedPaywallPlan === '1_anno' ? "border-indigo-500 bg-indigo-500" : "border-gray-550"
                     )}>
-                      {selectedPaywallPlan === 'match_expert' && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
+                      {selectedPaywallPlan === '1_anno' && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
                     </div>
                     <div>
-                      <h4 className="text-xs font-black uppercase tracking-wider text-emerald-500 flex items-center gap-2">
-                        MATCH EXPERT (ANNUALE)
-                        <span className="text-[7px] py-[1px] px-1.5 rounded-md bg-emerald-500/10 text-emerald-500 font-black">RISPARMIA 30%</span>
+                      <h4 className="text-xs font-black uppercase tracking-wider text-indigo-400 flex items-center gap-2 font-sans font-black">
+                        1 ANNO ELITE
+                        <span className="text-[7px] py-[1px] px-1.5 rounded-md bg-indigo-500/10 text-indigo-400 font-black ml-1.5">RISPARMIO MAX</span>
                       </h4>
-                      <p className="text-gray-500 text-[10px] leading-relaxed mt-1 max-w-sm">
-                        Tutto incluso nel piano Club Elite strutturato su licenza annuale. Aggiornamenti coefficienti gratuiti.
+                      <p className="text-gray-500 text-[10px] leading-relaxed mt-1 max-w-sm font-sans font-semibold">
+                        La licenza annuale definitiva. Tutto incluso, aggiornamenti coefficienti gratuiti garantiti tutto l'anno.
                       </p>
                     </div>
                   </div>
@@ -1626,153 +1664,176 @@ export default function App() {
                     "p-6 rounded-3xl border shadow-xl space-y-5 relative overflow-hidden",
                     theme === 'dark' ? "bg-[#0c0c0e] border-white/5" : "bg-white border-gray-150 shadow-gray-200/50"
                   )}>
-                    {/* Simulated Virtual Card Preview */}
-                    <div className="p-4.5 rounded-2xl bg-gradient-to-tr from-blue-700 via-indigo-600 to-indigo-800 text-white space-y-6 relative overflow-hidden shadow-lg shadow-indigo-600/15 text-left">
-                      <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-white/5 -mr-10 -mt-10 blur-xl" />
-                      <div className="flex items-center justify-between">
-                        <span className="text-[8px] font-black uppercase tracking-widest opacity-60">LICENZA PREMIUM</span>
-                        <CreditCard className="w-5 h-5 text-white/75" />
-                      </div>
-                      
-                      <div className="space-y-3">
-                        <div className="font-mono text-xs tracking-[0.2em] font-medium opacity-95">
-                          •••• •••• •••• 4242
+                    {selectedPaywallPlan === 'demo_free' ? (
+                      // Display message for Demo Free
+                      <div className="p-4.5 rounded-2xl bg-gradient-to-tr from-emerald-700 to-teal-800 text-white space-y-4 text-left shadow-lg">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[8px] font-black uppercase tracking-widest opacity-80 font-sans">LICENZA DEMO GRATUITA</span>
+                          <Sparkles className="w-5 h-5 text-white/95" />
                         </div>
-                        <div className="flex justify-between items-end">
-                          <div>
-                            <span className="text-[7px] font-black uppercase tracking-widest block opacity-50 font-sans">Intestatario</span>
-                            <span className="text-[9px] font-black uppercase tracking-wider font-sans">MATCH ANALYST USER</span>
+                        <p className="text-[10px] leading-relaxed font-bold font-sans">
+                          Hai selezionato la versione Demo Gratuita. Questa versione ti consente di provare tutte le funzionalità di analisi d'attacco con il roster base precaricato, ma non consente la modifica, l'aggiunta o l'eliminazione dei giocatori.
+                        </p>
+                        <p className="text-[9px] leading-relaxed opacity-75 font-sans">
+                          Nessun dato di pagamento richiesto. Puoi aggiornare a un piano Premium in qualsiasi momento per sbloccare la modifica dei giocatori.
+                        </p>
+                      </div>
+                    ) : (
+                      <>
+                        {/* Simulated Virtual Card Preview */}
+                        <div className="p-4.5 rounded-2xl bg-gradient-to-tr from-blue-700 via-indigo-600 to-indigo-800 text-white space-y-6 relative overflow-hidden shadow-lg shadow-indigo-600/15 text-left">
+                          <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-white/5 -mr-10 -mt-10 blur-xl" />
+                          <div className="flex items-center justify-between">
+                            <span className="text-[8px] font-black uppercase tracking-widest opacity-60 font-sans">LICENZA PREMIUM</span>
+                            <CreditCard className="w-5 h-5 text-white/75" />
                           </div>
-                          <div>
-                            <span className="text-[7px] font-black uppercase tracking-widest block opacity-50 font-sans">Scadenza</span>
-                            <span className="text-[9px] font-black uppercase tracking-wider font-mono">12/29</span>
+                          
+                          <div className="space-y-3">
+                            <div className="font-mono text-xs tracking-[0.2em] font-medium opacity-95">
+                              •••• •••• •••• 4242
+                            </div>
+                            <div className="flex justify-between items-end">
+                              <div>
+                                <span className="text-[7px] font-black uppercase tracking-widest block opacity-50 font-sans">Intestatario</span>
+                                <span className="text-[9px] font-black uppercase tracking-wider font-sans">MATCH ANALYST USER</span>
+                              </div>
+                              <div>
+                                <span className="text-[7px] font-black uppercase tracking-widest block opacity-50 font-sans">Scadenza</span>
+                                <span className="text-[9px] font-black uppercase tracking-wider font-mono">12/29</span>
+                              </div>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </div>
 
-                    {/* Faux Card Inputs */}
-                    <div className="space-y-3 text-left">
-                      <div className="space-y-1">
-                        <label className="text-[8px] font-black uppercase tracking-widest text-gray-500 font-sans">Nome Titolare Carta</label>
-                        <input 
-                          type="text" 
-                          required 
-                          defaultValue="MATCH ANALYST USER"
-                          className={cn(
-                            "w-full rounded-xl py-2.5 px-3.5 text-xs font-black uppercase focus:outline-none focus:ring-2 focus:ring-blue-500/30 border",
-                            theme === 'dark' ? "bg-black/60 border-white/5 text-white font-sans" : "bg-gray-50 border-gray-200 text-gray-900 font-sans"
-                          )}
-                        />
-                      </div>
+                        {/* Faux Card Inputs */}
+                        <div className="space-y-3 text-left">
+                          <div className="space-y-1">
+                            <label className="text-[8px] font-black uppercase tracking-widest text-gray-500 font-sans">Nome Titolare Carta</label>
+                            <input 
+                              type="text" 
+                              required 
+                              defaultValue="MATCH ANALYST USER"
+                              className={cn(
+                                "w-full rounded-xl py-2.5 px-3.5 text-xs font-black uppercase focus:outline-none focus:ring-2 focus:ring-blue-500/30 border",
+                                theme === 'dark' ? "bg-black/60 border-white/5 text-white font-sans" : "bg-gray-50 border-gray-200 text-gray-900 font-sans"
+                              )}
+                            />
+                          </div>
 
-                      <div className="space-y-1">
-                        <label className="text-[8px] font-black uppercase tracking-widest text-gray-500 font-sans">Numero Carta</label>
-                        <input 
-                          type="text" 
-                          required 
-                          maxLength={19}
-                          placeholder="4242 4242 4242 4242" 
-                          className={cn(
-                            "w-full rounded-xl py-2.5 px-3.5 text-xs font-bold font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/30 border",
-                            theme === 'dark' ? "bg-black/60 border-white/5 text-white font-mono" : "bg-gray-50 border-gray-200 text-gray-900 font-mono"
-                          )}
-                        />
-                      </div>
+                          <div className="space-y-1">
+                            <label className="text-[8px] font-black uppercase tracking-widest text-gray-500 font-sans">Numero Carta</label>
+                            <input 
+                              type="text" 
+                              required 
+                              maxLength={19}
+                              placeholder="4242 4242 4242 4242" 
+                              className={cn(
+                                "w-full rounded-xl py-2.5 px-3.5 text-xs font-bold font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/30 border",
+                                theme === 'dark' ? "bg-black/60 border-white/5 text-white font-mono" : "bg-gray-50 border-gray-200 text-gray-900 font-mono"
+                              )}
+                            />
+                          </div>
 
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                          <label className="text-[8px] font-black uppercase tracking-widest text-gray-500 font-sans">Scadenza</label>
-                          <input 
-                            type="text" 
-                            required 
-                            maxLength={5}
-                            placeholder="MM/AA" 
-                            defaultValue="12/29"
-                            className={cn(
-                              "w-full rounded-xl py-2.5 px-3.5 text-xs font-bold font-mono text-center focus:outline-none focus:ring-2 focus:ring-blue-500/30 border",
-                              theme === 'dark' ? "bg-black/60 border-white/5 text-white font-mono" : "bg-gray-50 border-gray-200 text-gray-900 font-mono"
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                              <label className="text-[8px] font-black uppercase tracking-widest text-gray-500 font-sans">Scadenza</label>
+                              <input 
+                                type="text" 
+                                required 
+                                maxLength={5}
+                                placeholder="MM/AA" 
+                                defaultValue="12/29"
+                                className={cn(
+                                  "w-full rounded-xl py-2.5 px-3.5 text-xs font-bold font-mono text-center focus:outline-none focus:ring-2 focus:ring-blue-500/30 border",
+                                  theme === 'dark' ? "bg-black/60 border-white/5 text-white font-mono" : "bg-gray-50 border-gray-200 text-gray-900 font-mono"
+                                )}
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[8px] font-black uppercase tracking-widest text-gray-500 font-sans">CVC / CVV</label>
+                              <input 
+                                type="password" 
+                                required 
+                                maxLength={3}
+                                placeholder="•••" 
+                                defaultValue="123"
+                                className={cn(
+                                  "w-full rounded-xl py-2.5 px-3.5 text-xs font-bold font-mono text-center focus:outline-none focus:ring-2 focus:ring-blue-500/30 border",
+                                  theme === 'dark' ? "bg-black/60 border-white/5 text-white font-mono" : "bg-gray-50 border-gray-200 text-gray-900 font-mono"
+                                )}
+                              />
+                            </div>
+                          </div>
+
+                          {/* Coupon input */}
+                          <div className="space-y-1.5">
+                            <label className="text-[8px] font-black uppercase tracking-widest text-gray-500 font-sans">Codice Promozionale / Coupon</label>
+                            <div className="flex gap-2">
+                              <input 
+                                type="text" 
+                                placeholder="es. BOLOGNAFREE" 
+                                value={couponCode}
+                                onChange={(e) => setCouponCode(e.target.value)}
+                                className={cn(
+                                  "flex-1 rounded-xl py-2 px-3 text-xs font-black uppercase placeholder:normal-case placeholder:font-semibold focus:outline-none border",
+                                  theme === 'dark' ? "bg-black/60 border-white/5 text-white font-sans" : "bg-gray-50 border-gray-200 text-gray-900 font-sans"
+                                )}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const code = couponCode.trim().toUpperCase();
+                                  if (code === 'BOLOGNAFREE' || code === 'ASSIST2026' || code === 'FREE') {
+                                    setIsCouponApplied(true);
+                                    setShowToast({ message: "Coupon valido! Sconto 100% applicato alla licenza.", type: 'success' });
+                                  } else {
+                                    setShowToast({ message: "Codice promozionale non valido.", type: 'error' });
+                                  }
+                                }}
+                                className={cn(
+                                  "px-3 py-2 rounded-xl text-[8px] font-black uppercase tracking-widest border transition-all cursor-pointer font-sans",
+                                  theme === 'dark' ? "bg-white/5 hover:bg-white/10 text-white border-white/10" : "bg-white hover:bg-gray-100 text-gray-700 border-gray-200"
+                                )}
+                              >
+                                Applica
+                              </button>
+                            </div>
+                            {isCouponApplied && (
+                              <span className="text-emerald-500 font-bold block text-[8px] uppercase tracking-wider mt-1 font-sans">
+                                ✓ Coupon applicato: Sconto del 100%!
+                              </span>
                             )}
-                          />
+                          </div>
                         </div>
-                        <div className="space-y-1">
-                          <label className="text-[8px] font-black uppercase tracking-widest text-gray-500 font-sans">CVC / CVV</label>
-                          <input 
-                            type="password" 
-                            required 
-                            maxLength={3}
-                            placeholder="•••" 
-                            defaultValue="123"
-                            className={cn(
-                              "w-full rounded-xl py-2.5 px-3.5 text-xs font-bold font-mono text-center focus:outline-none focus:ring-2 focus:ring-blue-500/30 border",
-                              theme === 'dark' ? "bg-black/60 border-white/5 text-white font-mono" : "bg-gray-50 border-gray-200 text-gray-900 font-mono"
-                            )}
-                          />
-                        </div>
-                      </div>
+                      </>
+                    )}
 
-                      {/* Coupon input */}
-                      <div className="space-y-1.5">
-                        <label className="text-[8px] font-black uppercase tracking-widest text-gray-500 font-sans">Codice Promozionale / Coupon</label>
-                        <div className="flex gap-2">
-                          <input 
-                            type="text" 
-                            placeholder="es. BOLOGNAFREE" 
-                            value={couponCode}
-                            onChange={(e) => setCouponCode(e.target.value)}
-                            className={cn(
-                              "flex-1 rounded-xl py-2 px-3 text-xs font-black uppercase placeholder:normal-case placeholder:font-semibold focus:outline-none border",
-                              theme === 'dark' ? "bg-black/60 border-white/5 text-white font-sans" : "bg-gray-50 border-gray-200 text-gray-900 font-sans"
-                            )}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const code = couponCode.trim().toUpperCase();
-                              if (code === 'BOLOGNAFREE' || code === 'ASSIST2026' || code === 'FREE') {
-                                setIsCouponApplied(true);
-                                setShowToast({ message: "Coupon valido! Sconto 100% applicato alla licenza.", type: 'success' });
-                              } else {
-                                setShowToast({ message: "Codice promozionale non valido.", type: 'error' });
-                              }
-                            }}
-                            className={cn(
-                              "px-3 py-2 rounded-xl text-[8px] font-black uppercase tracking-widest border transition-all cursor-pointer font-sans",
-                              theme === 'dark' ? "bg-white/5 hover:bg-white/10 text-white border-white/10" : "bg-white hover:bg-gray-100 text-gray-700 border-gray-200"
-                            )}
-                          >
-                            Applica
-                          </button>
-                        </div>
-                        {isCouponApplied && (
-                          <span className="text-emerald-500 font-bold block text-[8px] uppercase tracking-wider mt-1 font-sans">
-                            ✓ Coupon applicato: Sconto del 100%!
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="border-t border-white/5 pt-4 flex items-center justify-between text-xs">
-                      <span className="text-gray-400 uppercase tracking-wider font-extrabold text-[9px] font-sans">Prezzo Finale:</span>
+                    <div className="border-t border-white/5 pt-4 flex items-center justify-between text-xs font-sans">
+                      <span className="text-gray-400 uppercase tracking-wider font-extrabold text-[9px]">Prezzo Finale:</span>
                       <strong className={cn("text-base font-black font-sans", theme === 'dark' ? "text-white" : "text-gray-900")}>
-                        {isCouponApplied ? '€0.00' : (selectedPaywallPlan === 'scout_pro' ? '€14.99' : selectedPaywallPlan === 'club_elite' ? '€49.99' : '€119.99')}
+                        {isCouponApplied ? '€0.00' : (selectedPaywallPlan === 'demo_free' ? '€0.00' : selectedPaywallPlan === '3_mesi' ? '€39.99' : selectedPaywallPlan === '6_mesi' ? '€69.99' : '€119.99')}
                       </strong>
                     </div>
 
                     <button
                       type="submit"
                       disabled={isSimulatingPayment}
-                      className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 disabled:from-gray-700 disabled:to-gray-800 text-white font-black text-xs uppercase tracking-widest rounded-2xl transition-all shadow-xl shadow-blue-500/10 flex items-center justify-center gap-2 cursor-pointer font-sans"
+                      className={cn(
+                        "w-full py-3.5 text-white font-black text-xs uppercase tracking-widest rounded-2xl transition-all shadow-xl flex items-center justify-center gap-2 cursor-pointer font-sans",
+                        selectedPaywallPlan === 'demo_free' 
+                          ? "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-emerald-500/10"
+                          : "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 shadow-blue-500/10"
+                      )}
                     >
                       {isSimulatingPayment ? (
                         <div className="w-4 h-4 border-2 border-white/10 border-t-white rounded-full animate-spin" />
                       ) : (
-                        <span>Attiva Licenza Premium</span>
+                        <span>{selectedPaywallPlan === 'demo_free' ? 'Attiva Versione Demo (Gratuita)' : 'Attiva Licenza Premium'}</span>
                       )}
                     </button>
                     
                     <span className="text-[8px] text-gray-500 block uppercase tracking-widest text-center mt-2 font-sans">
-                      🔒 Pagamento Crittografato SSL 256-Bit
+                      🔒 {selectedPaywallPlan === 'demo_free' ? 'Attivazione Immediata Senza Carta' : 'Pagamento Crittografato SSL 256-Bit'}
                     </span>
                   </div>
                 </form>
@@ -1931,7 +1992,7 @@ export default function App() {
                   >
                     <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                     <span className="text-[9px] font-black uppercase tracking-wider hidden md:inline">
-                      Premium: {subStatus.plan === 'scout_pro' ? 'SCOUT PRO' : subStatus.plan === 'club_elite' ? 'CLUB ELITE' : 'EXPERT'}
+                      Premium: {subStatus.plan ? subStatus.plan : 'EXPERT'}
                     </span>
                   </button>
                 )}
@@ -3125,6 +3186,10 @@ export default function App() {
 
               <form onSubmit={(e) => {
                 e.preventDefault();
+                if (isDemoMode) {
+                  setShowToast({ message: "La versione Demo Gratuita non consente di modificare i giocatori. Scegli un abbonamento Premium per abilitare la gestione completa!", type: 'error' });
+                  return;
+                }
                 const formData = new FormData(e.currentTarget);
                 const nameInput = (formData.get('playerName') as string || '').trim().toUpperCase();
                 if (!nameInput) return;
@@ -3258,7 +3323,7 @@ export default function App() {
                   <div className="flex justify-between items-center text-xs">
                     <span className="text-gray-400 font-bold">Piano Selezionato:</span>
                     <strong className="uppercase font-black text-[11px] text-blue-500">
-                      {subStatus.plan === 'scout_pro' ? 'SCOUT PRO' : subStatus.plan === 'club_elite' ? 'CLUB ELITE' : 'EXPERT'}
+                      {subStatus.plan ? subStatus.plan : 'EXPERT'}
                     </strong>
                   </div>
 
@@ -3565,6 +3630,11 @@ export default function App() {
                         type="file"
                         accept=".json"
                         onChange={(e) => {
+                          if (isDemoMode) {
+                            setShowToast({ message: "La versione Demo Gratuita non consente di modificare i giocatori. Scegli un abbonamento Premium per abilitare la gestione completa!", type: 'error' });
+                            e.target.value = '';
+                            return;
+                          }
                           const file = e.target.files?.[0];
                           if (!file) return;
                           const reader = new FileReader();
@@ -3609,6 +3679,10 @@ export default function App() {
                     <button
                       type="button"
                       onClick={() => {
+                        if (isDemoMode) {
+                          setShowToast({ message: "La versione Demo Gratuita non consente di modificare i giocatori. Scegli un abbonamento Premium per abilitare la gestione completa!", type: 'error' });
+                          return;
+                        }
                         const current = teamFolders.find(f => f.id === activeFolderId);
                         if (!current) return;
                         if (confirm(`Sei sicuro di voler svuotare completamente la cartella "${current.name}"? Tutti i giocatori verranno rimossi e potrai iniziare da zero.`)) {
@@ -3652,6 +3726,10 @@ export default function App() {
                       key={editingPlayer ? editingPlayer.id : 'new-player'}
                       onSubmit={(e) => {
                         e.preventDefault();
+                        if (isDemoMode) {
+                          setShowToast({ message: "La versione Demo Gratuita non consente di modificare i giocatori. Scegli un abbonamento Premium per abilitare la gestione completa!", type: 'error' });
+                          return;
+                        }
                         const formData = new FormData(e.currentTarget);
                         const name = (formData.get('playerName') as string || '').trim().toUpperCase();
                         if (!name) {
@@ -3681,6 +3759,14 @@ export default function App() {
                       }}
                       className="space-y-4"
                     >
+                      {isDemoMode && (
+                        <div className="p-3 bg-amber-500/10 border border-amber-550/20 rounded-2xl text-[10px] text-amber-500 font-black tracking-wide leading-relaxed">
+                          ⚠️ MODIFICA GIOCATORI DISABILITATA<br/>
+                          <span className="font-bold font-sans text-gray-400 normal-case block mt-0.5">
+                            La versione Demo non permette di inserire o modificare i giocatori. Abbonati per personalizzare la squadra!
+                          </span>
+                        </div>
+                      )}
                       <div className="space-y-2">
                         <label className="text-[8px] font-bold text-gray-500 uppercase tracking-widest block font-sans">Nome e Cognome</label>
                         <input 
@@ -3860,7 +3946,13 @@ export default function App() {
                                 ? (theme === 'dark' ? "bg-yellow-500/5 hover:bg-yellow-500/5 border-l-2 border-yellow-500" : "bg-yellow-500/[0.03] border-l-2 border-yellow-500") 
                                 : ""
                             )}
-                            onClick={() => setEditingPlayer(player)}
+                            onClick={() => {
+                              if (isDemoMode) {
+                                setShowToast({ message: "La versione Demo Gratuita non consente di modificare i giocatori. Scegli un abbonamento Premium per abilitare la gestione completa!", type: 'error' });
+                                return;
+                              }
+                              setEditingPlayer(player);
+                            }}
                           >
                             <div className="flex items-center gap-3.5 min-w-0">
                               {/* Player Position Avatar Badge (instead of shirt number) */}
@@ -3909,6 +4001,10 @@ export default function App() {
                               {/* Quick Selectable Toggle */}
                               <button
                                 onClick={() => {
+                                  if (isDemoMode) {
+                                    setShowToast({ message: "La versione Demo Gratuita non consente di modificare i giocatori. Scegli un abbonamento Premium per abilitare la gestione completa!", type: 'error' });
+                                    return;
+                                  }
                                   setSquadPlayers(prev => prev.map(p => p.id === player.id ? { ...p, active: !p.active } : p));
                                   setShowToast({ 
                                     message: `${player.name} ${!player.active ? 'attivato' : 'disattivato'}`, 
@@ -3931,6 +4027,10 @@ export default function App() {
                               {/* Delete button */}
                               <button
                                 onClick={() => {
+                                  if (isDemoMode) {
+                                    setShowToast({ message: "La versione Demo Gratuita non consente di modificare i giocatori. Scegli un abbonamento Premium per abilitare la gestione completa!", type: 'error' });
+                                    return;
+                                  }
                                   if (confirm(`Rimuovere l'atleta ${player.name} dal roster?`)) {
                                     setSquadPlayers(prev => prev.filter(p => p.id !== player.id));
                                     if (editingPlayer?.id === player.id) setEditingPlayer(null);
@@ -3960,6 +4060,10 @@ export default function App() {
               )}>
                 <button
                   onClick={() => {
+                    if (isDemoMode) {
+                      setShowToast({ message: "La versione Demo Gratuita non consente di modificare i giocatori. Scegli un abbonamento Premium per abilitare la gestione completa!", type: 'error' });
+                      return;
+                    }
                     if (confirm("Sei sicuro di voler ripristinare il roster predefinito del Bologna? Tutti i giocatori personalizzati verranno rimpiazzati.")) {
                       localStorage.removeItem('squad_players');
                       setSquadPlayers(PREDEFINED_PLAYERS.map((name, index) => ({
@@ -3985,6 +4089,10 @@ export default function App() {
                 <div className="flex items-center gap-3">
                   <button
                     onClick={() => {
+                      if (isDemoMode) {
+                        setShowToast({ message: "La versione Demo Gratuita non consente di modificare i giocatori. Scegli un abbonamento Premium per abilitare la gestione completa!", type: 'error' });
+                        return;
+                      }
                       setSquadPlayers(prev => prev.map(p => ({ ...p, active: false })));
                       setShowToast({ message: "Tutti gli atleti disattivati!", type: 'success' });
                     }}
@@ -3997,6 +4105,10 @@ export default function App() {
                   </button>
                   <button
                     onClick={() => {
+                      if (isDemoMode) {
+                        setShowToast({ message: "La versione Demo Gratuita non consente di modificare i giocatori. Scegli un abbonamento Premium per abilitare la gestione completa!", type: 'error' });
+                        return;
+                      }
                       setSquadPlayers(prev => prev.map(p => ({ ...p, active: true })));
                       setShowToast({ message: "Tutti gli atleti attivati!", type: 'success' });
                     }}
