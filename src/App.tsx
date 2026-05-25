@@ -1976,315 +1976,287 @@ export default function App() {
       {/* Header */}
       <header className={cn(
         "border-b backdrop-blur-3xl sticky top-0 z-50 transition-colors duration-500",
-        theme === 'dark' ? "bg-[#070708]/50 border-white/[0.03]" : "bg-white/70 border-gray-100"
+        theme === 'dark' ? "bg-[#070708]/85 border-white/[0.03]" : "bg-white/80 border-gray-100"
       )}>
-        <div className="max-w-[1600px] mx-auto px-6 h-18 flex items-center justify-between gap-8">
-          <div className="flex items-center gap-5">
-            <div className={cn(
-              "w-10 h-10 flex items-center justify-center rounded-xl shadow-xl relative group overflow-hidden transition-all duration-500 hover:border-blue-500/20 border",
-              theme === 'dark' ? "bg-white/[0.03] border-white/5" : "bg-gray-50 border-gray-200"
-            )}>
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 to-blue-400/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-              <AppLogo className="w-6 h-6 relative z-10 group-hover:scale-105 transition-transform duration-500" />
-            </div>
-            <div className="flex flex-col">
-              <div className="flex items-center gap-2.5">
-                <h1 className={cn("font-black text-base tracking-tight leading-none uppercase", theme === 'dark' ? "text-white" : "text-gray-900")}>
-                  Analytic <span className="text-blue-500">Hub</span>
-                </h1>
-                <div className="flex gap-1 items-center">
-                  <span className="w-1 h-1 rounded-full bg-blue-500 animate-pulse" />
-                  <span className={cn("w-1 h-1 rounded-full", theme === 'dark' ? "bg-white/10" : "bg-gray-200")} />
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-3 lg:py-0 lg:h-18 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="flex items-center justify-between w-full lg:w-auto gap-4">
+            <div className="flex items-center gap-4">
+              <div className={cn(
+                "w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-xl shadow-xl relative group overflow-hidden transition-all duration-500 hover:border-blue-500/20 border shrink-0",
+                theme === 'dark' ? "bg-white/[0.03] border-white/5" : "bg-gray-50 border-gray-200"
+              )}>
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 to-blue-400/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <AppLogo className="w-5 h-5 sm:w-6 sm:h-6 relative z-10 group-hover:scale-105 transition-transform duration-500" />
+              </div>
+              <div className="flex flex-col">
+                <div className="flex items-center gap-2">
+                  <h1 className={cn("font-black text-sm sm:text-base tracking-tight leading-none uppercase", theme === 'dark' ? "text-white" : "text-gray-900")}>
+                    Analytic <span className="text-blue-500">Hub</span>
+                  </h1>
+                  <div className="flex gap-1 items-center">
+                    <span className="w-1 h-1 rounded-full bg-blue-500 animate-pulse" />
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 mt-1">
+                  <button 
+                    onClick={() => setShowMatchSettings(true)}
+                    className="flex items-center gap-1.5 hover:text-blue-400 transition-all group/match whitespace-nowrap"
+                  >
+                    <span className={cn("text-[8px] font-bold uppercase tracking-[0.1em] group-hover/match:text-blue-400/80 transition-colors", theme === 'dark' ? "text-gray-500" : "text-gray-400")}>
+                      {teamName} <span className="italic lowercase mx-0.5 opacity-50">vs</span> {awayTeam || 'Avversario'}
+                    </span>
+                    <Settings className="w-2 h-2 text-gray-700 group-hover/match:text-blue-400 opacity-50 transition-all" />
+                  </button>
                 </div>
               </div>
-              <div className="flex items-center gap-2 mt-1.5">
-                <button 
-                  onClick={() => setShowMatchSettings(true)}
-                  className="flex items-center gap-2 hover:text-blue-400 transition-all group/match whitespace-nowrap"
-                >
-                  <span className={cn("text-[8px] font-bold uppercase tracking-[0.1em] group-hover/match:text-blue-400/80 transition-colors", theme === 'dark' ? "text-gray-500" : "text-gray-400")}>
-                    {teamName} <span className="italic lowercase mx-0.5 opacity-50">vs</span> {awayTeam || 'Avversario'}
-                  </span>
-                  <Settings className="w-2 h-2 text-gray-700 group-hover/match:text-blue-400 opacity-50 transition-all" />
-                </button>
-              </div>
+            </div>
+
+            {/* Mobile/Tablet Quick Toggles */}
+            <div className="flex lg:hidden items-center gap-2 shrink-0">
+              <button 
+                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                className={cn(
+                  "p-2 rounded-xl border transition-all outline-none",
+                  theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-500 hover:text-white" : "bg-gray-50 border-gray-100 text-gray-400 hover:text-gray-900"
+                )}
+                title={theme === 'dark' ? "Modalità Chiara" : "Modalità Scura"}
+              >
+                {theme === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+              </button>
+              <button 
+                onClick={() => user ? logout() : login()}
+                className={cn(
+                  "p-2 rounded-xl border transition-all outline-none",
+                  theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-500 hover:text-white" : "bg-gray-50 border-gray-100 text-gray-400 hover:text-gray-900"
+                )}
+                title={user ? "Logout" : "Accedi"}
+              >
+                {user ? <LogOut className="w-3.5 h-3.5" /> : <LogIn className="w-3.5 h-3.5" />}
+              </button>
             </div>
           </div>
 
-          <div className={cn(
-            "flex items-center border rounded-[1.25rem] p-1 gap-1",
-            theme === 'dark' ? "bg-white/[0.02] border-white/5" : "bg-gray-50 border-gray-100"
-          )}>
-            <button
-              onClick={() => setActiveTab('xg')}
-              className={cn(
-                "px-5 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all duration-300 flex items-center gap-1.5 outline-none",
-                activeTab === 'xg' 
-                  ? "bg-blue-600 text-white shadow-lg shadow-blue-600/25 scale-[1.02]" 
-                  : (theme === 'dark' ? "text-gray-500 hover:text-white hover:bg-white/[0.02]" : "text-gray-400 hover:text-gray-800 hover:bg-white")
-              )}
-            >
-              <Target className="w-3.5 h-3.5" />
-              <span>Analisi Campo</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('ipo')}
-              className={cn(
-                "px-5 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all duration-300 flex items-center gap-1.5 outline-none",
-                activeTab === 'ipo' 
-                  ? "bg-blue-600 text-white shadow-lg shadow-blue-600/25 scale-[1.02]" 
-                  : (theme === 'dark' ? "text-gray-500 hover:text-white hover:bg-white/[0.02]" : "text-gray-400 hover:text-gray-800 hover:bg-white")
-              )}
-            >
-              <Activity className="w-3.5 h-3.5" />
-              <span>Indice IPO</span>
-            </button>
-          </div>
-
-          <div className="flex items-center gap-6">
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto justify-center lg:justify-start">
+            {/* Tab Selector */}
             <div className={cn(
-              "hidden lg:flex items-center border rounded-xl px-4 py-1.5 gap-4",
+              "flex items-center border rounded-[1.25rem] p-1 gap-1 w-full sm:w-auto justify-center",
               theme === 'dark' ? "bg-white/[0.02] border-white/5" : "bg-gray-50 border-gray-100"
             )}>
-              <div className="flex items-center gap-2">
-                <div className={cn("w-1 h-1 rounded-full transition-colors", isOnline ? "bg-emerald-500" : "bg-red-500 animate-pulse")} />
-                <span className="text-[8px] font-bold text-gray-500 uppercase tracking-widest leading-none">{isOnline ? 'Online' : 'Offline'}</span>
-              </div>
-              <div className={cn("w-px h-3", theme === 'dark' ? "bg-white/10" : "bg-gray-200")} />
-              <div className={cn("flex items-center gap-2 text-[9px] font-black font-mono tabular-nums leading-none tracking-widest", theme === 'dark' ? "text-white/90" : "text-gray-900")}>
-                <Clock className="w-3 h-3 text-gray-500" />
-                {String(Math.floor(timerSeconds / 60)).padStart(2, '0')}:{String(timerSeconds % 60).padStart(2, '0')}
-              </div>
+              <button
+                onClick={() => setActiveTab('xg')}
+                className={cn(
+                  "px-4 sm:px-5 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all duration-300 flex items-center gap-1.5 outline-none flex-1 sm:flex-initial justify-center",
+                  activeTab === 'xg' 
+                    ? "bg-blue-600 text-white shadow-lg shadow-blue-600/25 scale-[1.02]" 
+                    : (theme === 'dark' ? "text-gray-500 hover:text-white hover:bg-white/[0.02]" : "text-gray-400 hover:text-gray-800 hover:bg-white")
+                )}
+              >
+                <Target className="w-3.5 h-3.5" />
+                <span>Analisi Campo</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('ipo')}
+                className={cn(
+                  "px-4 sm:px-5 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all duration-300 flex items-center gap-1.5 outline-none flex-1 sm:flex-initial justify-center",
+                  activeTab === 'ipo' 
+                    ? "bg-blue-600 text-white shadow-lg shadow-blue-600/25 scale-[1.02]" 
+                    : (theme === 'dark' ? "text-gray-500 hover:text-white hover:bg-white/[0.02]" : "text-gray-400 hover:text-gray-800 hover:bg-white")
+                )}
+              >
+                <Activity className="w-3.5 h-3.5" />
+                <span>Indice IPO</span>
+              </button>
             </div>
 
-            <div className="flex items-center gap-3">
+            {/* Timer Controllers */}
+            <div className="flex items-center gap-3 w-full sm:w-auto justify-center">
               <button 
                 onClick={() => setIsTimerRunning(!isTimerRunning)}
                 className={cn(
-                  "px-4 py-2 rounded-xl transition-all border outline-none font-black uppercase tracking-widest text-[9px]",
+                  "px-4 py-2 rounded-xl transition-all border outline-none font-black uppercase tracking-widest text-[9px] flex-1 sm:flex-initial",
                   isTimerRunning 
                     ? (theme === 'dark' ? "bg-yellow-500/10 border-yellow-500/20 text-yellow-500 hover:bg-yellow-500/20" : "bg-yellow-500 text-white border-yellow-500 shadow-lg shadow-yellow-500/20")
                     : (theme === 'dark' ? "bg-blue-600/10 border-blue-500/20 text-blue-500 hover:bg-blue-600/20" : "bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-600/20")
                 )}
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-center justify-center gap-2">
                   {isTimerRunning ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
-                  <span className="hidden xs:inline">{isTimerRunning ? 'Pausa' : 'Avvia'}</span>
+                  <span>{isTimerRunning ? 'Pausa' : 'Avvia'}</span>
                 </div>
               </button>
-              
-              <div className={cn("h-6 w-px mx-1", theme === 'dark' ? "bg-white/5" : "bg-gray-100")} />
 
-              <div className="flex items-center gap-2">
-                {effectiveSubStatus && effectiveSubStatus.active && (
-                  <button
-                    onClick={() => {
-                      if (isDemoMode) {
-                        setForceShowPaywall(true);
-                      } else {
-                        setShowSubscriptionStatusInfoModal(true);
-                      }
-                    }}
-                    className={cn(
-                      "px-3 py-1.5 border rounded-xl transition-all outline-none flex items-center gap-1.5 focus:outline-none cursor-pointer",
-                      isDemoMode
-                        ? (theme === 'dark' 
-                            ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 animate-pulse" 
-                            : "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100 animate-pulse")
-                        : (theme === 'dark' 
-                            ? "bg-amber-500/10 border-amber-500/20 text-amber-500 hover:bg-amber-500/20" 
-                            : "bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100")
-                    )}
-                    title={isDemoMode ? "Sei in modalità Demo. Clicca per sbloccare tutti i piani!" : "Dettagli Licenza Abbonamento"}
-                  >
-                    <Sparkles className={cn("w-3.5 h-3.5 shrink-0", isDemoMode ? "text-emerald-400 animate-bounce" : "text-amber-500")} />
-                    <span className="text-[9px] font-black uppercase tracking-wider hidden md:inline">
-                      {isDemoMode ? "DEMO GRATUITA (Passa a Premium 🚀)" : `Premium: ${effectiveSubStatus.plan ? effectiveSubStatus.plan : 'EXPERT'}`}
-                    </span>
-                  </button>
-                )}
-              </div>
-                <button 
-                  onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                  className={cn(
-                    "p-2.5 rounded-xl border transition-all outline-none",
-                    theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-500 hover:text-white" : "bg-gray-50 border-gray-100 text-gray-400 hover:text-gray-900"
-                  )}
-                  title={theme === 'dark' ? "Modalità Chiara" : "Modalità Scura"}
-                >
-                  {theme === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
-                </button>
-                <button 
-                  onClick={() => setShowSquadModal(true)}
-                  className={cn(
-                    "p-2.5 rounded-xl border transition-all outline-none flex items-center gap-1.5 focus:outline-none",
-                    theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-500 hover:text-white" : "bg-gray-50 border-gray-100 text-gray-400 hover:text-gray-900"
-                  )}
-                  title="Scheda Squadra"
-                >
-                  <Users className="w-3.5 h-3.5 text-blue-500" />
-                  <span className="text-[9px] font-black uppercase tracking-wider hidden sm:inline">Roster</span>
-                </button>
-                <button 
-                  onClick={() => setShowMatchList(true)}
-                  className={cn(
-                    "p-2.5 rounded-xl border transition-all outline-none",
-                    theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-500 hover:text-white" : "bg-gray-50 border-gray-100 text-gray-400 hover:text-gray-900"
-                  )}
-                  title="Le mie partite"
-                >
-                  <List className="w-3.5 h-3.5" />
-                </button>
-                <button 
-                  onClick={() => user ? logout() : login()}
-                  className={cn(
-                    "p-2.5 rounded-xl border transition-all outline-none",
-                    theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-500 hover:text-white" : "bg-gray-50 border-gray-100 text-gray-400 hover:text-gray-900"
-                  )}
-                  title={user ? "Logout" : "Accedi"}
-                >
-                  {user ? <LogOut className="w-3.5 h-3.5" /> : <LogIn className="w-3.5 h-3.5" />}
-                </button>
+              <div className={cn(
+                "flex items-center border rounded-xl px-3.5 py-1.5 gap-2 font-mono text-[10px] sm:text-xs font-black tabular-nums leading-none tracking-wider",
+                theme === 'dark' ? "bg-white/[0.03] border-white/5 text-white/90" : "bg-gray-50 border-gray-150 text-gray-900"
+              )}>
+                <Clock className="w-3.5 h-3.5 text-gray-400" />
+                {String(Math.floor(timerSeconds / 60)).padStart(2, '0')}:{String(timerSeconds % 60).padStart(2, '0')}
               </div>
             </div>
+          </div>
 
-            <div className={cn("hidden sm:block h-6 w-px mx-1", theme === 'dark' ? "bg-white/10" : "bg-gray-200")} />
+          {/* Right actions and tools grouped cleanly */}
+          <div className="flex flex-wrap items-center justify-center lg:justify-end gap-2.5 w-full lg:w-auto border-t lg:border-t-0 border-white/5 lg:pt-0 pt-3">
+            <button 
+              onClick={() => setShowSquadModal(true)}
+              className={cn(
+                "p-2.5 sm:px-3 sm:py-2 rounded-xl border transition-all outline-none flex items-center gap-1.5 focus:outline-none",
+                theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-50 border-gray-150 text-gray-600 hover:text-gray-900"
+              )}
+              title="Scheda Squadra"
+            >
+              <Users className="w-3.5 h-3.5 text-blue-500" />
+              <span className="text-[9px] font-black uppercase tracking-wider">Roster</span>
+            </button>
+            <button 
+              onClick={() => setShowMatchList(true)}
+              className={cn(
+                "p-2.5 sm:px-3 sm:py-2 rounded-xl border transition-all outline-none flex items-center gap-1.5 focus:outline-none",
+                theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-50 border-gray-150 text-gray-600 hover:text-gray-900"
+              )}
+              title="Le mie partite"
+            >
+              <List className="w-3.5 h-3.5 text-blue-500" />
+              <span className="text-[9px] font-black uppercase tracking-wider">Partite</span>
+            </button>
 
-            {activeTab === 'xg' && (
-              <div className="flex items-center gap-3">
-                <div className={cn(
-                  "flex items-center rounded-xl p-1 border",
-                  theme === 'dark' ? "bg-white/5 border-white/10" : "bg-gray-50 border-gray-200"
-                )}>
-                  <button 
-                    onClick={() => setShowHeatmap(!showHeatmap)}
-                    className={cn(
-                      "px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all flex items-center gap-2",
-                      showHeatmap 
-                        ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20" 
-                        : (theme === 'dark' ? "text-gray-400 hover:text-white" : "text-gray-400 hover:text-gray-600")
-                    )}
-                  >
-                    <Flame className="w-3 h-3" />
-                    <span className="hidden xs:inline">Heat Map</span>
-                  </button>
-                  <button 
-                    onClick={() => setShowGridValues(!showGridValues)}
-                    className={cn(
-                      "px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all flex items-center gap-2",
-                      showGridValues 
-                        ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20" 
-                        : (theme === 'dark' ? "text-gray-400 hover:text-white" : "text-gray-400 hover:text-gray-600")
-                    )}
-                  >
-                    <Hash className="w-3 h-3" />
-                    <span className="hidden xs:inline">Grid</span>
-                  </button>
-                </div>
-
-                {showHeatmap && (
-                  <div className={cn(
-                    "hidden lg:flex items-center gap-4 border rounded-xl px-3 py-1.5",
-                    theme === 'dark' ? "bg-white/5 border-white/10" : "bg-gray-50 border-gray-200"
-                  )}>
-                    <div className="flex flex-col gap-1">
-                      <div className="flex justify-between items-center">
-                        <span className="text-[7px] font-black text-gray-500 uppercase">Opacità</span>
-                        <span className="text-[7px] font-bold text-blue-500">{Math.round(heatmapOpacity * 100)}%</span>
-                      </div>
-                      <input 
-                        type="range" 
-                        min="0" 
-                        max="1" 
-                        step="0.1" 
-                        value={heatmapOpacity}
-                        onChange={(e) => setHeatmapOpacity(parseFloat(e.target.value))}
-                        className="w-16 h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                      />
-                    </div>
-                    <div className={cn("w-px h-6", theme === 'dark' ? "bg-white/10" : "bg-gray-200")} />
-                    <div className="flex flex-col gap-1">
-                      <span className="text-[7px] font-black text-gray-500 uppercase">Scala</span>
-                      <div className="flex items-center gap-1">
-                        {(['default', 'viridis', 'plasma', 'hot'] as const).map((scale) => (
-                          <button
-                            key={scale}
-                            onClick={() => setHeatmapScale(scale)}
-                            className={cn(
-                              "w-3 h-3 rounded-full border transition-all",
-                              theme === 'dark' ? "border-white/10" : "border-gray-200",
-                              heatmapScale === scale ? "ring-2 ring-blue-500 scale-110" : "opacity-50 hover:opacity-100",
-                              scale === 'default' && "bg-gradient-to-r from-green-500 via-yellow-500 to-red-500",
-                              scale === 'viridis' && "bg-gradient-to-r from-[#440154] via-[#21908d] to-[#fde725]",
-                              scale === 'plasma' && "bg-gradient-to-r from-[#0d0887] via-[#9c179e] to-[#f0f921]",
-                              scale === 'hot' && "bg-gradient-to-r from-[#800000] via-[#ff0000] to-[#ffff00]"
-                            )}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            <div className="flex items-center gap-2">
+            {/* Desktop Only theme and login togglers */}
+            <div className="hidden lg:flex items-center gap-2">
               <button 
-                onClick={exportToExcel}
-                className={cn(
-                  "p-2.5 rounded-xl border transition-all outline-none",
-                  theme === 'dark' ? "bg-emerald-600/10 border-emerald-500/20 text-emerald-500 hover:bg-emerald-600/20" : "bg-emerald-50 border-emerald-100 text-emerald-600 hover:bg-emerald-100"
-                )}
-                title="Esporta Excel"
-              >
-                <FileSpreadsheet className="w-3.5 h-3.5" />
-              </button>
-
-              <button 
-                onClick={() => setShowXGTuning(true)}
+                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
                 className={cn(
                   "p-2.5 rounded-xl border transition-all outline-none",
                   theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-500 hover:text-white" : "bg-gray-50 border-gray-100 text-gray-400 hover:text-gray-900"
                 )}
-                title="Personalizza Modello"
+                title={theme === 'dark' ? "Modalità Chiara" : "Modalità Scura"}
               >
-                <Settings2 className="w-3.5 h-3.5" />
+                {theme === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
               </button>
-
-              {user && currentMatchId && !isReadOnly && (
-                <button 
-                  onClick={() => {
-                    const url = `${window.location.origin}${window.location.pathname}?matchId=${currentMatchId}`;
-                    navigator.clipboard.writeText(url);
-                    setShowToast({ message: "Link di invito copiato!", type: 'success' });
-                  }}
-                  className={cn(
-                    "p-2.5 rounded-xl border transition-all outline-none",
-                    theme === 'dark' ? "bg-blue-600/10 border-blue-500/20 text-blue-400 hover:bg-blue-600/20" : "bg-blue-50 border-blue-100 text-blue-600 hover:bg-blue-100"
-                  )}
-                  title="Invita Collaboratori"
-                >
-                  <UserPlus className="w-3.5 h-3.5" />
-                </button>
-              )}
-
-              {user && !isReadOnly && (
-                <button 
-                  onClick={saveMatch}
-                  disabled={isSaving}
-                  className={cn(
-                    "p-2.5 rounded-xl border transition-all outline-none",
-                    isSaving 
-                      ? "opacity-50 cursor-not-allowed" 
-                      : (theme === 'dark' ? "bg-blue-600/10 border-blue-500/20 text-blue-500 hover:bg-blue-600/20" : "bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-600/20")
-                  )}
-                  title="Salva Partita"
-                >
-                  {isSaving ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                </button>
-              )}
+              <button 
+                onClick={() => user ? logout() : login()}
+                className={cn(
+                  "p-2.5 rounded-xl border transition-all outline-none",
+                  theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-500 hover:text-white" : "bg-gray-50 border-gray-100 text-gray-400 hover:text-gray-900"
+                )}
+                title={user ? "Logout" : "Accedi"}
+              >
+                {user ? <LogOut className="w-3.5 h-3.5" /> : <LogIn className="w-3.5 h-3.5" />}
+              </button>
             </div>
+
+            {effectiveSubStatus && effectiveSubStatus.active && (
+              <button
+                onClick={() => {
+                  if (isDemoMode) {
+                    setForceShowPaywall(true);
+                  } else {
+                    setShowSubscriptionStatusInfoModal(true);
+                  }
+                }}
+                className={cn(
+                  "px-2.5 py-1.5 border rounded-xl transition-all outline-none flex items-center gap-1 cursor-pointer shrink-0 max-w-full text-ellipsis overflow-hidden",
+                  isDemoMode
+                    ? (theme === 'dark' 
+                        ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20" 
+                        : "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100")
+                    : (theme === 'dark' 
+                        ? "bg-amber-500/10 border-amber-500/20 text-amber-500 hover:bg-amber-500/20" 
+                        : "bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100")
+                )}
+                title={isDemoMode ? "Sei in modalità Demo. Clicca per sbloccare tutti i piani!" : "Dettagli Licenza Abbonamento"}
+              >
+                <Sparkles className={cn("w-3 h-3 shrink-0", isDemoMode ? "text-emerald-400 animate-bounce" : "text-amber-500")} />
+                <span className="text-[8px] font-black uppercase tracking-wider">
+                  {isDemoMode ? "DEMO 🚀" : "PREMIUM"}
+                </span>
+              </button>
+            )}
+
+            {activeTab === 'xg' && (
+              <div className="flex items-center gap-2 flex-wrap justify-center">
+                <button 
+                  onClick={() => setShowHeatmap(!showHeatmap)}
+                  className={cn(
+                    "p-2 sm:px-3 sm:py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5 border",
+                    showHeatmap 
+                      ? "bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-600/10" 
+                      : (theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-50 border-gray-150 hover:bg-gray-100 text-gray-550")
+                  )}
+                >
+                  <Flame className="w-3.5 h-3.5" />
+                  <span className="text-[9px]">Heatmap</span>
+                </button>
+                <button 
+                  onClick={() => setShowGridValues(!showGridValues)}
+                  className={cn(
+                    "p-2 sm:px-3 sm:py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5 border",
+                    showGridValues 
+                      ? "bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-600/10" 
+                      : (theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-50 border-gray-150 hover:bg-gray-100 text-gray-550")
+                  )}
+                >
+                  <Hash className="w-3.5 h-3.5" />
+                  <span className="text-[9px]">Griglia</span>
+                </button>
+
+                <button 
+                  onClick={exportToExcel}
+                  className={cn(
+                    "p-2.5 rounded-xl border transition-all outline-none",
+                    theme === 'dark' ? "bg-emerald-600/10 border-emerald-500/25 text-emerald-500 hover:bg-emerald-600/20" : "bg-emerald-50 border-emerald-150 text-emerald-650 hover:bg-emerald-100"
+                  )}
+                  title="Esporta Excel"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5" />
+                </button>
+
+                <button 
+                  onClick={() => setShowXGTuning(true)}
+                  className={cn(
+                    "p-2.5 rounded-xl border transition-all outline-none",
+                    theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-50 border-gray-150 text-gray-550 hover:text-gray-900"
+                  )}
+                  title="Personalizza Modello"
+                >
+                  <Settings2 className="w-3.5 h-3.5" />
+                </button>
+
+                {user && currentMatchId && !isReadOnly && (
+                  <button 
+                    onClick={() => {
+                      const url = `${window.location.origin}${window.location.pathname}?matchId=${currentMatchId}`;
+                      navigator.clipboard.writeText(url);
+                      setShowToast({ message: "Link di invito copiato!", type: 'success' });
+                    }}
+                    className={cn(
+                      "p-2.5 rounded-xl border transition-all outline-none",
+                      theme === 'dark' ? "bg-blue-600/10 border-blue-500/20 text-blue-400 hover:bg-blue-600/20" : "bg-blue-50 border-blue-150 text-blue-655 hover:bg-blue-100"
+                    )}
+                    title="Invita Collaboratori"
+                  >
+                    <UserPlus className="w-3.5 h-3.5" />
+                  </button>
+                )}
+
+                {user && !isReadOnly && (
+                  <button 
+                    onClick={saveMatch}
+                    disabled={isSaving}
+                    className={cn(
+                      "p-2.5 rounded-xl border transition-all outline-none",
+                      isSaving 
+                        ? "opacity-50 cursor-not-allowed" 
+                        : (theme === 'dark' ? "bg-blue-600/15 border-blue-500/25 text-blue-500 hover:bg-blue-600/25" : "bg-blue-600 text-white border-blue-650 shadow-md shadow-blue-500/15")
+                    )}
+                    title="Salva Partita"
+                  >
+                    {isSaving ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                  </button>
+                )}
+              </div>
+            )}
           </div>
+        </div>
       </header>
 
       <main ref={dashboardRef} className="max-w-[1600px] mx-auto p-4 sm:p-6 lg:p-8">
@@ -2966,7 +2938,7 @@ export default function App() {
       {/* Match Settings Modal */}
       <AnimatePresence>
         {showMatchSettings && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -3093,7 +3065,7 @@ export default function App() {
       {/* xG Tuning Modal */}
       <AnimatePresence>
         {showXGTuning && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -3253,7 +3225,7 @@ export default function App() {
       {/* Quick Add Player Modal */}
       <AnimatePresence>
         {isAddingNewPlayer && (
-          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -3505,7 +3477,7 @@ export default function App() {
       {/* Scheda Squadra / Roster Management Modal */}
       <AnimatePresence>
         {showSquadModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -4250,7 +4222,7 @@ export default function App() {
       {/* Match List Modal */}
       <AnimatePresence>
         {showMatchList && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -4369,7 +4341,7 @@ export default function App() {
       {/* Delete Confirmation Modal */}
       <AnimatePresence>
         {matchToDelete && (
-          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
