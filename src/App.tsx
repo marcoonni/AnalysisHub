@@ -1975,7 +1975,7 @@ export default function App() {
 
       {/* Header */}
       <header className={cn(
-        "border-b backdrop-blur-3xl sticky top-0 z-50 transition-colors duration-500",
+        "border-b backdrop-blur-3xl lg:sticky static lg:top-0 z-50 transition-colors duration-500",
         theme === 'dark' ? "bg-[#070708]/85 border-white/[0.03]" : "bg-white/80 border-gray-100"
       )}>
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-3 lg:py-0 lg:h-18 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
@@ -2597,26 +2597,28 @@ export default function App() {
                         key={shot.id}
                         initial={{ scale: 0, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
-                        whileHover={{ scale: 1.4, zIndex: 50 }}
+                        whileHover={{ scale: 1.2 }}
                         onClick={(e) => {
                           e.stopPropagation();
                           setSelectedShot(shot);
                         }}
-                        className={cn(
-                          "absolute w-4 h-4 -ml-2 -mt-2 rounded-full flex items-center justify-center cursor-pointer shadow-xl transition-all",
-                          shot.isGoal ? "bg-yellow-400 ring-4 ring-yellow-400/20" : "bg-white/80 ring-2 ring-white/10",
-                          selectedShot?.id === shot.id ? "ring-blue-500 ring-2 ring-offset-2 ring-offset-black z-50 scale-125" : ""
-                        )}
+                        className="absolute w-8 h-8 -ml-4 -mt-4 flex items-center justify-center cursor-pointer z-25"
                         style={{ 
                           top: `${(shot.x / DEFAULT_PITCH.height) * 100}%`, 
                           left: `${(shot.y / DEFAULT_PITCH.width) * 100}%` 
                         }}
                       >
-                        {shot.isGoal ? (
-                          <Trophy className="w-1.5 h-1.5 text-black" />
-                        ) : (
-                          <div className="w-1.5 h-1.5 bg-black/60 rounded-full" />
-                        )}
+                        <div className={cn(
+                          "w-4 h-4 rounded-full flex items-center justify-center shadow-xl transition-all duration-300",
+                          shot.isGoal ? "bg-yellow-400 ring-4 ring-yellow-400/20" : "bg-white/90 ring-2 ring-white/10",
+                          selectedShot?.id === shot.id ? "ring-blue-500 ring-2 ring-offset-2 ring-offset-[#070708] z-50 scale-125" : ""
+                        )}>
+                          {shot.isGoal ? (
+                            <Trophy className="w-1.5 h-1.5 text-black" />
+                          ) : (
+                            <div className="w-1.5 h-1.5 bg-black/70 rounded-full" />
+                          )}
+                        </div>
                       </motion.div>
                     ))}
 
@@ -2631,7 +2633,7 @@ export default function App() {
                       />
                     ))}
 
-                    {/* Selected Shot HUD Badge */}
+                    {/* Selected Shot HUD Badge (Desktop Absolute Layout ONLY to prevent mobile overlap) */}
                     <AnimatePresence>
                       {selectedShot && (
                         <motion.div
@@ -2639,7 +2641,7 @@ export default function App() {
                           animate={{ opacity: 1, x: 0, scale: 1 }}
                           exit={{ opacity: 0, scale: 0.95 }}
                           className={cn(
-                            "absolute bottom-4 left-4 z-40 w-52 border rounded-2xl p-4 backdrop-blur-md shadow-2xl flex flex-col gap-2 transition-colors pointer-events-auto",
+                            "absolute bottom-4 left-4 z-40 w-52 border rounded-2xl p-4 backdrop-blur-md shadow-2xl flex flex-col gap-2 transition-colors pointer-events-auto hidden lg:flex",
                             theme === 'dark' ? "bg-gray-950/85 border-white/10 text-white" : "bg-white/95 border-gray-200/80 text-gray-900"
                           )}
                         >
@@ -2685,6 +2687,76 @@ export default function App() {
                       )}
                     </AnimatePresence>
                   </div>
+
+                  {/* Selected Shot Mobile View (renders below the pitch screen area on mobile, avoiding overlays) */}
+                  <AnimatePresence>
+                    {selectedShot && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 15 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 15 }}
+                        className={cn(
+                          "mt-4 p-4 border rounded-2xl flex flex-col gap-3 transition-colors block lg:hidden w-full",
+                          theme === 'dark' ? "bg-white/[0.02]/85 border-white/5 text-white" : "bg-gray-50 border-gray-150 text-gray-900"
+                        )}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-[9px] font-black text-blue-500 uppercase tracking-widest">Dettaglio Tiro Selezionato</span>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedShot(null);
+                            }}
+                            className={cn(
+                              "p-1 rounded-lg border transition-colors",
+                              theme === 'dark' ? "bg-white/5 border-white/10 text-gray-400 hover:text-white" : "bg-white border-gray-200 text-gray-500 hover:text-gray-900"
+                            )}
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                        
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className={cn(
+                              "w-8 h-8 rounded-xl flex items-center justify-center border shrink-0",
+                              selectedShot.isGoal ? "bg-yellow-400/10 border-yellow-400/25 text-yellow-500" : "bg-blue-500/10 border-blue-500/25 text-blue-500"
+                            )}>
+                              {selectedShot.isGoal ? <Trophy className="w-4 h-4" /> : <Target className="w-4 h-4" />}
+                            </div>
+                            <div className="flex flex-col min-w-0">
+                              <span className="text-xs font-black uppercase leading-tight truncate">{selectedShot.playerName || "Giocatore"}</span>
+                              <span className="text-[9px] text-gray-500 font-bold uppercase tracking-wider mt-0.5">Minuto {selectedShot.minute || 0}'</span>
+                            </div>
+                          </div>
+
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removeShot(selectedShot.id);
+                            }}
+                            className="px-3 py-1.5 bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500/20 rounded-xl text-[9px] font-black uppercase tracking-widest transition-colors flex items-center gap-1.5 cursor-pointer"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            <span>Elimina</span>
+                          </button>
+                        </div>
+
+                        <div className={cn("h-px", theme === 'dark' ? "bg-white/5" : "bg-gray-200")} />
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className={cn("p-2.5 rounded-xl border text-left", theme === 'dark' ? "bg-black/20 border-white/5" : "bg-white border-gray-150")}>
+                            <span className="text-[8px] text-gray-400 font-bold uppercase tracking-widest block mb-0.5">Probabilità xG</span>
+                            <span className="text-xs font-black text-blue-500">{selectedShot.xg ? selectedShot.xg.toFixed(3) : '0.000'}</span>
+                          </div>
+                          <div className={cn("p-2.5 rounded-xl border text-left", theme === 'dark' ? "bg-black/20 border-white/5" : "bg-white border-gray-150")}>
+                            <span className="text-[8px] text-gray-400 font-bold uppercase tracking-widest block mb-0.5">Strike style</span>
+                            <span className="text-xs font-black uppercase tracking-tight text-gray-400">{selectedShot.bodyPart === 'head' ? 'Testa' : 'Piede'}</span>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
 
                   <div className="mt-8 flex items-center justify-between px-2">
                     <div className="flex items-center gap-6">
