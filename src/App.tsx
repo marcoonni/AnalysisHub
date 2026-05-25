@@ -1991,7 +1991,7 @@ export default function App() {
               <div className="flex flex-col">
                 <div className="flex items-center gap-2">
                   <h1 className={cn("font-black text-sm sm:text-base tracking-tight leading-none uppercase", theme === 'dark' ? "text-white" : "text-gray-900")}>
-                    Analytic <span className="text-blue-500">Hub</span>
+                    Analysis <span className="text-blue-500">Hub</span>
                   </h1>
                   <div className="flex gap-1 items-center">
                     <span className="w-1 h-1 rounded-full bg-blue-500 animate-pulse" />

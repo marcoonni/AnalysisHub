@@ -1,5 +1,5 @@
 {
-  "name": "Analytic Hub",
+  "name": "Analysis Hub",
   "description": "Dashboard interattiva per l'analisi avanzata dei match, con xG, heat map e tracciamento della pericolosità offensiva (Dangerzone).",
   "Overwrite": true,
   "requestFramePermissions": []
