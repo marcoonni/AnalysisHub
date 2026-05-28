@@ -94,6 +94,12 @@ import {
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 
+// List of admin and premium-approved user emails
+export const PREMIUM_ADMIN_EMAILS = [
+  'onnivellomarco@gmail.com',
+  'mimmoscogna@gmail.com'
+];
+
 // Types
 interface Match {
   id: string;
@@ -319,7 +325,7 @@ export default function App() {
 
   // Derive highly robust effective subscription status
   const effectiveSubStatus = useMemo(() => {
-    if (user && user.email && user.email.trim().toLowerCase() === 'onnivellomarco@gmail.com') {
+    if (user && user.email && PREMIUM_ADMIN_EMAILS.includes(user.email.trim().toLowerCase())) {
       return {
         active: true,
         plan: '1 ANNO ELITE',
@@ -337,7 +343,6 @@ export default function App() {
 
   const [shots, setShots] = useState<Shot[]>([]);
   const [showHeatmap, setShowHeatmap] = useState(false);
-  const [showGridValues, setShowGridValues] = useState(false);
   const [selectedShot, setSelectedShot] = useState<Shot | null>(null);
   const [playerList, setPlayerList] = useState<string[]>([]);
   const [isAddingNewPlayer, setIsAddingNewPlayer] = useState(false);
@@ -889,8 +894,8 @@ export default function App() {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
-        // Special bypass for admin always-active access (onnivellomarco@gmail.com)
-        if (currentUser.email && currentUser.email.toLowerCase() === 'onnivellomarco@gmail.com') {
+        // Special bypass for admin always-active access
+        if (currentUser.email && PREMIUM_ADMIN_EMAILS.includes(currentUser.email.trim().toLowerCase())) {
           setSubStatus({
             active: true,
             plan: '1 ANNO ELITE',
@@ -1001,13 +1006,48 @@ export default function App() {
       setAuthError('Inserisci email e password.');
       return;
     }
+    const cleanEmail = authEmail.trim().toLowerCase();
     setIsLoggingIn(true);
     try {
       await signInWithEmailAndPassword(auth, authEmail, authPassword);
       setShowToast({ message: `Accesso verificato!`, type: 'success' });
     } catch (err: any) {
       console.error(err);
-      if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+      
+      // Auto-register premium emails on login attempt if the account doesn't exist yet
+      if (PREMIUM_ADMIN_EMAILS.includes(cleanEmail) && 
+         (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential')) {
+        const defaultPassword = 'bologna2026';
+        if (authPassword !== defaultPassword) {
+          setAuthError(`Questo account premium non è ancora attivo. Per attivarlo ed effettuare il primo accesso, usa la password provvisoria: ${defaultPassword}`);
+          setIsLoggingIn(false);
+          return;
+        }
+        try {
+          const res = await createUserWithEmailAndPassword(auth, authEmail, defaultPassword);
+          const newSub = {
+            active: true,
+            plan: '1 ANNO ELITE',
+            expiryDate: '2100-01-01T00:00:00.005Z'
+          };
+          await setDoc(doc(db, 'users', res.user.uid), {
+            email: cleanEmail,
+            createdAt: new Date().toISOString(),
+            subscription: newSub
+          });
+          setSubStatus(newSub);
+          setShowToast({ message: `Account Premium creato e attivato con successo con la password temporanea "${defaultPassword}"!`, type: 'success' });
+          setIsLoggingIn(false);
+          return;
+        } catch (regErr: any) {
+          console.error("Auto registration error:", regErr);
+          setAuthError(`Impossibile registrare automaticamente l'account: ${regErr.message}`);
+          setIsLoggingIn(false);
+          return;
+        }
+      }
+
+      if (err.code === 'auth/user-not-found' || err.code === 'err/wrong-password' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
         setAuthError('Email o password non corretti.');
       } else if (err.code === 'auth/invalid-email') {
         setAuthError('Formato email non valido.');
@@ -1034,7 +1074,7 @@ export default function App() {
     try {
       const res = await createUserWithEmailAndPassword(auth, authEmail, authPassword);
       
-      const isAdmin = authEmail.toLowerCase() === 'onnivellomarco@gmail.com';
+      const isAdmin = PREMIUM_ADMIN_EMAILS.includes(authEmail.trim().toLowerCase());
       const newSub = isAdmin ? {
         active: true,
         plan: '1 ANNO ELITE',
@@ -2185,18 +2225,6 @@ export default function App() {
                 >
                   <Flame className="w-3.5 h-3.5" />
                   <span className="text-[9px]">Heatmap</span>
-                </button>
-                <button 
-                  onClick={() => setShowGridValues(!showGridValues)}
-                  className={cn(
-                    "p-2 sm:px-3 sm:py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5 border",
-                    showGridValues 
-                      ? "bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-600/10" 
-                      : (theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-50 border-gray-150 hover:bg-gray-100 text-gray-550")
-                  )}
-                >
-                  <Hash className="w-3.5 h-3.5" />
-                  <span className="text-[9px]">Griglia</span>
                 </button>
 
                 <button 
