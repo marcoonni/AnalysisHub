@@ -862,6 +862,20 @@ export default function App() {
   };
 
   const removeShot = (id: string) => {
+    const shotToRemove = shots.find(s => s.id === id);
+    if (shotToRemove) {
+      if (shotToRemove.isGoal) {
+        setGoals(prev => Math.max(0, prev - 1));
+      }
+      if (shotToRemove.ipoCategory) {
+        const cat = shotToRemove.ipoCategory;
+        setIpoEvents(prev => ({
+          ...prev,
+          [cat]: Math.max(0, (prev[cat as keyof typeof prev] || 0) - 1)
+        }));
+      }
+    }
+
     setShots(prev => prev.filter(s => s.id !== id));
     if (selectedShot?.id === id) setSelectedShot(null);
 
@@ -4707,6 +4721,62 @@ export default function App() {
           </div>
         )}
 
+        {showClearShotsConfirm && (
+          <div className="fixed inset-0 z-[111] flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowClearShotsConfirm(false)}
+              className="absolute inset-0 bg-black/90 backdrop-blur-md"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className={cn(
+                "relative w-full max-w-sm border rounded-3xl p-8 shadow-2xl text-center transition-colors z-10",
+                theme === 'dark' ? "bg-[#121212] border-white/10" : "bg-white border-gray-100"
+              )}
+            >
+              <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Trash2 className="text-red-500 w-10 h-10" />
+              </div>
+              <h2 className={cn("text-2xl font-black mb-2", theme === 'dark' ? "text-white" : "text-gray-900")}>Elimina Tutti i Tiri?</h2>
+              <p className="text-gray-500 text-sm mb-8 font-medium">
+                Questa azione azzererà tutti i tiri e i relativi calcoli IPO/Gol per questa partita. L'azione non può essere annullata.
+              </p>
+              <div className="flex flex-col gap-3">
+                <button 
+                  onClick={() => {
+                    setShots([]);
+                    setSelectedShot(null);
+                    setIpoEvents({ shotsIn: 0, shotsOut: 0, penalties: 0, freeKicks: 0, corners: 0, crosses: 0 });
+                    setIpoEventsAway({ shotsIn: 0, shotsOut: 0, penalties: 0, freeKicks: 0, corners: 0, crosses: 0 });
+                    setGoals(0);
+                    setGoalsAway(0);
+                    setMatchEvents(prev => prev.filter(e => e.type !== 'shot' && e.type !== 'goal' && e.type !== 'ipo_event'));
+                    setShowClearShotsConfirm(false);
+                    setShowToast({ message: "Tutti i tiri e i calcoli dell'indice IPO sono stati resettati!", type: 'success' });
+                  }}
+                  className="w-full py-4 bg-red-500 hover:bg-red-400 text-white font-black rounded-2xl transition-all shadow-lg shadow-red-500/20"
+                >
+                  Sì, Elimina Tutto
+                </button>
+                <button 
+                  onClick={() => setShowClearShotsConfirm(false)}
+                  className={cn(
+                    "w-full py-4 border font-bold rounded-2xl transition-all",
+                    theme === 'dark' ? "bg-white/5 hover:bg-white/10 text-white border-white/10" : "bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-100"
+                  )}
+                >
+                  Annulla
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
         {mapClickCoord && (
           <div className="fixed inset-0 z-[110] flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
             {/* Backdrop */}
@@ -4823,14 +4893,11 @@ export default function App() {
                 <div className="space-y-3">
                   <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.1em]">Seleziona Categoria IPO</label>
                   
-                  <div className="grid grid-cols-2 gap-2.5">
+                  <div className="grid grid-cols-1 gap-2.5">
                     {[
                       { id: 'shotsIn', label: 'Tiro in Area', weight: weights.shotsIn, icon: <Target className="w-4 h-4" /> },
                       { id: 'shotsOut', label: 'Tiro Fuori', weight: weights.shotsOut, icon: <Zap className="w-4 h-4" /> },
-                      { id: 'penalties', label: 'Calcio di Rigore', weight: weights.penalties, icon: <CheckCircle2 className="w-4 h-4" /> },
                       { id: 'freeKicks', label: 'Calcio di Punizione', weight: weights.freeKicks, icon: <Activity className="w-4 h-4" /> },
-                      { id: 'corners', label: "Calcio d'angolo", weight: weights.corners, icon: <RotateCw className="w-4 h-4" /> },
-                      { id: 'crosses', label: 'Cross/Traversone', weight: weights.crosses, icon: <ChevronUp className="w-4 h-4" /> },
                     ].map(cat => {
                       const isSel = popupCategory === cat.id;
                       return (
@@ -4907,10 +4974,7 @@ export default function App() {
                   <button
                     type="button"
                     onClick={() => {
-                      if (!popupPlayer) {
-                        setShowToast({ message: "Seleziona prima un giocatore!", type: 'error' });
-                        return;
-                      }
+                      const finalPlayer = popupPlayer || 'Nessuno';
 
                       // 1. Add event to chosen IPO category of HOME team
                       setIpoEvents(prev => ({
@@ -4936,7 +5000,8 @@ export default function App() {
                         xg: xgVal,
                         timestamp: Date.now(),
                         minute: currentMinute,
-                        playerName: popupPlayer,
+                        playerName: finalPlayer,
+                        ipoCategory: popupCategory,
                       };
 
                       setShots(prev => [...prev, newShot]);
@@ -4956,8 +5021,8 @@ export default function App() {
                       addMatchEvent({
                         type: finalIsGoal ? 'goal' : 'ipo_event',
                         description: finalIsGoal 
-                          ? `⚽ GOL Reale! ${popupPlayer} segna da ${categoryLabel} (${teamName})` 
-                          : `📈 ${categoryLabel} - ${popupPlayer} (${teamName})`,
+                          ? `⚽ GOL Reale! ${finalPlayer} segna da ${categoryLabel} (${teamName})` 
+                          : `📈 ${categoryLabel} - ${finalPlayer} (${teamName})`,
                         value: xgVal,
                         shotId: newShot.id,
                         minute: newShot.minute
@@ -4973,8 +5038,8 @@ export default function App() {
                       // Toast message
                       setShowToast({ 
                         message: finalIsGoal 
-                          ? `GOL e ${categoryLabel} registrati per ${popupPlayer}!` 
-                          : `${categoryLabel} aggiunto per ${popupPlayer}!`, 
+                          ? `GOL e ${categoryLabel} registrati per ${finalPlayer}!` 
+                          : `${categoryLabel} aggiunto per ${finalPlayer}!`, 
                         type: 'success' 
                       });
 

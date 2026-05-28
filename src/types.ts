@@ -21,6 +21,7 @@ export interface Shot {
   minute: number;
   playerName?: string;
   matchName?: string;
+  ipoCategory?: string;
 }
 
 export interface PitchDimensions {
