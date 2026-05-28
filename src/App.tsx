@@ -366,13 +366,6 @@ export default function App() {
   const [popupCategory, setPopupCategory] = useState<string>('shotsIn');
   const [popupIsGoal, setPopupIsGoal] = useState<boolean>(false);
 
-  useEffect(() => {
-    if (mapClickCoord) {
-      setPopupPlayer('');
-      setPopupCategory('shotsIn');
-      setPopupIsGoal(false);
-    }
-  }, [mapClickCoord]);
   const [isAddingNewPlayer, setIsAddingNewPlayer] = useState(false);
   const [showSquadModal, setShowSquadModal] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
@@ -474,6 +467,16 @@ export default function App() {
     const combined = Array.from(new Set([...activeSquadNames, ...shotPlayers])).sort();
     setPlayerList(combined);
   }, [shots, squadPlayers]);
+
+  useEffect(() => {
+    if (mapClickCoord) {
+      const firstActive = squadPlayers.find(p => p.active)?.name;
+      const firstAny = playerList.length > 0 ? playerList[0] : '';
+      setPopupPlayer(firstActive || firstAny || 'GIOCATORE 1');
+      setPopupCategory('shotsIn');
+      setPopupIsGoal(false);
+    }
+  }, [mapClickCoord, playerList, squadPlayers]);
 
   // Handle Demo Mode overrides (Exactly 20 players "Player 1", ..., "Player 20", and Team name "TEAM")
   useEffect(() => {
@@ -951,7 +954,16 @@ export default function App() {
         }
         
         setUser(null);
-        setMatches([]);
+        const storedMatches = localStorage.getItem('local_premium_matches_guest-user');
+        if (storedMatches) {
+          try {
+            setMatches(JSON.parse(storedMatches));
+          } catch (e) {
+            setMatches([]);
+          }
+        } else {
+          setMatches([]);
+        }
         setShowMatchList(false);
         setSubStatus(null);
       } else {
@@ -1250,16 +1262,11 @@ export default function App() {
   }, [showToast]);
 
   const saveMatch = async () => {
-    if (!user) {
-      setShowToast({ message: "Devi effettuare l'accesso per salvare la partita.", type: 'error' });
-      return;
-    }
-
     setIsSaving(true);
     
     // Construct match data
     const matchData = {
-      userId: user.uid,
+      userId: user ? user.uid : 'guest-user',
       teamName,
       teamColor,
       awayTeam,
@@ -1274,10 +1281,11 @@ export default function App() {
       matchEvents // Added for live feed state persistence
     };
 
-    // Fallback: If logged in with a local/mock premium session, save to localStorage
-    if (user.uid.startsWith('premium-mock-')) {
+    // Fallback: If not logged in, or logged in with local mock/guest user
+    if (!user || user.uid.startsWith('premium-mock-') || user.uid === 'guest-user') {
       try {
-        const stored = localStorage.getItem('local_premium_matches_' + user.uid);
+        const uid = user ? user.uid : 'guest-user';
+        const stored = localStorage.getItem('local_premium_matches_' + uid);
         let localMatches: Match[] = [];
         if (stored) {
           try {
@@ -1305,11 +1313,11 @@ export default function App() {
         const localShotsKey = 'local_premium_shots_' + matchId;
         localStorage.setItem(localShotsKey, JSON.stringify(shots));
 
-        localStorage.setItem('local_premium_matches_' + user.uid, JSON.stringify(localMatches));
+        localStorage.setItem('local_premium_matches_' + uid, JSON.stringify(localMatches));
         setMatches(localMatches);
         
         setShowToast({ 
-          message: "Partita salvata in locale come file Premium!", 
+          message: "Partita salvata localmente con successo!", 
           type: 'success' 
         });
       } catch (err) {
@@ -2248,37 +2256,6 @@ export default function App() {
           </div>
 
           <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto justify-center lg:justify-start">
-            {/* Tab Selector - behavior updated to scroll to sections stacked on the same page */}
-            <div className={cn(
-              "flex items-center border rounded-none p-1 gap-1 w-full sm:w-auto justify-center",
-              theme === 'dark' ? "bg-white/[0.02] border-white/5" : "bg-gray-50 border-gray-100"
-            )}>
-              <button
-                onClick={() => scrollToSection('section-xg')}
-                className={cn(
-                  "px-4 sm:px-5 py-2 rounded-none text-[9px] font-black uppercase tracking-widest transition-all duration-300 flex items-center gap-1.5 outline-none flex-1 sm:flex-initial justify-center",
-                  activeTab === 'xg' 
-                    ? "bg-blue-600 text-white shadow-lg shadow-blue-600/25 scale-[1.02]" 
-                    : (theme === 'dark' ? "text-gray-500 hover:text-white hover:bg-white/[0.02]" : "text-gray-400 hover:text-gray-800 hover:bg-white")
-                )}
-              >
-                <Target className="w-3.5 h-3.5" />
-                <span>Analisi Campo</span>
-              </button>
-              <button
-                onClick={() => scrollToSection('section-ipo')}
-                className={cn(
-                  "px-4 sm:px-5 py-2 rounded-none text-[9px] font-black uppercase tracking-widest transition-all duration-300 flex items-center gap-1.5 outline-none flex-1 sm:flex-initial justify-center",
-                  activeTab === 'ipo' 
-                    ? "bg-blue-600 text-white shadow-lg shadow-blue-600/25 scale-[1.02]" 
-                    : (theme === 'dark' ? "text-gray-500 hover:text-white hover:bg-white/[0.02]" : "text-gray-400 hover:text-gray-800 hover:bg-white")
-                )}
-              >
-                <Activity className="w-3.5 h-3.5" />
-                <span>Indice IPO</span>
-              </button>
-            </div>
-
             {/* Timer Controllers and Reset Milestones */}
             <div className="flex items-center gap-3 w-full sm:w-auto justify-center flex-wrap">
               <button 
@@ -2332,9 +2309,9 @@ export default function App() {
                     "px-2 py-1 text-[9px] font-black border rounded-lg transition-all uppercase tracking-tight",
                     theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-50 border-gray-150 text-gray-600 hover:text-gray-900"
                   )}
-                  title="Fine 1° Sup. (105:00)"
+                  title="Overtime (105:00)"
                 >
-                  105'
+                  overtime
                 </button>
                 <button 
                   onClick={() => { setTimerSeconds(0); setIsTimerRunning(false); }}
@@ -5004,9 +4981,10 @@ export default function App() {
                       // Reset and close
                       setMapClickCoord(null);
                     }}
-                    className="flex-1 py-4 bg-blue-500 hover:bg-blue-400 text-white text-xs font-black uppercase tracking-widest rounded-2xl transition-all shadow-lg shadow-blue-500/20"
+                    className="flex-1 py-4 bg-blue-500 hover:bg-blue-400 text-white text-xs font-black uppercase tracking-widest rounded-2xl transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2"
                   >
-                    Registra ed Aggiungi all'IPO
+                    <Save className="w-4 h-4" />
+                    <span>Salva</span>
                   </button>
                   <button
                     type="button"
