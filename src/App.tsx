@@ -14,6 +14,7 @@ import {
   Trophy, 
   Zap, 
   Hash, 
+  MapPin,
   Footprints, 
   User as UserIcon, 
   X, 
@@ -354,7 +355,24 @@ export default function App() {
   const [shots, setShots] = useState<Shot[]>([]);
   const [showHeatmap, setShowHeatmap] = useState(false);
   const [selectedShot, setSelectedShot] = useState<Shot | null>(null);
+  const [mapClickCoord, setMapClickCoord] = useState<{
+    mX: number;
+    mY: number;
+    clickX: number;
+    clickY: number;
+  } | null>(null);
   const [playerList, setPlayerList] = useState<string[]>([]);
+  const [popupPlayer, setPopupPlayer] = useState<string>('');
+  const [popupCategory, setPopupCategory] = useState<string>('shotsIn');
+  const [popupIsGoal, setPopupIsGoal] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (mapClickCoord) {
+      setPopupPlayer('');
+      setPopupCategory('shotsIn');
+      setPopupIsGoal(false);
+    }
+  }, [mapClickCoord]);
   const [isAddingNewPlayer, setIsAddingNewPlayer] = useState(false);
   const [showSquadModal, setShowSquadModal] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
@@ -795,38 +813,11 @@ export default function App() {
     const mY = (clickX / rect.width) * DEFAULT_PITCH.width;
     const mX = (clickY / rect.height) * DEFAULT_PITCH.height;
 
-    const xg = calculateXG(mX, mY, newShotConfig.bodyPart, newShotConfig.assistType, xgCoeffs);
-
-    const newShot: Shot = {
-      id: Math.random().toString(36).substr(2, 9),
-      x: mX,
-      y: mY,
-      isGoal: newShotConfig.isGoal,
-      bodyPart: newShotConfig.bodyPart,
-      assistType: newShotConfig.assistType,
-      xg,
-      timestamp: Date.now(),
-      minute: currentMinute,
-      playerName: newShotConfig.playerName || 'Giocatore',
-    };
-
-    setShots(prev => [...prev, newShot]);
-    setSelectedShot(newShot);
-
-    // Add ripple effect
-    const rippleId = Math.random().toString(36).substr(2, 9);
-    setRipples(prev => [...prev, { id: rippleId, x: (clickX / rect.width) * 100, y: (clickY / rect.height) * 100 }]);
-    setTimeout(() => {
-      setRipples(prev => prev.filter(r => r.id !== rippleId));
-    }, 1000);
-
-    // Record match event
-    addMatchEvent({
-      type: newShot.isGoal ? 'goal' : 'shot',
-      description: `${newShot.isGoal ? 'GOL!' : 'Tiro'} - xG: ${newShot.xg.toFixed(2)} (${newShot.playerName})`,
-      value: newShot.xg,
-      shotId: newShot.id,
-      minute: newShot.minute
+    setMapClickCoord({
+      mX,
+      mY,
+      clickX: (clickX / rect.width) * 100,
+      clickY: (clickY / rect.height) * 100
     });
   };
 
@@ -3633,6 +3624,7 @@ export default function App() {
                 };
 
                 setSquadPlayers(prev => [...prev, newP]);
+                setPopupPlayer(nameInput);
                 if (selectedShot) {
                   updateShot(selectedShot.id, { playerName: nameInput });
                 } else {
@@ -4737,6 +4729,302 @@ export default function App() {
             </motion.div>
           </div>
         )}
+
+        {mapClickCoord && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+            {/* Backdrop */}
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setMapClickCoord(null)}
+              className="absolute inset-0 bg-[#070708]/85 backdrop-blur-md"
+            />
+            {/* Modal Box */}
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              className={cn(
+                "relative w-full max-w-xl rounded-[2.5rem] p-6 sm:p-8 border shadow-2xl overflow-hidden z-10",
+                theme === 'dark' ? "bg-[#0d0d0e]/95 border-white/[0.05]" : "bg-white border-gray-100"
+              )}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-500">
+                    <MapPin className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className={cn("text-lg font-black uppercase tracking-tight", theme === 'dark' ? "text-white" : "text-gray-900")}>Registra Evento IPO</h3>
+                    <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest mt-0.5">Mappa: X {mapClickCoord.mX.toFixed(1)}, Y {mapClickCoord.mY.toFixed(1)}</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setMapClickCoord(null)}
+                  className={cn(
+                    "w-8 h-8 rounded-full border flex items-center justify-center transition-colors",
+                    theme === 'dark' ? "bg-white/5 border-white/5 text-gray-400 hover:text-white" : "bg-gray-100 hover:bg-gray-200 border-gray-200 text-gray-700"
+                  )}
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Form Content */}
+              <div className="space-y-6">
+                
+                {/* Giocatore */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.1em]">Seleziona Giocatore</label>
+                    <span className="text-[9px] text-gray-400 uppercase tracking-widest">{teamName}</span>
+                  </div>
+                  
+                  {/* Combobox Dropdown */}
+                  <div className="relative">
+                    <select 
+                      value={popupPlayer}
+                      onChange={(e) => {
+                         const val = e.target.value;
+                         if (val === 'ADD_NEW') {
+                           setIsAddingNewPlayer(true);
+                         } else {
+                           setPopupPlayer(val);
+                         }
+                      }}
+                      className={cn(
+                        "w-full border rounded-2xl py-3.5 px-5 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all appearance-none",
+                        theme === 'dark' ? "bg-[#121214] border-white/5 text-white" : "bg-gray-50 border-gray-200 text-gray-900"
+                      )}
+                    >
+                      <option value="">Seleziona Giocatore...</option>
+                      {playerList.map(pName => {
+                        const pObj = squadPlayers.find(sp => sp.name.toUpperCase() === pName.toUpperCase());
+                        const displayLabel = pObj 
+                          ? `${pObj.name}${pObj.role ? ` - ${pObj.role}` : ''}`
+                          : pName;
+                        return <option key={pName} value={pName}>{displayLabel}</option>;
+                      })}
+                      <option value="ADD_NEW">+ Aggiungi Nuovo Giocatore...</option>
+                    </select>
+                    <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                  </div>
+
+                  {/* Quick Select Quick Tap Pills */}
+                  {playerList.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-[8px] font-bold text-gray-500 uppercase tracking-widest">Scelta Rapida:</p>
+                      <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto pr-1 no-scrollbar">
+                        {playerList.slice(0, 10).map(pName => {
+                          const isSel = popupPlayer === pName;
+                          return (
+                            <button
+                              key={pName}
+                              type="button"
+                              onClick={() => setPopupPlayer(pName)}
+                              className={cn(
+                                "px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border",
+                                isSel
+                                  ? "bg-blue-500 text-white border-blue-500"
+                                  : (theme === 'dark' 
+                                      ? "bg-white/5 hover:bg-white/10 text-gray-400 border-white/5" 
+                                      : "bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-200")
+                              )}
+                            >
+                              {pName}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Event Category */}
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.1em]">Seleziona Categoria IPO</label>
+                  
+                  <div className="grid grid-cols-2 gap-2.5">
+                    {[
+                      { id: 'shotsIn', label: 'Tiro in Area', weight: weights.shotsIn, icon: <Target className="w-4 h-4" /> },
+                      { id: 'shotsOut', label: 'Tiro Fuori', weight: weights.shotsOut, icon: <Zap className="w-4 h-4" /> },
+                      { id: 'penalties', label: 'Calcio di Rigore', weight: weights.penalties, icon: <CheckCircle2 className="w-4 h-4" /> },
+                      { id: 'freeKicks', label: 'Calcio di Punizione', weight: weights.freeKicks, icon: <Activity className="w-4 h-4" /> },
+                      { id: 'corners', label: "Calcio d'angolo", weight: weights.corners, icon: <RotateCw className="w-4 h-4" /> },
+                      { id: 'crosses', label: 'Cross/Traversone', weight: weights.crosses, icon: <ChevronUp className="w-4 h-4" /> },
+                    ].map(cat => {
+                      const isSel = popupCategory === cat.id;
+                      return (
+                        <button
+                          key={cat.id}
+                          type="button"
+                          onClick={() => setPopupCategory(cat.id)}
+                          className={cn(
+                            "p-3.5 rounded-2xl flex items-center justify-between text-left transition-all border",
+                            isSel
+                              ? "bg-blue-500/10 border-blue-500 text-blue-500"
+                              : (theme === 'dark'
+                                  ? "bg-white/[0.01] border-white/[0.03] hover:bg-white/[0.03] text-gray-400"
+                                  : "bg-gray-50 border-gray-100 hover:bg-gray-100 text-gray-800")
+                          )}
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <div className={cn(
+                              "w-8 h-8 rounded-xl flex items-center justify-center transition-colors",
+                              isSel ? "bg-blue-500/20 text-blue-500" : "bg-black/10 text-gray-400"
+                            )}>
+                              {cat.icon}
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-black uppercase tracking-tight leading-none">{cat.label}</p>
+                              <span className="text-[7.5px] font-bold text-gray-500 uppercase tracking-widest mt-0.5 block">PESO: {cat.weight}</span>
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Is Goal Toggle - Only relevant for shotsIn, shotsOut, penalties, freeKicks */}
+                {(popupCategory === 'shotsIn' || popupCategory === 'shotsOut' || popupCategory === 'penalties' || popupCategory === 'freeKicks') && (
+                  <div className={cn(
+                    "p-4 rounded-2xl border flex items-center justify-between transition-colors",
+                    theme === 'dark' ? "bg-white/[0.01] border-white/[0.03]" : "bg-gray-50 border-gray-100"
+                  )}>
+                    <div className="flex items-center gap-3">
+                      <div className={cn(
+                        "w-8 h-8 rounded-xl flex items-center justify-center",
+                        popupIsGoal ? "bg-yellow-500/10 text-yellow-500" : "bg-gray-500/10 text-gray-500"
+                      )}>
+                        <Trophy className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <p className={cn("text-[10px] font-black uppercase tracking-tight", theme === 'dark' ? "text-white" : "text-gray-900")}>È stato GOL Reale?</p>
+                        <p className="text-[8px] text-gray-500 font-bold uppercase tracking-widest mt-0.5">Incrementa il punteggio della partita</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setPopupIsGoal(!popupIsGoal)}
+                      className={cn(
+                        "w-12 h-6 rounded-full p-1 transition-colors duration-300 focus:outline-none",
+                        popupIsGoal ? "bg-yellow-500" : "bg-gray-700"
+                      )}
+                    >
+                      <div className={cn(
+                        "bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300",
+                        popupIsGoal ? "translate-x-6" : "translate-x-0"
+                      )} />
+                    </button>
+                  </div>
+                )}
+
+                {/* Divider */}
+                <div className={cn("border-t my-2", theme === 'dark' ? "border-white/5" : "border-gray-100")} />
+
+                {/* Submits */}
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!popupPlayer) {
+                        setShowToast({ message: "Seleziona prima un giocatore!", type: 'error' });
+                        return;
+                      }
+
+                      // 1. Add event to chosen IPO category of HOME team
+                      setIpoEvents(prev => ({
+                        ...prev,
+                        [popupCategory]: prev[popupCategory] + 1
+                      }));
+
+                      // 2. Add real Goals count if it is Goal
+                      const finalIsGoal = popupIsGoal && (popupCategory === 'shotsIn' || popupCategory === 'shotsOut' || popupCategory === 'penalties' || popupCategory === 'freeKicks');
+                      if (finalIsGoal) {
+                        setGoals(prev => prev + 1);
+                      }
+
+                      // 3. Register Shot at those coordinates
+                      const xgVal = calculateXG(mapClickCoord.mX, mapClickCoord.mY, 'foot', 'none', xgCoeffs);
+                      const newShot: Shot = {
+                        id: Math.random().toString(36).substr(2, 9),
+                        x: mapClickCoord.mX,
+                        y: mapClickCoord.mY,
+                        isGoal: finalIsGoal,
+                        bodyPart: 'foot',
+                        assistType: 'none',
+                        xg: xgVal,
+                        timestamp: Date.now(),
+                        minute: currentMinute,
+                        playerName: popupPlayer,
+                      };
+
+                      setShots(prev => [...prev, newShot]);
+                      setSelectedShot(newShot);
+
+                      // 4. Record Match event logs
+                      const catLabels: Record<string, string> = {
+                        shotsIn: 'Tiro in Area',
+                        shotsOut: 'Tiro Fuori',
+                        penalties: 'Calcio di Rigore',
+                        freeKicks: 'Calcio di Punizione',
+                        corners: "Calcio d'angolo",
+                        crosses: 'Cross/Traversone'
+                      };
+                      const categoryLabel = catLabels[popupCategory] || popupCategory;
+
+                      addMatchEvent({
+                        type: finalIsGoal ? 'goal' : 'ipo_event',
+                        description: finalIsGoal 
+                          ? `⚽ GOL Reale! ${popupPlayer} segna da ${categoryLabel} (${teamName})` 
+                          : `📈 ${categoryLabel} - ${popupPlayer} (${teamName})`,
+                        value: xgVal,
+                        shotId: newShot.id,
+                        minute: newShot.minute
+                      });
+
+                      // 5. Add ripple feedback
+                      const rippleId = Math.random().toString(36).substr(2, 9);
+                      setRipples(prev => [...prev, { id: rippleId, x: mapClickCoord.clickX, y: mapClickCoord.clickY }]);
+                      setTimeout(() => {
+                        setRipples(prev => prev.filter(r => r.id !== rippleId));
+                      }, 1000);
+
+                      // Toast message
+                      setShowToast({ 
+                        message: finalIsGoal 
+                          ? `GOL e ${categoryLabel} registrati per ${popupPlayer}!` 
+                          : `${categoryLabel} aggiunto per ${popupPlayer}!`, 
+                        type: 'success' 
+                      });
+
+                      // Reset and close
+                      setMapClickCoord(null);
+                    }}
+                    className="flex-1 py-4 bg-blue-500 hover:bg-blue-400 text-white text-xs font-black uppercase tracking-widest rounded-2xl transition-all shadow-lg shadow-blue-500/20"
+                  >
+                    Registra ed Aggiungi all'IPO
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMapClickCoord(null)}
+                    className={cn(
+                      "py-4 px-6 border text-xs font-bold rounded-2xl transition-all",
+                      theme === 'dark' ? "bg-white/5 hover:bg-white/10 text-white border-white/10" : "bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-100"
+                    )}
+                  >
+                    Annulla
+                  </button>
+                </div>
+
+              </div>
+
+            </motion.div>
+          </div>
+        )}
       </AnimatePresence>
 
       {/* Toast Notification */}
@@ -4883,39 +5171,6 @@ function IPOView({
               <Plus className="w-4 h-4" />
             </motion.button>
           </div>
-
-          {/* Quick immediate + GOL button */}
-          {(key === 'shotsIn' || key === 'penalties') && (
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => {
-                if (isReadOnly) return;
-                // Increment IPO Category
-                setIpoEventsFn((prev: any) => ({ ...prev, [key]: prev[key] + 1 }));
-                // Increment real goals
-                if (activeTeam === 'home') {
-                  setGoals((prev: number) => prev + 1);
-                } else {
-                  setGoalsAway((prev: number) => prev + 1);
-                }
-                // Log event
-                addMatchEvent({
-                  type: 'goal',
-                  description: `⚽ GOL diretto da ${label}! (${currentTeamName})`,
-                  minute: currentMinute
-                });
-                if (setShowToast) {
-                  setShowToast({ message: "Gol + Evento registrati insieme!", type: 'success' });
-                }
-              }}
-              className="px-3.5 py-2.5 bg-yellow-500/15 hover:bg-yellow-500/25 text-yellow-500 border border-yellow-500/25 rounded-2xl text-[8.5px] font-black uppercase tracking-wider flex items-center gap-1.5 shrink-0 shadow-sm shadow-yellow-500/5 transition-all"
-              title="Registra immediatamente come GOL + Incrementa Contatore"
-            >
-              <Trophy className="w-3 h-3" />
-              <span>+ GOL</span>
-            </motion.button>
-          )}
 
           <div className="w-16 text-right font-black text-blue-500 text-lg tabular-nums">
             {(count * weight).toFixed(1)}
