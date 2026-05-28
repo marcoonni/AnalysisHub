@@ -522,6 +522,36 @@ export default function App() {
     };
   }, []);
 
+  // Monitor scroll height to dynamically light up the active header navigation tab
+  useEffect(() => {
+    const handleScroll = () => {
+      const xgEl = document.getElementById('section-xg');
+      const ipoEl = document.getElementById('section-ipo');
+      if (xgEl && ipoEl) {
+        const xgRect = xgEl.getBoundingClientRect();
+        const ipoRect = ipoEl.getBoundingClientRect();
+        
+        // If IPO section's top is past half of the viewport, make IPO active, otherwise xG is active
+        if (ipoRect.top < window.innerHeight / 2) {
+          setActiveTab('ipo');
+        } else {
+          setActiveTab('xg');
+        }
+      }
+    };
+    
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Helper function to scroll to sections smoothly
+  const scrollToSection = (id: string) => {
+    const element = document.getElementById(id);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
   // Handle Shared Match Loading via URL
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -2226,13 +2256,13 @@ export default function App() {
           </div>
 
           <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto justify-center lg:justify-start">
-            {/* Tab Selector */}
+            {/* Tab Selector - behavior updated to scroll to sections stacked on the same page */}
             <div className={cn(
               "flex items-center border rounded-[1.25rem] p-1 gap-1 w-full sm:w-auto justify-center",
               theme === 'dark' ? "bg-white/[0.02] border-white/5" : "bg-gray-50 border-gray-100"
             )}>
               <button
-                onClick={() => setActiveTab('xg')}
+                onClick={() => scrollToSection('section-xg')}
                 className={cn(
                   "px-4 sm:px-5 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all duration-300 flex items-center gap-1.5 outline-none flex-1 sm:flex-initial justify-center",
                   activeTab === 'xg' 
@@ -2244,7 +2274,7 @@ export default function App() {
                 <span>Analisi Campo</span>
               </button>
               <button
-                onClick={() => setActiveTab('ipo')}
+                onClick={() => scrollToSection('section-ipo')}
                 className={cn(
                   "px-4 sm:px-5 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all duration-300 flex items-center gap-1.5 outline-none flex-1 sm:flex-initial justify-center",
                   activeTab === 'ipo' 
@@ -2257,8 +2287,8 @@ export default function App() {
               </button>
             </div>
 
-            {/* Timer Controllers */}
-            <div className="flex items-center gap-3 w-full sm:w-auto justify-center">
+            {/* Timer Controllers and Reset Milestones */}
+            <div className="flex items-center gap-3 w-full sm:w-auto justify-center flex-wrap">
               <button 
                 onClick={() => setIsTimerRunning(!isTimerRunning)}
                 className={cn(
@@ -2280,6 +2310,50 @@ export default function App() {
               )}>
                 <Clock className="w-3.5 h-3.5 text-gray-400" />
                 {String(Math.floor(timerSeconds / 60)).padStart(2, '0')}:{String(timerSeconds % 60).padStart(2, '0')}
+              </div>
+
+              {/* Reset Milestones */}
+              <div className="flex items-center gap-1">
+                <button 
+                  onClick={() => { setTimerSeconds(45 * 60); setIsTimerRunning(false); }}
+                  className={cn(
+                    "px-2 py-1 text-[9px] font-black border rounded-lg transition-all uppercase tracking-tight",
+                    theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-50 border-gray-150 text-gray-600 hover:text-gray-900"
+                  )}
+                  title="Inizio 2° Tempo (45:00)"
+                >
+                  45'
+                </button>
+                <button 
+                  onClick={() => { setTimerSeconds(90 * 60); setIsTimerRunning(false); }}
+                  className={cn(
+                    "px-2 py-1 text-[9px] font-black border rounded-lg transition-all uppercase tracking-tight",
+                    theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-50 border-gray-150 text-gray-600 hover:text-gray-900"
+                  )}
+                  title="Fine Partita (90:00)"
+                >
+                  90'
+                </button>
+                <button 
+                  onClick={() => { setTimerSeconds(105 * 60); setIsTimerRunning(false); }}
+                  className={cn(
+                    "px-2 py-1 text-[9px] font-black border rounded-lg transition-all uppercase tracking-tight",
+                    theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-50 border-gray-150 text-gray-600 hover:text-gray-900"
+                  )}
+                  title="Fine 1° Sup. (105:00)"
+                >
+                  105'
+                </button>
+                <button 
+                  onClick={() => { setTimerSeconds(0); setIsTimerRunning(false); }}
+                  className={cn(
+                    "px-1.5 py-1 text-[9px] font-black border rounded-lg transition-all uppercase tracking-tight",
+                    theme === 'dark' ? "bg-red-500/10 border-red-500/20 text-red-400 hover:bg-red-500/20" : "bg-red-50 border-red-150 text-red-650 hover:bg-red-100"
+                  )}
+                  title="Reset totale a 00:00"
+                >
+                  Reset
+                </button>
               </div>
             </div>
           </div>
@@ -2436,8 +2510,8 @@ export default function App() {
         </div>
       </header>
 
-      <main ref={dashboardRef} className="max-w-[1600px] mx-auto p-4 sm:p-6 lg:p-8">
-        {activeTab === 'xg' ? (
+      <main ref={dashboardRef} className="max-w-[1600px] mx-auto p-4 sm:p-6 lg:p-8 space-y-12">
+        <div id="section-xg" className="flex flex-col gap-8 scroll-mt-24">
           <div className="flex flex-col gap-8">
             {/* Bento Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
@@ -3158,7 +3232,15 @@ export default function App() {
               </div>
             </div>
           </div>
-        ) : (
+        </div>
+
+        <div className={cn("h-px my-12", theme === 'dark' ? "bg-white/10" : "bg-gray-200")} />
+
+        <div id="section-ipo" className="scroll-mt-24 space-y-6">
+          <div className="flex items-center gap-3">
+            <div className="w-5 h-1 bg-indigo-500 rounded-full" />
+            <h2 className={cn("text-xl font-black uppercase tracking-wider", theme === 'dark' ? "text-white" : "text-gray-900")}>Analisi Indice Pericolosità Offensiva (IPO)</h2>
+          </div>
           <IPOView 
             teamName={teamName}
             teamColor={teamColor}
@@ -3180,8 +3262,10 @@ export default function App() {
             addMatchEvent={addMatchEvent}
             isReadOnly={isReadOnly}
             theme={theme}
+            currentMinute={currentMinute}
+            setShowToast={setShowToast}
           />
-        )}
+        </div>
       </main>
 
       {/* Match Settings Modal */}
@@ -4710,9 +4794,18 @@ function IPOView({
   weights,
   addMatchEvent,
   isReadOnly,
-  theme
+  theme,
+  currentMinute = 0,
+  setShowToast
 }: any) {
   const [ipoActiveTeam, setIpoActiveTeam] = useState<'home' | 'away'>('home');
+  const [askGoalForEvent, setAskGoalForEvent] = useState<{
+    key: string;
+    label: string;
+    activeTeam: 'home' | 'away';
+    currentTeamName: string;
+  } | null>(null);
+
   const efficiency = ipoActiveTeam === 'home' 
     ? (ipo > 0 ? goals / ipo : 0)
     : (ipoAway > 0 ? goalsAway / ipoAway : 0);
@@ -4771,12 +4864,56 @@ function IPOView({
                 if (isReadOnly) return;
                 setIpoEventsFn((prev: any) => ({ ...prev, [key]: prev[key] + 1 }));
                 addMatchEvent({ type: 'ipo_event', description: `Aggiunto ${label} (${currentTeamName})` });
+                
+                // Prompt to also register a goal for Shots/Penalties
+                if (key === 'shotsIn' || key === 'penalties') {
+                  setAskGoalForEvent({
+                    key,
+                    label,
+                    activeTeam,
+                    currentTeamName
+                  });
+                }
               }}
               className={cn("w-10 h-10 flex items-center justify-center transition-colors", theme === 'dark' ? "text-gray-600 hover:text-white" : "text-gray-400 hover:text-gray-900")}
             >
               <Plus className="w-4 h-4" />
             </motion.button>
           </div>
+
+          {/* Quick immediate + GOL button */}
+          {(key === 'shotsIn' || key === 'penalties') && (
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => {
+                if (isReadOnly) return;
+                // Increment IPO Category
+                setIpoEventsFn((prev: any) => ({ ...prev, [key]: prev[key] + 1 }));
+                // Increment real goals
+                if (activeTeam === 'home') {
+                  setGoals((prev: number) => prev + 1);
+                } else {
+                  setGoalsAway((prev: number) => prev + 1);
+                }
+                // Log event
+                addMatchEvent({
+                  type: 'goal',
+                  description: `⚽ GOL diretto da ${label}! (${currentTeamName})`,
+                  minute: currentMinute
+                });
+                if (setShowToast) {
+                  setShowToast({ message: "Gol + Evento registrati insieme!", type: 'success' });
+                }
+              }}
+              className="px-3.5 py-2.5 bg-yellow-500/15 hover:bg-yellow-500/25 text-yellow-500 border border-yellow-500/25 rounded-2xl text-[8.5px] font-black uppercase tracking-wider flex items-center gap-1.5 shrink-0 shadow-sm shadow-yellow-500/5 transition-all"
+              title="Registra immediatamente come GOL + Incrementa Contatore"
+            >
+              <Trophy className="w-3 h-3" />
+              <span>+ GOL</span>
+            </motion.button>
+          )}
+
           <div className="w-16 text-right font-black text-blue-500 text-lg tabular-nums">
             {(count * weight).toFixed(1)}
           </div>
@@ -4786,7 +4923,8 @@ function IPOView({
   };
 
   return (
-    <div className="max-w-[1600px] mx-auto p-4 sm:p-6 lg:p-8 flex flex-col gap-8">
+    <>
+      <div className="max-w-[1600px] mx-auto p-4 sm:p-6 lg:p-8 flex flex-col gap-8">
       {/* Scoreboard Bento */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {[
@@ -5110,6 +5248,82 @@ function IPOView({
         </div>
       </div>
     </div>
+
+    {/* Dynamic Goal Registration Dialog */}
+    <AnimatePresence>
+      {askGoalForEvent && (
+        <div className="fixed inset-0 z-[310] flex items-center justify-center p-4" id="goal-popup-overlay">
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setAskGoalForEvent(null)}
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+          />
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95, y: 15 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 15 }}
+            className={cn(
+              "w-full max-w-sm border rounded-[2rem] p-6 shadow-2xl relative z-10 flex flex-col gap-5 text-center",
+              theme === 'dark' ? "bg-gray-950 border-white/10 text-white" : "bg-white border-gray-150 text-gray-900"
+            )}
+            id="goal-popup-card"
+          >
+            <div className="mx-auto w-12 h-12 rounded-2xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-yellow-500">
+              <Trophy className="w-6 h-6 animate-bounce" />
+            </div>
+            
+            <div className="space-y-1.5 font-sans">
+              <h3 className="text-base font-black uppercase tracking-tight">Vuoi segnalare un GOL?</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest leading-relaxed">
+                Hai inserito: <span className="text-blue-500 font-extrabold">{askGoalForEvent.label}</span> per il team <span className="text-blue-500 font-extrabold">{askGoalForEvent.currentTeamName}</span>. Vuoi registrarlo anche come GOL?
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 mt-2">
+              <button
+                type="button"
+                id="goal-confirm-yes-btn"
+                onClick={() => {
+                  // Update goal count
+                  if (askGoalForEvent.activeTeam === 'home') {
+                    setGoals((prev: number) => prev + 1);
+                  } else {
+                    setGoalsAway((prev: number) => prev + 1);
+                  }
+                  // Add match event
+                  addMatchEvent({ 
+                    type: 'goal', 
+                    description: `⚽ GOL da ${askGoalForEvent.label}! (${askGoalForEvent.currentTeamName})`,
+                    minute: currentMinute
+                  });
+                  setAskGoalForEvent(null);
+                  if (setShowToast) {
+                    setShowToast({ message: "Gol combinato registrato con successo!", type: 'success' });
+                  }
+                }}
+                className="py-3 px-4 bg-yellow-500 hover:bg-yellow-400 text-black font-black uppercase tracking-wider text-[10px] rounded-xl shadow-lg shadow-yellow-500/10 transition-all duration-300"
+              >
+                Sì, Segna GOL
+              </button>
+              <button
+                type="button"
+                id="goal-confirm-no-btn"
+                onClick={() => setAskGoalForEvent(null)}
+                className={cn(
+                  "py-3 px-4 border font-black uppercase tracking-wider text-[10px] rounded-xl transition-all duration-300",
+                  theme === 'dark' ? "bg-white/5 border-white/10 text-gray-300 hover:text-white" : "bg-gray-50 border-gray-200 text-gray-650 hover:bg-gray-100"
+                )}
+              >
+                No, solo evento
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+  </>
   );
 }
 
