@@ -308,7 +308,17 @@ export default function App() {
   const isOnline = useOnlineStatus();
   
   // Auth state defined early so memoized selectors can reference it
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(() => {
+    const saved = localStorage.getItem('local_premium_user');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        return null;
+      }
+    }
+    return null;
+  });
   
   // Custom Subscription and Authentication States
   const [subStatus, setSubStatus] = useState<{ active: boolean; plan: string | null; expiryDate: string | null } | null>(null);
@@ -892,8 +902,38 @@ export default function App() {
   // Auth Listener
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      if (currentUser) {
+      if (!currentUser) {
+        // Fallback for local premium session
+        const saved = localStorage.getItem('local_premium_user');
+        if (saved) {
+          try {
+            const parsedUser = JSON.parse(saved);
+            setUser(parsedUser);
+            setSubStatus({
+              active: true,
+              plan: '1 ANNO ELITE',
+              expiryDate: '2100-01-01T00:00:00.000Z'
+            });
+            
+            // Load local matches
+            const storedMatches = localStorage.getItem('local_premium_matches_' + parsedUser.uid);
+            if (storedMatches) {
+              setMatches(JSON.parse(storedMatches));
+            } else {
+              setMatches([]);
+            }
+            return;
+          } catch (e) {
+            console.error("Local premium user loading error:", e);
+          }
+        }
+        
+        setUser(null);
+        setMatches([]);
+        setShowMatchList(false);
+        setSubStatus(null);
+      } else {
+        setUser(currentUser);
         // Special bypass for admin always-active access
         if (currentUser.email && PREMIUM_ADMIN_EMAILS.includes(currentUser.email.trim().toLowerCase())) {
           setSubStatus({
@@ -937,10 +977,6 @@ export default function App() {
           handleFirestoreError(error, OperationType.LIST, 'matches');
         });
 
-      } else {
-        setMatches([]);
-        setShowMatchList(false);
-        setSubStatus(null);
       }
     });
     return () => unsubscribe();
@@ -992,6 +1028,8 @@ export default function App() {
   const logout = async () => {
     try {
       await signOut(auth);
+      localStorage.removeItem('local_premium_user');
+      setUser(null);
       clearAll();
       setCurrentMatchId(null);
     } catch (error) {
@@ -1008,47 +1046,56 @@ export default function App() {
     }
     const cleanEmail = authEmail.trim().toLowerCase();
     setIsLoggingIn(true);
+    
+    // Check if the user is a premium admin email to use the local premium login bypass.
+    // This allows them to login with password "bologna2026" even if Firebase Email/Password
+    // sign-in provider is disabled (which causes `auth/operation-not-allowed`).
+    if (PREMIUM_ADMIN_EMAILS.includes(cleanEmail)) {
+      const defaultPassword = 'bologna2026';
+      if (authPassword === defaultPassword) {
+        const mockUser: any = {
+          uid: 'premium-mock-' + cleanEmail.replace(/[@.]/g, '-'),
+          email: cleanEmail,
+          displayName: cleanEmail.split('@')[0],
+          emailVerified: true,
+          providerData: []
+        };
+        localStorage.setItem('local_premium_user', JSON.stringify(mockUser));
+        setUser(mockUser);
+        setSubStatus({
+          active: true,
+          plan: '1 ANNO ELITE',
+          expiryDate: '2100-01-01T00:00:00.000Z'
+        });
+        
+        // Load local matches if any
+        const storedMatches = localStorage.getItem('local_premium_matches_' + mockUser.uid);
+        if (storedMatches) {
+          setMatches(JSON.parse(storedMatches));
+        } else {
+          setMatches([]);
+        }
+        
+        setShowToast({ message: `Accesso Premium verificato! Benvenuto su Bologna Lab.`, type: 'success' });
+        setIsLoggingIn(false);
+        return;
+      } else {
+        setAuthError(`Password non corretta per questo account Premium. Per attivarlo ed effettuare l'accesso, usa la password provvisoria: ${defaultPassword}`);
+        setIsLoggingIn(false);
+        return;
+      }
+    }
+
     try {
       await signInWithEmailAndPassword(auth, authEmail, authPassword);
       setShowToast({ message: `Accesso verificato!`, type: 'success' });
     } catch (err: any) {
       console.error(err);
       
-      // Auto-register premium emails on login attempt if the account doesn't exist yet
-      if (PREMIUM_ADMIN_EMAILS.includes(cleanEmail) && 
-         (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential')) {
-        const defaultPassword = 'bologna2026';
-        if (authPassword !== defaultPassword) {
-          setAuthError(`Questo account premium non è ancora attivo. Per attivarlo ed effettuare il primo accesso, usa la password provvisoria: ${defaultPassword}`);
-          setIsLoggingIn(false);
-          return;
-        }
-        try {
-          const res = await createUserWithEmailAndPassword(auth, authEmail, defaultPassword);
-          const newSub = {
-            active: true,
-            plan: '1 ANNO ELITE',
-            expiryDate: '2100-01-01T00:00:00.005Z'
-          };
-          await setDoc(doc(db, 'users', res.user.uid), {
-            email: cleanEmail,
-            createdAt: new Date().toISOString(),
-            subscription: newSub
-          });
-          setSubStatus(newSub);
-          setShowToast({ message: `Account Premium creato e attivato con successo con la password temporanea "${defaultPassword}"!`, type: 'success' });
-          setIsLoggingIn(false);
-          return;
-        } catch (regErr: any) {
-          console.error("Auto registration error:", regErr);
-          setAuthError(`Impossibile registrare automaticamente l'account: ${regErr.message}`);
-          setIsLoggingIn(false);
-          return;
-        }
-      }
-
-      if (err.code === 'auth/user-not-found' || err.code === 'err/wrong-password' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
-        setAuthError('Email o password non corretti.');
+      if (err.code === 'auth/operation-not-allowed') {
+        setAuthError("L'accesso classico con email e password è disabilitato sul server del progetto. Per favore, effettua l'accesso cliccando su 'Google Authentication' in basso.");
+      } else if (err.code === 'auth/user-not-found' || err.code === 'err/wrong-password' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+        setAuthError('Email o password non corretti. Se possiedi una licenza Premium approvata, assicurati di utilizzare la password corretta.');
       } else if (err.code === 'auth/invalid-email') {
         setAuthError('Formato email non valido.');
       } else {
@@ -1066,6 +1113,14 @@ export default function App() {
       setAuthError('Inserisci email e password.');
       return;
     }
+    const cleanEmail = authEmail.trim().toLowerCase();
+    
+    // Check if the user is a premium admin email to guide them to sign in
+    if (PREMIUM_ADMIN_EMAILS.includes(cleanEmail)) {
+      setAuthError("Questo indirizzo email premium è già abilitato. Per favore, clicca sulla scheda 'Accedi' e inserisci la password provvisoria.");
+      return;
+    }
+
     if (authPassword.length < 6) {
       setAuthError('La password deve essere di almeno 6 caratteri.');
       return;
@@ -1074,7 +1129,7 @@ export default function App() {
     try {
       const res = await createUserWithEmailAndPassword(auth, authEmail, authPassword);
       
-      const isAdmin = PREMIUM_ADMIN_EMAILS.includes(authEmail.trim().toLowerCase());
+      const isAdmin = PREMIUM_ADMIN_EMAILS.includes(cleanEmail);
       const newSub = isAdmin ? {
         active: true,
         plan: '1 ANNO ELITE',
@@ -1096,7 +1151,9 @@ export default function App() {
       setShowToast({ message: 'Registrazione completata! Benvenuto.', type: 'success' });
     } catch (err: any) {
       console.error(err);
-      if (err.code === 'auth/email-already-in-use') {
+      if (err.code === 'auth/operation-not-allowed') {
+        setAuthError("La registrazione classica con email e password è disabilitata sul server del progetto. Per accedere, utilizza l'accesso rapido tramite Google Authentication.");
+      } else if (err.code === 'auth/email-already-in-use') {
         setAuthError('Questa email è già in uso.');
       } else if (err.code === 'auth/invalid-email') {
         setAuthError('Formato email non valido.');
@@ -1177,29 +1234,82 @@ export default function App() {
     }
 
     setIsSaving(true);
-    try {
-      const matchData = {
-        userId: user.uid,
-        teamName,
-        teamColor,
-        awayTeam,
-        awayColor,
-        date: new Date().toISOString(),
-        createdAt: serverTimestamp(),
-        totalXG: totalXG,
-        totalGoals: goals,
-        ipoEvents,
-        ipoEventsAway,
-        goals,
-        goalsAway,
-        matchEvents // Added for live feed state persistence
-      };
+    
+    // Construct match data
+    const matchData = {
+      userId: user.uid,
+      teamName,
+      teamColor,
+      awayTeam,
+      awayColor,
+      date: new Date().toISOString(),
+      totalXG: totalXG,
+      totalGoals: goals,
+      ipoEvents,
+      ipoEventsAway,
+      goals,
+      goalsAway,
+      matchEvents // Added for live feed state persistence
+    };
 
+    // Fallback: If logged in with a local/mock premium session, save to localStorage
+    if (user.uid.startsWith('premium-mock-')) {
+      try {
+        const stored = localStorage.getItem('local_premium_matches_' + user.uid);
+        let localMatches: Match[] = [];
+        if (stored) {
+          try {
+            localMatches = JSON.parse(stored);
+          } catch (e) {}
+        }
+        
+        let matchId = currentMatchId;
+        const mockMatchData: any = {
+          ...matchData,
+          id: matchId || 'mock-match-' + Math.random().toString(36).substr(2, 9),
+          date: new Date().toISOString(),
+          createdAt: new Date().toISOString()
+        };
+
+        if (matchId) {
+          localMatches = localMatches.map(m => m.id === matchId ? mockMatchData : m);
+        } else {
+          matchId = mockMatchData.id;
+          setCurrentMatchId(matchId);
+          localMatches = [mockMatchData, ...localMatches];
+        }
+
+        // Save shots to localStorage
+        const localShotsKey = 'local_premium_shots_' + matchId;
+        localStorage.setItem(localShotsKey, JSON.stringify(shots));
+
+        localStorage.setItem('local_premium_matches_' + user.uid, JSON.stringify(localMatches));
+        setMatches(localMatches);
+        
+        setShowToast({ 
+          message: "Partita salvata in locale come file Premium!", 
+          type: 'success' 
+        });
+      } catch (err) {
+        console.error("Local save error:", err);
+        setShowToast({ message: "Errore durante il salvataggio locale.", type: 'error' });
+      } finally {
+        setIsSaving(false);
+      }
+      return;
+    }
+
+    try {
+      const dbMatchData = {
+        ...matchData,
+        createdAt: serverTimestamp()
+      };
+      
       let matchId = currentMatchId;
       if (matchId) {
-        await setDoc(doc(db, 'matches', matchId), matchData, { merge: true });
+        await setDoc(doc(db, 'matches', matchId), dbMatchData, { merge: true });
       } else {
-        const docRef = await addDoc(collection(db, 'matches'), matchData);
+        const docRef = await addDoc(collection(db, 'matches'), dbMatchData);
         matchId = docRef.id;
         setCurrentMatchId(matchId);
       }
@@ -1256,11 +1366,22 @@ export default function App() {
       setGoals(match.goals || 0);
       setGoalsAway(match.goalsAway || 0);
       
-      const shotsSnapshot = await getDocs(collection(db, 'matches', match.id, 'shots'));
-      const shotsData = shotsSnapshot.docs.map(doc => ({
-        ...doc.data(),
-        id: doc.id
-      }) as Shot);
+      let shotsData: Shot[] = [];
+      if (user && user.uid.startsWith('premium-mock-')) {
+        const localShotsKey = 'local_premium_shots_' + match.id;
+        const storedShots = localStorage.getItem(localShotsKey);
+        if (storedShots) {
+          try {
+            shotsData = JSON.parse(storedShots);
+          } catch (e) {}
+        }
+      } else {
+        const shotsSnapshot = await getDocs(collection(db, 'matches', match.id, 'shots'));
+        shotsData = shotsSnapshot.docs.map(doc => ({
+          ...doc.data(),
+          id: doc.id
+        }) as Shot);
+      }
       
       setShots(shotsData);
 
@@ -1270,7 +1391,7 @@ export default function App() {
         loadedEvents = shotsData.map(shot => ({
           id: Math.random().toString(36).substr(2, 9),
           minute: shot.minute || 0,
-          type: shot.isGoal ? 'goal' : 'shot',
+          type: shot.isGoal ? 'goal' : 'shot' as any,
           description: `${shot.isGoal ? 'GOL!' : 'Tiro'} - xG: ${shot.xg.toFixed(2)} (${shot.playerName})`,
           timestamp: shot.timestamp || Date.now(),
           value: shot.xg,
@@ -1309,6 +1430,34 @@ export default function App() {
   const deleteMatch = async (matchId: string) => {
     if (!user) return;
     
+    // Mock user deletion
+    if (user.uid.startsWith('premium-mock-')) {
+      try {
+        const stored = localStorage.getItem('local_premium_matches_' + user.uid);
+        let localMatches: Match[] = [];
+        if (stored) {
+          try {
+            localMatches = JSON.parse(stored);
+          } catch (e) {}
+        }
+        localMatches = localMatches.filter(m => m.id !== matchId);
+        localStorage.setItem('local_premium_matches_' + user.uid, JSON.stringify(localMatches));
+        localStorage.removeItem('local_premium_shots_' + matchId);
+        setMatches(localMatches);
+        
+        if (currentMatchId === matchId) {
+          clearAll();
+          setCurrentMatchId(null);
+        }
+        setMatchToDelete(null);
+        setShowToast({ message: "Partita eliminata con successo!", type: 'success' });
+      } catch (err) {
+        console.error(err);
+        setShowToast({ message: "Errore durante l'eliminazione locale.", type: 'error' });
+      }
+      return;
+    }
+
     try {
       // Delete shots subcollection first
       const shotsSnapshot = await getDocs(collection(db, 'matches', matchId, 'shots'));
