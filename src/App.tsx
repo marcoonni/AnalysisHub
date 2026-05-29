@@ -2950,11 +2950,11 @@ export default function App() {
                       <svg className="absolute inset-0 w-full h-full pointer-events-none z-10 animate-fade-in" viewBox="0 0 68 34">
                         <defs>
                           <linearGradient id="shot-trajectory-grad" x1="0%" y1="100%" x2="0%" y2="0%">
-                            <stop offset="0%" stopColor={selectedShot.isGoal ? "#facc15" : "#3b82f6"} stopOpacity="0.8" />
-                            <stop offset="100%" stopColor="#ef4444" stopOpacity="1" />
+                            <stop offset="0%" stopColor={selectedShot.isGoal ? "#fbbf24" : "#3b82f6"} stopOpacity="1" />
+                            <stop offset="100%" stopColor={selectedShot.isGoal ? "#fef08a" : "#60a5fa"} stopOpacity="0.8" />
                           </linearGradient>
                           <filter id="soft-glow" x="-20%" y="-20%" width="140%" height="140%">
-                            <feGaussianBlur in="SourceGraphic" stdDeviation="0.4" />
+                            <feGaussianBlur in="SourceGraphic" stdDeviation="0.15" />
                             <feMerge>
                               <feMergeNode />
                               <feMergeNode in="SourceGraphic" />
@@ -2966,32 +2966,40 @@ export default function App() {
                           d={`M ${selectedShot.y} ${selectedShot.x} C ${selectedShot.y} ${selectedShot.x * 0.7}, 34 ${selectedShot.x * 0.3}, 34 0`}
                           fill="none"
                           stroke="black"
-                          strokeOpacity="0.2"
-                          strokeWidth="0.8"
-                          className="blur-[1px]"
+                          strokeOpacity="0.1"
+                          strokeWidth="0.4"
                         />
-                        {/* Glow curve */}
+                        {/* Soft Ambient Glow Path */}
+                        <path 
+                          d={`M ${selectedShot.y} ${selectedShot.x} C ${selectedShot.y} ${selectedShot.x * 0.7}, 34 ${selectedShot.x * 0.3}, 34 0`}
+                          fill="none"
+                          stroke="url(#shot-trajectory-grad)"
+                          strokeWidth="0.35"
+                          filter="url(#soft-glow)"
+                          strokeOpacity="0.4"
+                        />
+                        {/* Main Crisp Trajectory Line (Ultra sleek!) */}
+                        <path 
+                          d={`M ${selectedShot.y} ${selectedShot.x} C ${selectedShot.y} ${selectedShot.x * 0.7}, 34 ${selectedShot.x * 0.3}, 34 0`}
+                          fill="none"
+                          stroke="url(#shot-trajectory-grad)"
+                          strokeWidth="0.18"
+                          strokeLinecap="round"
+                        />
+                        {/* High-tech Traveling Light Overlay (Stream "flow" effect) */}
                         <motion.path 
                           d={`M ${selectedShot.y} ${selectedShot.x} C ${selectedShot.y} ${selectedShot.x * 0.7}, 34 ${selectedShot.x * 0.3}, 34 0`}
                           fill="none"
                           stroke="url(#shot-trajectory-grad)"
-                          strokeWidth="0.5"
-                          filter="url(#soft-glow)"
-                          strokeDasharray="1.5 1"
-                          animate={{ strokeDashoffset: [0, -10] }}
-                          transition={{ repeat: Infinity, ease: "linear", duration: 1.5 }}
-                        />
-                        {/* Solid path accent */}
-                        <path 
-                          d={`M ${selectedShot.y} ${selectedShot.x} C ${selectedShot.y} ${selectedShot.x * 0.7}, 34 ${selectedShot.x * 0.3}, 34 0`}
-                          fill="none"
-                          stroke={selectedShot.isGoal ? "#facc15" : "#60a5fa"}
-                          strokeWidth="0.2"
-                          strokeOpacity="0.6"
+                          strokeWidth="0.22"
+                          strokeLinecap="round"
+                          strokeDasharray="1.5 5"
+                          animate={{ strokeDashoffset: [13, 0] }}
+                          transition={{ repeat: Infinity, ease: "linear", duration: 1.2 }}
                         />
                         {/* Goal impact pulse */}
-                        <circle cx="34" cy="0" r="1.5" fill={selectedShot.isGoal ? "#facc15" : "#ef4444"} className="animate-ping" fillOpacity="0.4" />
-                        <circle cx="34" cy="0" r="0.6" fill={selectedShot.isGoal ? "#facc15" : "#ef4444"} />
+                        <circle cx="34" cy="0" r="1" fill={selectedShot.isGoal ? "#facc15" : "#60a5fa"} className="animate-ping" fillOpacity="0.4" />
+                        <circle cx="34" cy="0" r="0.4" fill={selectedShot.isGoal ? "#facc15" : "#60a5fa"} />
                       </svg>
                     )}
 
@@ -3000,24 +3008,36 @@ export default function App() {
                       <div className="absolute inset-0 pointer-events-none z-10">
                         {/* Horizontal dashed targeting line */}
                         <div 
-                          className="absolute left-0 right-0 border-t border-dashed border-blue-500/40" 
+                          className={cn(
+                            "absolute left-0 right-0 border-t border-dashed transition-all duration-300",
+                            theme === 'dark' ? "border-white/[0.08]" : "border-gray-400/[0.18]"
+                          )}
                           style={{ top: `${(selectedShot.x / DEFAULT_PITCH.height) * 100}%` }}
                         />
                         {/* Vertical dashed targeting line */}
                         <div 
-                          className="absolute top-0 bottom-0 border-l border-dashed border-blue-500/40" 
+                          className={cn(
+                            "absolute top-0 bottom-0 border-l border-dashed transition-all duration-300",
+                            theme === 'dark' ? "border-white/[0.08]" : "border-gray-400/[0.18]"
+                          )}
                           style={{ left: `${(selectedShot.y / DEFAULT_PITCH.width) * 100}%` }}
                         />
                         {/* Radar Range Rings */}
                         <div 
-                          className="absolute w-12 h-12 -ml-6 -mt-6 border border-blue-500/20 rounded-full animate-ping opacity-75"
+                          className={cn(
+                            "absolute w-12 h-12 -ml-6 -mt-6 border rounded-full animate-ping opacity-30 transition-all duration-300",
+                            theme === 'dark' ? "border-white/20" : "border-gray-400/20"
+                          )}
                           style={{ 
                             top: `${(selectedShot.x / DEFAULT_PITCH.height) * 100}%`, 
                             left: `${(selectedShot.y / DEFAULT_PITCH.width) * 100}%` 
                           }}
                         />
                         <div 
-                          className="absolute w-8 h-8 -ml-4 -mt-4 border border-dashed border-blue-500/60 rounded-full animate-[spin_10s_linear_infinite]"
+                          className={cn(
+                            "absolute w-8 h-8 -ml-4 -mt-4 border border-dashed rounded-full animate-[spin_12s_linear_infinite] opacity-50 transition-all duration-300",
+                            theme === 'dark' ? "border-white/20" : "border-gray-400/25"
+                          )}
                           style={{ 
                             top: `${(selectedShot.x / DEFAULT_PITCH.height) * 100}%`, 
                             left: `${(selectedShot.y / DEFAULT_PITCH.width) * 100}%` 
