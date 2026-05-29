@@ -471,7 +471,10 @@ export default function App() {
   useEffect(() => {
     if (mapClickCoord) {
       setPopupPlayer('');
-      setPopupCategory('shotsIn');
+      // Auto-detect if shot is inside or outside penalty area
+      // Penalty area: X (mX) between 0 and 16.5; Y (mY) between 13.84 and 54.16
+      const isInsideArea = mapClickCoord.mX <= 16.5 && mapClickCoord.mY >= 13.84 && mapClickCoord.mY <= 54.16;
+      setPopupCategory(isInsideArea ? 'shotsIn' : 'shotsOut');
       setPopupIsGoal(false);
     }
   }, [mapClickCoord]);
@@ -1106,12 +1109,30 @@ export default function App() {
     if (isLoggingIn) return;
     setIsLoggingIn(true);
     console.log("Attempting login...");
+    
+    // Safely clear any existing mock user or state BEFORE attempting login to prevent race conditions
+    localStorage.removeItem('local_premium_user');
+    setUser(null);
+    setSubStatus(null);
+    try {
+      await signOut(auth);
+    } catch (e) {}
+
     try {
       const result = await signInWithPopup(auth, googleProvider);
       console.log("Login successful:", result.user.email);
       setShowToast({ message: `Benvenuto, ${result.user.displayName}!`, type: 'success' });
     } catch (error: any) {
       console.error("Errore login:", error);
+      
+      // Clear cache thoroughly on failure
+      localStorage.removeItem('local_premium_user');
+      setUser(null);
+      setSubStatus(null);
+      try {
+        await signOut(auth);
+      } catch (e) {}
+
       let errorMessage = "Errore durante l'accesso.";
       if (error.code === 'auth/popup-blocked') {
         errorMessage = "Il popup di accesso è stato bloccato dal browser. Per favore, abilita i popup per questo sito.";
@@ -1128,11 +1149,13 @@ export default function App() {
 
   const logout = async () => {
     try {
-      await signOut(auth);
+      // CRITICAL: Clear cache before signing out so the Auth Listener does not auto-restore the session
       localStorage.removeItem('local_premium_user');
       setUser(null);
+      setSubStatus(null);
       clearAll();
       setCurrentMatchId(null);
+      await signOut(auth);
     } catch (error) {
       console.error("Errore logout:", error);
     }
@@ -1147,6 +1170,14 @@ export default function App() {
     }
     const cleanEmail = authEmail.trim().toLowerCase();
     setIsLoggingIn(true);
+    
+    // Safely clear previous login cache BEFORE starting the request
+    localStorage.removeItem('local_premium_user');
+    setUser(null);
+    setSubStatus(null);
+    try {
+      await signOut(auth);
+    } catch (e) {}
     
     // Check if the user is a premium admin email to use the local premium login bypass.
     // This allows them to login with password "bologna2026" even if Firebase Email/Password
@@ -1181,6 +1212,10 @@ export default function App() {
         setIsLoggingIn(false);
         return;
       } else {
+        // Clear caches on password error
+        localStorage.removeItem('local_premium_user');
+        setUser(null);
+        setSubStatus(null);
         setAuthError(`Password non corretta per questo account Premium. Per attivarlo ed effettuare l'accesso, usa la password provvisoria: ${defaultPassword}`);
         setIsLoggingIn(false);
         return;
@@ -1193,6 +1228,14 @@ export default function App() {
     } catch (err: any) {
       console.error(err);
       
+      // Clear caches thoroughly on email/password failure so they don't get locked out
+      localStorage.removeItem('local_premium_user');
+      setUser(null);
+      setSubStatus(null);
+      try {
+        await signOut(auth);
+      } catch (e) {}
+
       if (err.code === 'auth/operation-not-allowed') {
         setAuthError("L'accesso classico con email e password è disabilitato sul server del progetto. Per favore, effettua l'accesso cliccando su 'Google Authentication' in basso.");
       } else if (err.code === 'auth/user-not-found' || err.code === 'err/wrong-password' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
@@ -1227,6 +1270,15 @@ export default function App() {
       return;
     }
     setIsLoggingIn(true);
+
+    // Safely clear previous login cache BEFORE starting registration
+    localStorage.removeItem('local_premium_user');
+    setUser(null);
+    setSubStatus(null);
+    try {
+      await signOut(auth);
+    } catch (e) {}
+
     try {
       const res = await createUserWithEmailAndPassword(auth, authEmail, authPassword);
       
@@ -1252,6 +1304,15 @@ export default function App() {
       setShowToast({ message: 'Registrazione completata! Benvenuto.', type: 'success' });
     } catch (err: any) {
       console.error(err);
+
+      // Clear caches thoroughly on registration failure
+      localStorage.removeItem('local_premium_user');
+      setUser(null);
+      setSubStatus(null);
+      try {
+        await signOut(auth);
+      } catch (e) {}
+
       if (err.code === 'auth/operation-not-allowed') {
         setAuthError("La registrazione classica con email e password è disabilitata sul server del progetto. Per accedere, utilizza l'accesso rapido tramite Google Authentication.");
       } else if (err.code === 'auth/email-already-in-use') {
@@ -1527,6 +1588,17 @@ export default function App() {
     const lastShot = shots[shots.length - 1];
     setShots(prev => prev.slice(0, -1));
     setSelectedShot(null);
+    
+    if (lastShot.isGoal) {
+      setGoals(prev => Math.max(0, prev - 1));
+    }
+    if (lastShot.ipoCategory) {
+      const cat = lastShot.ipoCategory;
+      setIpoEvents(prev => ({
+        ...prev,
+        [cat]: Math.max(0, (prev[cat as keyof typeof prev] || 0) - 1)
+      }));
+    }
     
     // Remove the corresponding match event
     setMatchEvents(prev => prev.filter(e => e.shotId !== lastShot.id));
@@ -4942,46 +5014,32 @@ export default function App() {
                   )}
                 </div>
 
-                {/* Event Category */}
-                <div className="space-y-3">
-                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.1em]">Seleziona Categoria IPO</label>
-                  
-                  <div className="grid grid-cols-1 gap-2.5">
-                    {[
-                      { id: 'shotsIn', label: 'Tiro in Area', weight: weights.shotsIn, icon: <Target className="w-4 h-4" /> },
-                      { id: 'shotsOut', label: 'Tiro Fuori', weight: weights.shotsOut, icon: <Zap className="w-4 h-4" /> },
-                      { id: 'freeKicks', label: 'Calcio di Punizione', weight: weights.freeKicks, icon: <Activity className="w-4 h-4" /> },
-                    ].map(cat => {
-                      const isSel = popupCategory === cat.id;
-                      return (
-                        <button
-                          key={cat.id}
-                          type="button"
-                          onClick={() => setPopupCategory(cat.id)}
-                          className={cn(
-                            "p-3.5 rounded-2xl flex items-center justify-between text-left transition-all border",
-                            isSel
-                              ? "bg-blue-500/10 border-blue-500 text-blue-500"
-                              : (theme === 'dark'
-                                  ? "bg-white/[0.01] border-white/[0.03] hover:bg-white/[0.03] text-gray-400"
-                                  : "bg-gray-50 border-gray-100 hover:bg-gray-100 text-gray-800")
-                          )}
-                        >
-                          <div className="flex items-center gap-2.5">
-                            <div className={cn(
-                              "w-8 h-8 rounded-xl flex items-center justify-center transition-colors",
-                              isSel ? "bg-blue-500/20 text-blue-500" : "bg-black/10 text-gray-400"
-                            )}>
-                              {cat.icon}
-                            </div>
-                            <div>
-                              <p className="text-[10px] font-black uppercase tracking-tight leading-none">{cat.label}</p>
-                              <span className="text-[7.5px] font-bold text-gray-500 uppercase tracking-widest mt-0.5 block">PESO: {cat.weight}</span>
-                            </div>
-                          </div>
-                        </button>
-                      );
-                    })}
+                {/* Auto-detected Event Category Badge */}
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.1em]">Classificazione IPO (Automatica)</label>
+                  <div className={cn(
+                    "p-4 rounded-2xl flex items-center justify-between border",
+                    theme === 'dark' ? "bg-white/[0.01] border-white/5" : "bg-gray-50 border-gray-100"
+                  )}>
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center">
+                        <MapPin className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <span className="text-[7.5px] font-bold text-gray-500 uppercase tracking-widest block">ANALISI POSIZIONE</span>
+                        <span className={cn("text-[10px] font-black uppercase leading-none block mt-0.5", theme === 'dark' ? "text-white" : "text-gray-900")}>
+                          {popupCategory === 'shotsIn' ? 'Tiro In Area di Rigore' : 'Tiro Da Fuori Area'}
+                        </span>
+                      </div>
+                    </div>
+                    <span className={cn(
+                      "px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider border",
+                      popupCategory === 'shotsIn' 
+                        ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" 
+                        : "bg-amber-500/10 border-amber-500/20 text-amber-400"
+                    )}>
+                      {popupCategory === 'shotsIn' ? 'In Area (IPo)' : 'Da Fuori (IPo)'}
+                    </span>
                   </div>
                 </div>
 
