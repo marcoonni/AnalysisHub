@@ -365,6 +365,7 @@ export default function App() {
   const [popupPlayer, setPopupPlayer] = useState<string>('');
   const [popupCategory, setPopupCategory] = useState<string>('shotsIn');
   const [popupIsGoal, setPopupIsGoal] = useState<boolean>(false);
+  const [popupTeam, setPopupTeam] = useState<'home' | 'away'>('home');
 
   const [isAddingNewPlayer, setIsAddingNewPlayer] = useState(false);
   const [showSquadModal, setShowSquadModal] = useState(false);
@@ -468,17 +469,6 @@ export default function App() {
     setPlayerList(combined);
   }, [shots, squadPlayers]);
 
-  useEffect(() => {
-    if (mapClickCoord) {
-      setPopupPlayer('');
-      // Auto-detect if shot is inside or outside penalty area
-      // Penalty area: X (mX) between 0 and 16.5; Y (mY) between 13.84 and 54.16
-      const isInsideArea = mapClickCoord.mX <= 16.5 && mapClickCoord.mY >= 13.84 && mapClickCoord.mY <= 54.16;
-      setPopupCategory(isInsideArea ? 'shotsIn' : 'shotsOut');
-      setPopupIsGoal(false);
-    }
-  }, [mapClickCoord]);
-
   // Handle Demo Mode overrides (Exactly 20 players "Player 1", ..., "Player 20", and Team name "TEAM")
   useEffect(() => {
     if (isDemoMode) {
@@ -524,6 +514,18 @@ export default function App() {
   const [showXGTuning, setShowXGTuning] = useState(false);
 
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+
+  useEffect(() => {
+    if (mapClickCoord) {
+      setPopupPlayer('');
+      // Auto-detect if shot is inside or outside penalty area
+      // Penalty area: X (mX) between 0 and 16.5; Y (mY) between 13.84 and 54.16
+      const isInsideArea = mapClickCoord.mX <= 16.5 && mapClickCoord.mY >= 13.84 && mapClickCoord.mY <= 54.16;
+      setPopupCategory(isInsideArea ? 'shotsIn' : 'shotsOut');
+      setPopupIsGoal(false);
+      setPopupTeam(ipoActiveTeam);
+    }
+  }, [mapClickCoord, ipoActiveTeam]);
 
   // Check for Service Worker readiness and Install Prompt
   useEffect(() => {
@@ -790,12 +792,19 @@ export default function App() {
   const currentMinute = Math.floor(timerSeconds / 60);
 
   // Stats
-  const displayShots = useMemo(() => shots, [shots]);
-  const displayXG = useMemo(() => displayShots.reduce((sum, s) => sum + s.xg, 0), [displayShots]);
-  const displayGoals = useMemo(() => displayShots.filter(s => s.isGoal).length, [displayShots]);
-  const displayXGPerShot = useMemo(() => displayShots.length > 0 ? displayXG / displayShots.length : 0, [displayShots, displayXG]);
+  const displayShotsHome = useMemo(() => shots.filter(s => s.team !== 'away'), [shots]);
+  const displayShotsAway = useMemo(() => shots.filter(s => s.team === 'away'), [shots]);
 
-  const totalXG = displayXG;
+  const displayXG = useMemo(() => displayShotsHome.reduce((sum, s) => sum + s.xg, 0), [displayShotsHome]);
+  const displayXGAway = useMemo(() => displayShotsAway.reduce((sum, s) => sum + s.xg, 0), [displayShotsAway]);
+
+  const displayGoals = useMemo(() => displayShotsHome.filter(s => s.isGoal).length, [displayShotsHome]);
+  const displayGoalsAway = useMemo(() => displayShotsAway.filter(s => s.isGoal).length, [displayShotsAway]);
+
+  const displayXGPerShot = useMemo(() => displayShotsHome.length > 0 ? displayXG / displayShotsHome.length : 0, [displayShotsHome, displayXG]);
+  const displayXGPerShotAway = useMemo(() => displayShotsAway.length > 0 ? displayXGAway / displayShotsAway.length : 0, [displayShotsAway, displayXGAway]);
+
+  const totalXG = displayXG + displayXGAway;
   const totalGoals = displayGoals;
 
   // Chart Data
@@ -865,15 +874,27 @@ export default function App() {
   const removeShot = (id: string) => {
     const shotToRemove = shots.find(s => s.id === id);
     if (shotToRemove) {
+      const isAway = shotToRemove.team === 'away';
       if (shotToRemove.isGoal) {
-        setGoals(prev => Math.max(0, prev - 1));
+        if (isAway) {
+          setGoalsAway(prev => Math.max(0, prev - 1));
+        } else {
+          setGoals(prev => Math.max(0, prev - 1));
+        }
       }
       if (shotToRemove.ipoCategory) {
         const cat = shotToRemove.ipoCategory;
-        setIpoEvents(prev => ({
-          ...prev,
-          [cat]: Math.max(0, (prev[cat as keyof typeof prev] || 0) - 1)
-        }));
+        if (isAway) {
+          setIpoEventsAway(prev => ({
+            ...prev,
+            [cat]: Math.max(0, (prev[cat as keyof typeof prev] || 0) - 1)
+          }));
+        } else {
+          setIpoEvents(prev => ({
+            ...prev,
+            [cat]: Math.max(0, (prev[cat as keyof typeof prev] || 0) - 1)
+          }));
+        }
       }
     }
 
@@ -1589,15 +1610,27 @@ export default function App() {
     setShots(prev => prev.slice(0, -1));
     setSelectedShot(null);
     
+    const isAway = lastShot.team === 'away';
     if (lastShot.isGoal) {
-      setGoals(prev => Math.max(0, prev - 1));
+      if (isAway) {
+        setGoalsAway(prev => Math.max(0, prev - 1));
+      } else {
+        setGoals(prev => Math.max(0, prev - 1));
+      }
     }
     if (lastShot.ipoCategory) {
       const cat = lastShot.ipoCategory;
-      setIpoEvents(prev => ({
-        ...prev,
-        [cat]: Math.max(0, (prev[cat as keyof typeof prev] || 0) - 1)
-      }));
+      if (isAway) {
+        setIpoEventsAway(prev => ({
+          ...prev,
+          [cat]: Math.max(0, (prev[cat as keyof typeof prev] || 0) - 1)
+        }));
+      } else {
+        setIpoEvents(prev => ({
+          ...prev,
+          [cat]: Math.max(0, (prev[cat as keyof typeof prev] || 0) - 1)
+        }));
+      }
     }
     
     // Remove the corresponding match event
@@ -2626,42 +2659,66 @@ export default function App() {
               {[
                 { 
                   label: 'Expected Goals', 
-                  value: displayXG, 
+                  homeVal: displayXG,
+                  awayVal: displayXGAway,
                   icon: Target, 
                   color: 'blue', 
-                  detail: 'xG', 
                   decimals: 2,
                   glow: 'rgba(59, 130, 246, 0.15)',
                   badgeClass: 'text-blue-500 bg-blue-500/10 border-blue-500/20',
                   aux: (
-                    <div className="mt-3 pt-3 border-t border-gray-500/10 flex items-center justify-between text-[9px] font-mono tracking-wider opacity-60">
-                      <span>BUILDACTIVE RATIO</span>
-                      <span>{(displayXG / Math.max(1, shots.length)).toFixed(2)} AVG</span>
+                    <div className="mt-3 pt-3 border-t border-gray-500/10 flex flex-col gap-1">
+                      <div className="flex items-center justify-between text-[9px] font-mono tracking-wider opacity-60">
+                        <span>CONFRONTO EFFICIENZA</span>
+                        <span>{displayXG >= displayXGAway ? `${teamName} +${(displayXG - displayXGAway).toFixed(2)}` : `${awayTeam || 'Avversario'} +${(displayXGAway - displayXG).toFixed(2)}`}</span>
+                      </div>
+                      <div className="h-1 w-full bg-gray-500/10 rounded-full overflow-hidden mt-1 flex">
+                        <div 
+                          className="h-full bg-blue-500 transition-all duration-1000" 
+                          style={{ width: `${(displayXG / Math.max(0.1, displayXG + displayXGAway)) * 100}%` }} 
+                        />
+                        <div 
+                          className="h-full bg-rose-500 transition-all duration-1000" 
+                          style={{ width: `${(displayXGAway / Math.max(0.1, displayXG + displayXGAway)) * 100}%` }} 
+                        />
+                      </div>
                     </div>
                   )
                 },
                 { 
                   label: 'Gol Reali', 
-                  value: displayGoals, 
+                  homeVal: displayGoals,
+                  awayVal: displayGoalsAway,
                   icon: Trophy, 
                   color: 'yellow', 
-                  detail: 'Gol', 
                   decimals: 0,
                   glow: 'rgba(234, 179, 8, 0.15)',
                   badgeClass: 'text-yellow-500 bg-yellow-500/10 border-yellow-500/20',
                   aux: (
-                    <div className="mt-3 pt-3 border-t border-gray-500/10 flex items-center justify-between text-[9px] font-mono tracking-wider opacity-60">
-                      <span>CONVERSINE RATE</span>
-                      <span>{displayGoals > 0 && displayXG > 0 ? `${Math.round((displayGoals / displayXG) * 100)}%` : '0%'}</span>
+                    <div className="mt-3 pt-3 border-t border-gray-500/10 flex flex-col gap-1">
+                      <div className="flex items-center justify-between text-[9px] font-mono tracking-wider opacity-60">
+                        <span>GAP GOL REALI</span>
+                        <span>{displayGoals >= displayGoalsAway ? `+${displayGoals - displayGoalsAway}` : `-${displayGoalsAway - displayGoals}`}</span>
+                      </div>
+                      <div className="h-1 w-full bg-gray-500/10 rounded-full overflow-hidden mt-1 flex">
+                        <div 
+                          className="h-full bg-yellow-500 transition-all duration-1000" 
+                          style={{ width: `${(displayGoals / Math.max(1, displayGoals + displayGoalsAway)) * 105}%` }} 
+                        />
+                        <div 
+                          className="h-full bg-rose-500 transition-all duration-1000" 
+                          style={{ width: `${(displayGoalsAway / Math.max(1, displayGoals + displayGoalsAway)) * 105}%` }} 
+                        />
+                      </div>
                     </div>
                   )
                 },
                 { 
                   label: 'xG/Tiro', 
-                  value: displayXGPerShot, 
+                  homeVal: displayXGPerShot,
+                  awayVal: displayXGPerShotAway,
                   icon: Activity, 
                   color: 'emerald', 
-                  detail: 'Qualità', 
                   decimals: 2,
                   glow: 'rgba(16, 185, 129, 0.15)',
                   badgeClass: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
@@ -2669,12 +2726,16 @@ export default function App() {
                     <div className="mt-3 pt-3 border-t border-gray-500/10 flex flex-col gap-1">
                       <div className="flex items-center justify-between text-[9px] font-mono tracking-wider opacity-60">
                         <span>QUALITÀ TIRO</span>
-                        <span>{displayXGPerShot > 0.15 ? 'ALTA' : displayXGPerShot > 0.08 ? 'MED' : 'BASSA'}</span>
+                        <span>H: {displayXGPerShot > 0.15 ? 'ALTA' : 'MED'} vs A: {displayXGPerShotAway > 0.15 ? 'ALTA' : 'MED'}</span>
                       </div>
-                      <div className="h-1 w-full bg-gray-500/10 rounded-full overflow-hidden mt-1">
+                      <div className="h-1 w-full bg-gray-500/10 rounded-full overflow-hidden mt-1 flex">
                         <div 
-                          className="h-full bg-emerald-500 rounded-full transition-all duration-1000" 
-                          style={{ width: `${Math.min(100, displayXGPerShot * 400)}%` }} 
+                          className="h-full bg-emerald-500 transition-all duration-1000" 
+                          style={{ width: `${(displayXGPerShot / Math.max(0.1, displayXGPerShot + displayXGPerShotAway)) * 100}%` }} 
+                        />
+                        <div 
+                          className="h-full bg-rose-500 transition-all duration-1000" 
+                          style={{ width: `${(displayXGPerShotAway / Math.max(0.1, displayXGPerShot + displayXGPerShotAway)) * 100}%` }} 
                         />
                       </div>
                     </div>
@@ -2682,10 +2743,10 @@ export default function App() {
                 },
                 { 
                   label: 'Indice IPO', 
-                  value: ipo, 
+                  homeVal: ipo,
+                  awayVal: ipoAway,
                   icon: Zap, 
                   color: 'indigo', 
-                  detail: ipo >= ipoAway ? 'Dominio' : 'In Difesa', 
                   decimals: 1,
                   glow: 'rgba(99, 102, 241, 0.15)',
                   badgeClass: ipo >= ipoAway ? 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20' : 'text-red-500 bg-red-500/10 border-red-500/20',
@@ -2701,7 +2762,7 @@ export default function App() {
                           style={{ width: `${(ipo / Math.max(1, ipo + ipoAway)) * 100}%` }} 
                         />
                         <div 
-                          className="h-full bg-red-500 transition-all duration-1000" 
+                          className="h-full bg-rose-500 transition-all duration-1000" 
                           style={{ width: `${(ipoAway / Math.max(1, ipo + ipoAway)) * 100}%` }} 
                         />
                       </div>
@@ -2728,7 +2789,7 @@ export default function App() {
                 >
                   {/* Subtle technical corner accents */}
                   <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-white/5 group-hover:border-white/20 transition-colors pointer-events-none" />
-                  <div className="absolute top-0 right-0 w-3 h-3 border-t border-r border-white/5 group-hover:border-white/20 transition-colors pointer-events-none" />
+                  <div className="absolute top-0 right-0 h-3 border-t border-r border-white/5 group-hover:border-white/20 transition-colors pointer-events-none w-3" />
                   <div className="absolute bottom-0 left-0 w-3 h-3 border-b border-l border-white/5 group-hover:border-white/20 transition-colors pointer-events-none" />
                   <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-white/5 group-hover:border-white/20 transition-colors pointer-events-none" />
 
@@ -2740,7 +2801,7 @@ export default function App() {
                       stat.color === 'emerald' ? "bg-emerald-500/10 border-emerald-500/25 text-emerald-500" :
                       "bg-indigo-500/10 border-indigo-500/25 text-indigo-500"
                     )}>
-                    <stat.icon className="w-5 h-5" />
+                      <stat.icon className="w-5 h-5" />
                     </div>
                     {stat.label === 'Expected Goals' && (
                       <div className="flex items-center gap-1.5 bg-blue-500/10 border border-blue-500/20 px-2.5 py-1 rounded-full">
@@ -2749,20 +2810,29 @@ export default function App() {
                       </div>
                     )}
                   </div>
-                  <div className="space-y-1 relative z-10">
+                  
+                  <div className="space-y-3 relative z-10">
                     <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">{stat.label}</p>
-                    <div className="flex items-baseline gap-2">
-                      <span className={cn("text-4xl font-black tracking-tight leading-none tabular-nums", theme === 'dark' ? "text-white" : "text-gray-900")}>
-                        <AnimatedCounter value={stat.value} decimals={stat.decimals} />
-                      </span>
-                      <span className={cn(
-                        "text-[9px] font-black uppercase tracking-wider px-2 header-tag border rounded-md font-mono",
-                        stat.badgeClass
-                      )}>
-                        {stat.detail}
-                      </span>
+                    
+                    <div className="grid grid-cols-2 gap-4 border-b border-gray-500/5 pb-3">
+                      {/* Home team */}
+                      <div className="space-y-0.5">
+                        <span className="text-[7.5px] font-bold text-blue-500 uppercase tracking-wider block truncate">{teamName}</span>
+                        <span className={cn("text-2xl font-black tracking-tight leading-none tabular-nums block", theme === 'dark' ? "text-white" : "text-gray-900")}>
+                          <AnimatedCounter value={stat.homeVal} decimals={stat.decimals} />
+                        </span>
+                      </div>
+                      
+                      {/* Away team */}
+                      <div className="space-y-0.5 border-l border-gray-500/10 pl-3">
+                        <span className="text-[7.5px] font-bold text-rose-500 uppercase tracking-wider block truncate">{awayTeam || 'Avversario'}</span>
+                        <span className={cn("text-2xl font-black tracking-tight leading-none tabular-nums block", theme === 'dark' ? "text-white" : "text-gray-900")}>
+                          <AnimatedCounter value={stat.awayVal} decimals={stat.decimals} />
+                        </span>
+                      </div>
                     </div>
                   </div>
+                  
                   {/* Auxiliary technical details */}
                   {stat.aux}
 
@@ -2969,35 +3039,41 @@ export default function App() {
                     )}
 
                     {/* Shots */}
-                    {shots.map((shot) => (
-                      <motion.div
-                        key={shot.id}
-                        initial={{ scale: 0, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        whileHover={{ scale: 1.2 }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedShot(shot);
-                        }}
-                        className="absolute w-8 h-8 -ml-4 -mt-4 flex items-center justify-center cursor-pointer z-25"
-                        style={{ 
-                          top: `${(shot.x / DEFAULT_PITCH.height) * 100}%`, 
-                          left: `${(shot.y / DEFAULT_PITCH.width) * 100}%` 
-                        }}
-                      >
-                        <div className={cn(
-                          "w-4 h-4 rounded-full flex items-center justify-center shadow-xl transition-all duration-300",
-                          shot.isGoal ? "bg-yellow-400 ring-4 ring-yellow-400/20" : "bg-white/90 ring-2 ring-white/10",
-                          selectedShot?.id === shot.id ? "ring-blue-500 ring-2 ring-offset-2 ring-offset-[#070708] z-50 scale-125" : ""
-                        )}>
-                          {shot.isGoal ? (
-                            <Trophy className="w-1.5 h-1.5 text-black" />
-                          ) : (
-                            <div className="w-1.5 h-1.5 bg-black/70 rounded-full" />
-                          )}
-                        </div>
-                      </motion.div>
-                    ))}
+                    {shots.map((shot) => {
+                      const isAway = shot.team === 'away';
+                      const isSelected = selectedShot?.id === shot.id;
+                      return (
+                        <motion.div
+                          key={shot.id}
+                          initial={{ scale: 0, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          whileHover={{ scale: 1.2 }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedShot(shot);
+                          }}
+                          className="absolute w-8 h-8 -ml-4 -mt-4 flex items-center justify-center cursor-pointer z-25"
+                          style={{ 
+                            top: `${(shot.x / DEFAULT_PITCH.height) * 100}%`, 
+                            left: `${(shot.y / DEFAULT_PITCH.width) * 100}%` 
+                          }}
+                        >
+                          <div className={cn(
+                            "w-4 h-4 rounded-full flex items-center justify-center shadow-xl transition-all duration-300",
+                            isAway 
+                              ? (shot.isGoal ? "bg-rose-500 ring-4 ring-rose-500/30" : "bg-rose-500/20 ring-2 ring-rose-500/40 border border-rose-500/60")
+                              : (shot.isGoal ? "bg-yellow-400 ring-4 ring-yellow-400/20" : "bg-white/90 ring-2 ring-white/10"),
+                            isSelected ? "ring-blue-500 ring-2 ring-offset-2 ring-offset-[#070708] z-50 scale-125" : ""
+                          )}>
+                            {shot.isGoal ? (
+                              <Trophy className={cn("w-1.5 h-1.5", isAway ? "text-white" : "text-black")} />
+                            ) : (
+                              <div className={cn("w-1.5 h-1.5 rounded-full", isAway ? "bg-rose-500" : "bg-black/70")} />
+                            )}
+                          </div>
+                        </motion.div>
+                      );
+                    })}
 
                     {/* Interaction Ripples */}
                     {ripples.map(ripple => (
@@ -3044,7 +3120,17 @@ export default function App() {
                             </div>
                             <div className="flex flex-col min-w-0">
                               <span className="text-[11px] font-black uppercase leading-none truncate">{selectedShot.playerName || "Giocatore"}</span>
-                              <span className="text-[7px] text-gray-500 font-bold uppercase tracking-wider mt-1">Minuto {selectedShot.minute || 0}'</span>
+                              <div className="flex items-center gap-1.5 mt-1">
+                                <span className={cn(
+                                  "text-[7px] px-1 py-0.5 rounded font-black uppercase tracking-wider leading-none shrink-0",
+                                  selectedShot.team === 'away' 
+                                    ? "bg-rose-500/10 text-rose-500 border border-rose-500/20" 
+                                    : "bg-blue-500/10 text-blue-500 border border-blue-500/20"
+                                )}>
+                                  {selectedShot.team === 'away' ? (awayTeam || 'Avversario') : teamName}
+                                </span>
+                                <span className="text-[7px] text-gray-500 font-bold uppercase tracking-wider">Minuto {selectedShot.minute || 0}'</span>
+                              </div>
                             </div>
                           </div>
 
@@ -3103,7 +3189,17 @@ export default function App() {
                             </div>
                             <div className="flex flex-col min-w-0">
                               <span className="text-xs font-black uppercase leading-tight truncate">{selectedShot.playerName || "Giocatore"}</span>
-                              <span className="text-[9px] text-gray-500 font-bold uppercase tracking-wider mt-0.5">Minuto {selectedShot.minute || 0}'</span>
+                              <div className="flex items-center gap-1.5 mt-0.5">
+                                <span className={cn(
+                                  "text-[7px] px-1 py-0.5 rounded font-black uppercase tracking-wider leading-none shrink-0",
+                                  selectedShot.team === 'away' 
+                                    ? "bg-rose-500/10 text-rose-500 border border-rose-500/20" 
+                                    : "bg-blue-500/10 text-blue-500 border border-blue-500/20"
+                                )}>
+                                  {selectedShot.team === 'away' ? (awayTeam || 'Avversario') : teamName}
+                                </span>
+                                <span className="text-[9px] text-gray-500 font-bold uppercase tracking-wider">Minuto {selectedShot.minute || 0}'</span>
+                              </div>
                             </div>
                           </div>
 
@@ -4947,72 +5043,130 @@ export default function App() {
               {/* Form Content */}
               <div className="space-y-6">
                 
-                {/* Giocatore */}
+                {/* Selezione Squadra */}
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.1em]">Seleziona Giocatore</label>
-                    <span className="text-[9px] text-gray-400 uppercase tracking-widest">{teamName}</span>
-                  </div>
-                  
-                  {/* Combobox Dropdown */}
-                  <div className="relative">
-                    <select 
-                      value={popupPlayer}
-                      onChange={(e) => {
-                         const val = e.target.value;
-                         if (val === 'ADD_NEW') {
-                           setIsAddingNewPlayer(true);
-                         } else {
-                           setPopupPlayer(val);
-                         }
+                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.1em]">Seleziona Squadra</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPopupTeam('home');
+                        setPopupPlayer('');
                       }}
                       className={cn(
-                        "w-full border rounded-2xl py-3.5 px-5 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all appearance-none",
-                        theme === 'dark' ? "bg-[#121214] border-white/5 text-white" : "bg-gray-50 border-gray-200 text-gray-900"
+                        "py-3.5 px-4 rounded-2xl text-xs font-black uppercase tracking-wider transition-all border flex items-center justify-center gap-2.5",
+                        popupTeam === 'home'
+                          ? "bg-blue-500 text-white border-blue-500 shadow-md shadow-blue-500/10"
+                          : (theme === 'dark' ? "bg-[#121214] border-white/5 text-gray-400 hover:text-white" : "bg-gray-50 border-gray-200 text-gray-700")
                       )}
                     >
-                      <option value="">Seleziona Giocatore...</option>
-                      {playerList.map(pName => {
-                        const pObj = squadPlayers.find(sp => sp.name.toUpperCase() === pName.toUpperCase());
-                        const displayLabel = pObj 
-                          ? `${pObj.name}${pObj.role ? ` - ${pObj.role}` : ''}`
-                          : pName;
-                        return <option key={pName} value={pName}>{displayLabel}</option>;
-                      })}
-                      <option value="ADD_NEW">+ Aggiungi Nuovo Giocatore...</option>
-                    </select>
-                    <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                      <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: teamColor || '#3b82f6' }} />
+                      <span>{teamName}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPopupTeam('away');
+                        setPopupPlayer('Avversario');
+                      }}
+                      className={cn(
+                        "py-3.5 px-4 rounded-2xl text-xs font-black uppercase tracking-wider transition-all border flex items-center justify-center gap-2.5",
+                        popupTeam === 'away'
+                          ? "bg-rose-500 text-white border-rose-500 shadow-md shadow-rose-500/10"
+                          : (theme === 'dark' ? "bg-[#121214] border-white/5 text-gray-400 hover:text-white" : "bg-gray-50 border-gray-200 text-gray-700")
+                      )}
+                    >
+                      <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: awayColor || '#e11d48' }} />
+                      <span>{awayTeam || 'Avversario'}</span>
+                    </button>
                   </div>
-
-                  {/* Quick Select Quick Tap Pills */}
-                  {playerList.length > 0 && (
-                    <div className="space-y-2">
-                      <p className="text-[8px] font-bold text-gray-500 uppercase tracking-widest">Scelta Rapida:</p>
-                      <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto pr-1 no-scrollbar">
-                        {playerList.slice(0, 10).map(pName => {
-                          const isSel = popupPlayer === pName;
-                          return (
-                            <button
-                              key={pName}
-                              type="button"
-                              onClick={() => setPopupPlayer(pName)}
-                              className={cn(
-                                "px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border",
-                                isSel
-                                  ? "bg-blue-500 text-white border-blue-500"
-                                  : (theme === 'dark' 
-                                      ? "bg-white/5 hover:bg-white/10 text-gray-400 border-white/5" 
-                                      : "bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-200")
-                              )}
-                            >
-                              {pName}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
                 </div>
+
+                {/* Giocatore */}
+                {popupTeam === 'home' ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.1em]">Seleziona Giocatore</label>
+                      <span className="text-[9px] text-gray-400 uppercase tracking-widest">{teamName}</span>
+                    </div>
+                    
+                    {/* Combobox Dropdown */}
+                    <div className="relative">
+                      <select 
+                        value={popupPlayer}
+                        onChange={(e) => {
+                           const val = e.target.value;
+                           if (val === 'ADD_NEW') {
+                             setIsAddingNewPlayer(true);
+                           } else {
+                             setPopupPlayer(val);
+                           }
+                        }}
+                        className={cn(
+                          "w-full border rounded-2xl py-3.5 px-5 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all appearance-none",
+                          theme === 'dark' ? "bg-[#121214] border-white/5 text-white" : "bg-gray-50 border-gray-200 text-gray-900"
+                        )}
+                      >
+                        <option value="">Seleziona Giocatore...</option>
+                        {playerList.map(pName => {
+                          const pObj = squadPlayers.find(sp => sp.name.toUpperCase() === pName.toUpperCase());
+                          const displayLabel = pObj 
+                            ? `${pObj.name}${pObj.role ? ` - ${pObj.role}` : ''}`
+                            : pName;
+                          return <option key={pName} value={pName}>{displayLabel}</option>;
+                        })}
+                        <option value="ADD_NEW">+ Aggiungi Nuovo Giocatore...</option>
+                      </select>
+                      <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                    </div>
+
+                    {/* Quick Select Quick Tap Pills */}
+                    {playerList.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-[8px] font-bold text-gray-500 uppercase tracking-widest">Scelta Rapida:</p>
+                        <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto pr-1 no-scrollbar">
+                          {playerList.slice(0, 10).map(pName => {
+                            const isSel = popupPlayer === pName;
+                            return (
+                              <button
+                                key={pName}
+                                type="button"
+                                onClick={() => setPopupPlayer(pName)}
+                                className={cn(
+                                  "px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border",
+                                  isSel
+                                    ? "bg-blue-500 text-white border-blue-500"
+                                    : (theme === 'dark' 
+                                        ? "bg-white/5 hover:bg-white/10 text-gray-400 border-white/5" 
+                                        : "bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-200")
+                                )}
+                              >
+                                {pName}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.1em]">Nome Giocatore Avversario (Opzionale)</label>
+                      <span className="text-[9px] text-gray-400 uppercase tracking-widest">{awayTeam || 'Avversario'}</span>
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Es: Numero 9, Centrocampista..."
+                      value={popupPlayer === 'Avversario' ? '' : popupPlayer}
+                      onChange={(e) => setPopupPlayer(e.target.value || 'Avversario')}
+                      className={cn(
+                        "w-full border rounded-2xl py-3.5 px-5 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-rose-500/30 transition-all",
+                        theme === 'dark' ? "bg-[#121214] border-white/5 text-white" : "bg-gray-50 border-gray-200 text-gray-900"
+                      )}
+                    />
+                  </div>
+                )}
 
                 {/* Auto-detected Event Category Badge */}
                 <div className="space-y-2">
@@ -5086,17 +5240,29 @@ export default function App() {
                     type="button"
                     onClick={() => {
                       const finalPlayer = popupPlayer || 'Nessuno';
+                      const isAway = popupTeam === 'away';
 
-                      // 1. Add event to chosen IPO category of HOME team
-                      setIpoEvents(prev => ({
-                        ...prev,
-                        [popupCategory]: prev[popupCategory] + 1
-                      }));
+                      // 1. Add event to chosen IPO category of selected team
+                      if (isAway) {
+                        setIpoEventsAway(prev => ({
+                          ...prev,
+                          [popupCategory]: prev[popupCategory] + 1
+                        }));
+                      } else {
+                        setIpoEvents(prev => ({
+                          ...prev,
+                          [popupCategory]: prev[popupCategory] + 1
+                        }));
+                      }
 
                       // 2. Add real Goals count if it is Goal
                       const finalIsGoal = popupIsGoal && (popupCategory === 'shotsIn' || popupCategory === 'shotsOut' || popupCategory === 'penalties' || popupCategory === 'freeKicks');
                       if (finalIsGoal) {
-                        setGoals(prev => prev + 1);
+                        if (isAway) {
+                          setGoalsAway(prev => prev + 1);
+                        } else {
+                          setGoals(prev => prev + 1);
+                        }
                       }
 
                       // 3. Register Shot at those coordinates
@@ -5113,6 +5279,7 @@ export default function App() {
                         minute: currentMinute,
                         playerName: finalPlayer,
                         ipoCategory: popupCategory,
+                        team: popupTeam,
                       };
 
                       setShots(prev => [...prev, newShot]);
@@ -5128,12 +5295,13 @@ export default function App() {
                         crosses: 'Cross/Traversone'
                       };
                       const categoryLabel = catLabels[popupCategory] || popupCategory;
+                      const activeTeamName = isAway ? (awayTeam || 'Avversario') : teamName;
 
                       addMatchEvent({
                         type: finalIsGoal ? 'goal' : 'ipo_event',
                         description: finalIsGoal 
-                          ? `⚽ GOL Reale! ${finalPlayer} segna da ${categoryLabel} (${teamName})` 
-                          : `📈 ${categoryLabel} - ${finalPlayer} (${teamName})`,
+                          ? `⚽ GOL Reale! ${finalPlayer} segna da ${categoryLabel} (${activeTeamName})` 
+                          : `📈 ${categoryLabel} - ${finalPlayer} (${activeTeamName})`,
                         value: xgVal,
                         shotId: newShot.id,
                         minute: newShot.minute
@@ -5149,8 +5317,8 @@ export default function App() {
                       // Toast message
                       setShowToast({ 
                         message: finalIsGoal 
-                          ? `GOL e ${categoryLabel} registrati per ${finalPlayer}!` 
-                          : `${categoryLabel} aggiunto per ${finalPlayer}!`, 
+                          ? `GOL e ${categoryLabel} registrati per ${finalPlayer}! (${activeTeamName})` 
+                          : `${categoryLabel} aggiunto per ${finalPlayer}! (${activeTeamName})`, 
                         type: 'success' 
                       });
 

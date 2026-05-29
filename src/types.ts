@@ -22,6 +22,7 @@ export interface Shot {
   playerName?: string;
   matchName?: string;
   ipoCategory?: string;
+  team?: 'home' | 'away';
 }
 
 export interface PitchDimensions {
