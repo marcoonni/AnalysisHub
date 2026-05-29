@@ -57,14 +57,14 @@ service cloud.firestore {
     function isValidShot(data) {
       let allowedFields = [
         'id', 'matchId', 'x', 'y', 'xg', 'isGoal', 'playerName', 
-        'bodyPart', 'assistType', 'minute', 'timestamp'
+        'bodyPart', 'assistType', 'minute', 'timestamp', 'team', 'ipoCategory', 'matchName'
       ];
       return hasRequiredFields(data, ['matchId', 'x', 'y', 'xg', 'isGoal']) &&
              hasOnlyAllowedFields(data, allowedFields) &&
              isValidNumber(data.x, -10, 110) &&
              isValidNumber(data.y, -10, 110) &&
              isValidNumber(data.xg, 0, 1) &&
-             (!('playerName' in data) || isValidString(data.playerName, 1, 100)) &&
+             (!('playerName' in data) || isValidString(data.playerName, 0, 100)) &&
              (!('bodyPart' in data) || isValidString(data.bodyPart, 1, 20)) &&
              (!('assistType' in data) || isValidString(data.assistType, 1, 20));
     }

@@ -5353,11 +5353,11 @@ export default function App() {
       <AnimatePresence>
         {showToast && (
             <motion.div 
-              initial={{ opacity: 0, y: 50, x: '-50%', scale: 0.9 }}
-              animate={{ opacity: 1, y: 0, x: '-50%', scale: 1 }}
-              exit={{ opacity: 0, y: 50, x: '-50%', scale: 0.9 }}
+              initial={{ opacity: 0, y: 50, x: 0, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, x: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 50, x: 0, scale: 0.9 }}
               className={cn(
-                "fixed bottom-12 left-1/2 z-[300] px-8 py-4 rounded-[1.5rem] flex items-center gap-4 border backdrop-blur-2xl transition-all",
+                "fixed bottom-12 right-6 md:right-12 z-[300] px-8 py-4 rounded-[1.5rem] flex items-center gap-4 border backdrop-blur-2xl transition-all",
                 theme === 'dark' 
                   ? "bg-[#0d0d0e]/95 border-white/[0.05] shadow-[0_20px_50px_rgba(0,0,0,0.5)]" 
                   : "bg-white/95 border-gray-100 shadow-[0_10px_40px_rgba(0,0,0,0.1)]"
