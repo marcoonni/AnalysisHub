@@ -12,6 +12,30 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <script>
+      // Self-healing: Unregister any service workers and clear caches to prevent stale cache-lock freezes
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+          for (let registration of registrations) {
+            registration.unregister().then(function(unregistered) {
+              if (unregistered) {
+                console.log('Stale service worker cleared.');
+                if ('caches' in window) {
+                  caches.keys().then(function(keys) {
+                    keys.forEach(function(key) {
+                      caches.delete(key);
+                    });
+                  });
+                }
+                // Reload once to fetch fresh assets directly from the network
+                window.location.reload();
+              }
+            });
+          }
+        }).catch(function(err) {
+          console.warn('Failed to clean service worker:', err);
+        });
+      }
+
       // Prevent libraries from trying to overwrite window.fetch in environments where it's read-only
       (function() {
         const originalFetch = window.fetch;
@@ -32,11 +56,34 @@
       window.onerror = function(msg, url, lineNo, columnNo, error) {
         const statusEl = document.getElementById('boot-status');
         if (statusEl) {
-          statusEl.textContent = 'Errore: ' + msg;
+          statusEl.textContent = 'Errore: ' + msg + (lineNo ? ' (Linea ' + lineNo + ')' : '');
           statusEl.style.color = '#ef4444';
         }
         return false;
       };
+
+      // Catch module and asset loading failures
+      window.addEventListener('error', function(event) {
+        const statusEl = document.getElementById('boot-status');
+        if (statusEl) {
+          const target = event.target || event.srcElement;
+          if (target && (target.tagName === 'SCRIPT' || target.tagName === 'LINK')) {
+            statusEl.textContent = 'Errore di caricamento risorsa: ' + (target.src || target.href || 'unknown script/link');
+          } else {
+            statusEl.textContent = 'Errore: ' + (event.message || 'Errore di sintassi o runtime');
+          }
+          statusEl.style.color = '#ef4444';
+        }
+      }, true);
+
+      // Catch unhandled promise rejections (Firestore, Auth, etc)
+      window.addEventListener('unhandledrejection', function(event) {
+        const statusEl = document.getElementById('boot-status');
+        if (statusEl) {
+          statusEl.textContent = 'Errore Promessa: ' + (event.reason?.message || event.reason || 'Connessione/Auth fallita');
+          statusEl.style.color = '#ef4444';
+        }
+      });
     </script>
   </head>
   <body>
