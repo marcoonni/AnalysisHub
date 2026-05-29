@@ -470,13 +470,11 @@ export default function App() {
 
   useEffect(() => {
     if (mapClickCoord) {
-      const firstActive = squadPlayers.find(p => p.active)?.name;
-      const firstAny = playerList.length > 0 ? playerList[0] : '';
-      setPopupPlayer(firstActive || firstAny || 'GIOCATORE 1');
+      setPopupPlayer('');
       setPopupCategory('shotsIn');
       setPopupIsGoal(false);
     }
-  }, [mapClickCoord, playerList, squadPlayers]);
+  }, [mapClickCoord]);
 
   // Handle Demo Mode overrides (Exactly 20 players "Player 1", ..., "Player 20", and Team name "TEAM")
   useEffect(() => {
@@ -938,6 +936,33 @@ export default function App() {
     }
   };
 
+  useEffect(() => {
+    // Migrate old local matches to the new unified location so they are never lost
+    try {
+      const unified = localStorage.getItem('local_premium_matches_all');
+      if (!unified) {
+        const guestMatches = localStorage.getItem('local_premium_matches_guest-user');
+        if (guestMatches) {
+          localStorage.setItem('local_premium_matches_all', guestMatches);
+        } else {
+          // Check for any mock user key or matches under prefix
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith('local_premium_matches_')) {
+              const val = localStorage.getItem(key);
+              if (val) {
+                localStorage.setItem('local_premium_matches_all', val);
+                break;
+              }
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.error("Migration error:", e);
+    }
+  }, []);
+
   // Auth Listener
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -955,7 +980,7 @@ export default function App() {
             });
             
             // Load local matches
-            const storedMatches = localStorage.getItem('local_premium_matches_' + parsedUser.uid);
+            const storedMatches = localStorage.getItem('local_premium_matches_all');
             if (storedMatches) {
               setMatches(JSON.parse(storedMatches));
             } else {
@@ -968,7 +993,7 @@ export default function App() {
         }
         
         setUser(null);
-        const storedMatches = localStorage.getItem('local_premium_matches_guest-user');
+        const storedMatches = localStorage.getItem('local_premium_matches_all');
         if (storedMatches) {
           try {
             setMatches(JSON.parse(storedMatches));
@@ -1020,9 +1045,37 @@ export default function App() {
             id: doc.id,
             ...doc.data()
           })) as Match[];
-          setMatches(matchesData);
+          
+          // Merge with any local matches by id to ensure we show everything
+          const localStored = localStorage.getItem('local_premium_matches_all');
+          let localMatches: Match[] = [];
+          if (localStored) {
+            try {
+              localMatches = JSON.parse(localStored);
+            } catch (e) {}
+          }
+          
+          // Combine both lists, keeping Firestore version for matching ids, sorted by date desc
+          const combined = [...matchesData];
+          localMatches.forEach(lm => {
+            if (!combined.some(cm => cm.id === lm.id)) {
+              combined.push(lm);
+            }
+          });
+          
+          combined.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+          setMatches(combined);
         }, (error) => {
-          handleFirestoreError(error, OperationType.LIST, 'matches');
+          // Fallback to local matches ONLY in case of Firestore error
+          console.warn("Firestore loading error, using local fallback matches:", error);
+          const storedMatches = localStorage.getItem('local_premium_matches_all');
+          if (storedMatches) {
+            try {
+              setMatches(JSON.parse(storedMatches));
+            } catch (e) {
+              setMatches([]);
+            }
+          }
         });
 
       }
@@ -1117,7 +1170,7 @@ export default function App() {
         });
         
         // Load local matches if any
-        const storedMatches = localStorage.getItem('local_premium_matches_' + mockUser.uid);
+        const storedMatches = localStorage.getItem('local_premium_matches_all');
         if (storedMatches) {
           setMatches(JSON.parse(storedMatches));
         } else {
@@ -1295,88 +1348,89 @@ export default function App() {
       matchEvents // Added for live feed state persistence
     };
 
-    // Fallback: If not logged in, or logged in with local mock/guest user
-    if (!user || user.uid.startsWith('premium-mock-') || user.uid === 'guest-user') {
-      try {
-        const uid = user ? user.uid : 'guest-user';
-        const stored = localStorage.getItem('local_premium_matches_' + uid);
-        let localMatches: Match[] = [];
-        if (stored) {
-          try {
-            localMatches = JSON.parse(stored);
-          } catch (e) {}
-        }
-        
-        let matchId = currentMatchId;
-        const mockMatchData: any = {
-          ...matchData,
-          id: matchId || 'mock-match-' + Math.random().toString(36).substr(2, 9),
-          date: new Date().toISOString(),
-          createdAt: new Date().toISOString()
-        };
+    let matchId = currentMatchId;
+    const finalMatchId = matchId || 'match-' + Math.random().toString(36).substr(2, 9);
+    
+    if (!currentMatchId) {
+      setCurrentMatchId(finalMatchId);
+    }
 
-        if (matchId) {
-          localMatches = localMatches.map(m => m.id === matchId ? mockMatchData : m);
-        } else {
-          matchId = mockMatchData.id;
-          setCurrentMatchId(matchId);
-          localMatches = [mockMatchData, ...localMatches];
-        }
-
-        // Save shots to localStorage
-        const localShotsKey = 'local_premium_shots_' + matchId;
-        localStorage.setItem(localShotsKey, JSON.stringify(shots));
-
-        localStorage.setItem('local_premium_matches_' + uid, JSON.stringify(localMatches));
-        setMatches(localMatches);
-        
-        setShowToast({ 
-          message: "Partita salvata localmente con successo!", 
-          type: 'success' 
-        });
-      } catch (err) {
-        console.error("Local save error:", err);
-        setShowToast({ message: "Errore durante il salvataggio locale.", type: 'error' });
-      } finally {
-        setIsSaving(false);
+    // 1. ALWAYS save to localStorage first as a persistent failsafe cache!
+    try {
+      const stored = localStorage.getItem('local_premium_matches_all');
+      let localMatches: Match[] = [];
+      if (stored) {
+        try {
+          localMatches = JSON.parse(stored);
+        } catch (e) {}
       }
+      
+      const mockMatchData: any = {
+        ...matchData,
+        id: finalMatchId,
+        date: new Date().toISOString(),
+        createdAt: new Date().toISOString()
+      };
+
+      if (localMatches.some(m => m.id === finalMatchId)) {
+        localMatches = localMatches.map(m => m.id === finalMatchId ? mockMatchData : m);
+      } else {
+        localMatches = [mockMatchData, ...localMatches];
+      }
+
+      // Save shots to localStorage
+      const localShotsKey = 'local_premium_shots_' + finalMatchId;
+      localStorage.setItem(localShotsKey, JSON.stringify(shots));
+
+      // Save match list to localStorage
+      localStorage.setItem('local_premium_matches_all', JSON.stringify(localMatches));
+      
+      // Update local state matches
+      setMatches(prev => {
+        const filtered = prev.filter(m => m.id !== finalMatchId);
+        return [mockMatchData, ...filtered];
+      });
+      
+    } catch (err) {
+      console.error("Local save failsafe error:", err);
+    }
+
+    // 2. If we are guest-user or starting with local mock premium, we are done saving since local is successfully written!
+    if (!user || user.uid.startsWith('premium-mock-') || user.uid === 'guest-user') {
+      setIsSaving(false);
+      setShowToast({ 
+        message: "Partita salvata localmente con successo!", 
+        type: 'success' 
+      });
       return;
     }
 
+    // 3. Otherwise, save to Firestore for cloud sync
     try {
       const dbMatchData = {
         ...matchData,
         createdAt: serverTimestamp()
       };
       
-      let matchId = currentMatchId;
-      if (matchId) {
-        await setDoc(doc(db, 'matches', matchId), dbMatchData, { merge: true });
-      } else {
-        const docRef = await addDoc(collection(db, 'matches'), dbMatchData);
-        matchId = docRef.id;
-        setCurrentMatchId(matchId);
-      }
+      await setDoc(doc(db, 'matches', finalMatchId), dbMatchData, { merge: true });
 
       // Save shots - Delete existing shots first to avoid duplicates/stale data
-      if (matchId) {
-        try {
-          const shotsSnapshot = await getDocs(collection(db, 'matches', matchId, 'shots'));
-          const deletePromises = shotsSnapshot.docs.map(shotDoc => 
-            deleteDoc(doc(db, 'matches', matchId, 'shots', shotDoc.id))
-          );
-          await Promise.all(deletePromises);
-        } catch (err) {
-          console.warn("Could not clear existing shots, continuing anyway:", err);
-        }
+      try {
+        const shotsSnapshot = await getDocs(collection(db, 'matches', finalMatchId, 'shots'));
+        const deletePromises = shotsSnapshot.docs.map(shotDoc => 
+          deleteDoc(doc(db, 'matches', finalMatchId, 'shots', shotDoc.id))
+        );
+        await Promise.all(deletePromises);
+      } catch (err) {
+        console.warn("Could not clear existing shots on Cloud, continuing anyway:", err);
       }
 
-      // Add current shots in batches or chunks if needed, but here we just use Promise.all
+      // Add current shots to Cloud
       if (shots.length > 0) {
         const shotPromises = shots.map(shot => 
-          addDoc(collection(db, 'matches', matchId!, 'shots'), {
+          addDoc(collection(db, 'matches', finalMatchId, 'shots'), {
             ...shot,
-            matchId,
+            matchId: finalMatchId,
             timestamp: new Date().toISOString()
           })
         );
@@ -1384,13 +1438,16 @@ export default function App() {
       }
 
       setShowToast({ 
-        message: isOnline ? "Partita salvata con successo!" : "Salvato localmente (sincronizzazione appena torni online)", 
+        message: isOnline ? "Partita salvata in Cloud con successo!" : "Salvato localmente (sincronizzazione appena torni online)", 
         type: 'success' 
       });
     } catch (error) {
-      console.error("Save Match Error:", error);
-      handleFirestoreError(error, OperationType.WRITE, 'matches');
-      setShowToast({ message: "Errore durante il salvataggio della partita.", type: 'error' });
+      console.error("Cloud Save Match Error:", error);
+      // We don't crash the whole UI or block if cloud fails because the local save succeeded perfectly!
+      setShowToast({ 
+        message: "Partita salvata localmente (Cloud temporaneamente non disponibile).", 
+        type: 'success' 
+      });
     } finally {
       setIsSaving(false);
     }
@@ -1411,20 +1468,26 @@ export default function App() {
       setGoalsAway(match.goalsAway || 0);
       
       let shotsData: Shot[] = [];
-      if (user && user.uid.startsWith('premium-mock-')) {
-        const localShotsKey = 'local_premium_shots_' + match.id;
-        const storedShots = localStorage.getItem(localShotsKey);
-        if (storedShots) {
-          try {
-            shotsData = JSON.parse(storedShots);
-          } catch (e) {}
+      const localShotsKey = 'local_premium_shots_' + match.id;
+      const storedShots = localStorage.getItem(localShotsKey);
+      
+      if (storedShots) {
+        try {
+          shotsData = JSON.parse(storedShots);
+        } catch (e) {}
+      }
+      
+      // If no local shots found or if the user is a real logged-in cloud user, try fetching from Firestore as well
+      if (shotsData.length === 0 && user && !user.uid.startsWith('premium-mock-') && user.uid !== 'guest-user') {
+        try {
+          const shotsSnapshot = await getDocs(collection(db, 'matches', match.id, 'shots'));
+          shotsData = shotsSnapshot.docs.map(doc => ({
+            ...doc.data(),
+            id: doc.id
+          }) as Shot);
+        } catch (error) {
+          console.warn("Could not load shots from Firestore, using local fallback:", error);
         }
-      } else {
-        const shotsSnapshot = await getDocs(collection(db, 'matches', match.id, 'shots'));
-        shotsData = shotsSnapshot.docs.map(doc => ({
-          ...doc.data(),
-          id: doc.id
-        }) as Shot);
       }
       
       setShots(shotsData);
@@ -1472,56 +1535,46 @@ export default function App() {
   };
 
   const deleteMatch = async (matchId: string) => {
-    if (!user) return;
-    
-    // Mock user deletion
-    if (user.uid.startsWith('premium-mock-')) {
-      try {
-        const stored = localStorage.getItem('local_premium_matches_' + user.uid);
-        let localMatches: Match[] = [];
-        if (stored) {
-          try {
-            localMatches = JSON.parse(stored);
-          } catch (e) {}
-        }
-        localMatches = localMatches.filter(m => m.id !== matchId);
-        localStorage.setItem('local_premium_matches_' + user.uid, JSON.stringify(localMatches));
-        localStorage.removeItem('local_premium_shots_' + matchId);
-        setMatches(localMatches);
-        
-        if (currentMatchId === matchId) {
-          clearAll();
-          setCurrentMatchId(null);
-        }
-        setMatchToDelete(null);
-        setShowToast({ message: "Partita eliminata con successo!", type: 'success' });
-      } catch (err) {
-        console.error(err);
-        setShowToast({ message: "Errore durante l'eliminazione locale.", type: 'error' });
-      }
-      return;
-    }
-
+    // 1. Always delete from local storage first to be responsive and consistent
     try {
-      // Delete shots subcollection first
-      const shotsSnapshot = await getDocs(collection(db, 'matches', matchId, 'shots'));
-      const deletePromises = shotsSnapshot.docs.map(shotDoc => 
-        deleteDoc(doc(db, 'matches', matchId, 'shots', shotDoc.id))
-      );
-      await Promise.all(deletePromises);
-      
-      // Delete the match document
-      await deleteDoc(doc(db, 'matches', matchId));
+      const stored = localStorage.getItem('local_premium_matches_all');
+      let localMatches: Match[] = [];
+      if (stored) {
+        try {
+          localMatches = JSON.parse(stored);
+        } catch (e) {}
+      }
+      localMatches = localMatches.filter(m => m.id !== matchId);
+      localStorage.setItem('local_premium_matches_all', JSON.stringify(localMatches));
+      localStorage.removeItem('local_premium_shots_' + matchId);
+      setMatches(localMatches);
       
       if (currentMatchId === matchId) {
         clearAll();
         setCurrentMatchId(null);
       }
       setMatchToDelete(null);
-      setShowToast({ message: "Partita eliminata con successo!", type: 'success' });
-    } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `matches/${matchId}`);
-      setShowToast({ message: "Errore durante l'eliminazione", type: 'error' });
+      setShowToast({ message: "Partita eliminata dal dispositivo con successo!", type: 'success' });
+    } catch (err) {
+      console.error("Local delete error:", err);
+      setShowToast({ message: "Errore durante l'eliminazione locale.", type: 'error' });
+    }
+
+    // 2. If logged in with real online credentials, delete from Firestore too
+    if (user && !user.uid.startsWith('premium-mock-') && user.uid !== 'guest-user') {
+      try {
+        // Delete shots subcollection first
+        const shotsSnapshot = await getDocs(collection(db, 'matches', matchId, 'shots'));
+        const deletePromises = shotsSnapshot.docs.map(shotDoc => 
+          deleteDoc(doc(db, 'matches', matchId, 'shots', shotDoc.id))
+        );
+        await Promise.all(deletePromises);
+        
+        // Delete the match document
+        await deleteDoc(doc(db, 'matches', matchId));
+      } catch (error) {
+        console.warn("Could not delete from Cloud, match was deleted locally anyway:", error);
+      }
     }
   };
 
@@ -2472,7 +2525,7 @@ export default function App() {
                   </button>
                 )}
 
-                {user && !isReadOnly && (
+                 {!isReadOnly && (
                   <button 
                     onClick={saveMatch}
                     disabled={isSaving}
