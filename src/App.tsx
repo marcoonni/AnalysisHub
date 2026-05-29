@@ -2524,30 +2524,6 @@ export default function App() {
               <span className="text-[9px] font-black uppercase tracking-wider">Partite</span>
             </button>
 
-            {/* Desktop Only theme and login togglers */}
-            <div className="hidden lg:flex items-center gap-2">
-              <button 
-                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                className={cn(
-                  "p-2.5 rounded-xl border transition-all outline-none",
-                  theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-500 hover:text-white" : "bg-gray-50 border-gray-100 text-gray-400 hover:text-gray-900"
-                )}
-                title={theme === 'dark' ? "Modalità Chiara" : "Modalità Scura"}
-              >
-                {theme === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
-              </button>
-              <button 
-                onClick={() => user ? logout() : login()}
-                className={cn(
-                  "p-2.5 rounded-xl border transition-all outline-none",
-                  theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-500 hover:text-white" : "bg-gray-50 border-gray-100 text-gray-400 hover:text-gray-900"
-                )}
-                title={user ? "Logout" : "Accedi"}
-              >
-                {user ? <LogOut className="w-3.5 h-3.5" /> : <LogIn className="w-3.5 h-3.5" />}
-              </button>
-            </div>
-
             {effectiveSubStatus && effectiveSubStatus.active && (
               <button
                 onClick={() => {
@@ -2647,6 +2623,30 @@ export default function App() {
                 )}
               </div>
             )}
+
+            {/* Desktop Only theme and login togglers */}
+            <div className="hidden lg:flex items-center gap-2">
+              <button 
+                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                className={cn(
+                  "p-2.5 rounded-xl border transition-all outline-none",
+                  theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-500 hover:text-white" : "bg-gray-50 border-gray-100 text-gray-400 hover:text-gray-900"
+                )}
+                title={theme === 'dark' ? "Modalità Chiara" : "Modalità Scura"}
+              >
+                {theme === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+              </button>
+              <button 
+                onClick={() => user ? logout() : login()}
+                className={cn(
+                  "p-2.5 rounded-xl border transition-all outline-none",
+                  theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-500 hover:text-white" : "bg-gray-50 border-gray-100 text-gray-400 hover:text-gray-900"
+                )}
+                title={user ? "Logout" : "Accedi"}
+              >
+                {user ? <LogOut className="w-3.5 h-3.5" /> : <LogIn className="w-3.5 h-3.5" />}
+              </button>
+            </div>
           </div>
         </div>
       </header>
