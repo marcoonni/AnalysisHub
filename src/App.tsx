@@ -136,6 +136,32 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+// Helper function to recursively sanitize data structures for Firestore (replaces undefined with null)
+function sanitizeForFirestore(val: any): any {
+  if (val === undefined) {
+    return null;
+  }
+  if (val === null) {
+    return null;
+  }
+  if (Array.isArray(val)) {
+    return val.map(sanitizeForFirestore);
+  }
+  if (typeof val === 'object') {
+    const res: any = {};
+    for (const key in val) {
+      if (Object.prototype.hasOwnProperty.call(val, key)) {
+        const cleaned = sanitizeForFirestore(val[key]);
+        if (cleaned !== undefined) {
+          res[key] = cleaned;
+        }
+      }
+    }
+    return res;
+  }
+  return val;
+}
+
 const PREDEFINED_PLAYERS = [
   "ANASTASIO", "AURELI", "BRIGUGLIO", "BUIKUS", "DATTILO", "DE PACE", 
   "DELLA ROCCA", "IGBINIGUN", "ITALIANO", "KUJRAKOVIC", "LIBRA", 
@@ -1601,166 +1627,175 @@ export default function App() {
 
   const saveMatch = async () => {
     setIsSaving(true);
-    
-    // Construct match data
-    const matchData = {
-      userId: user ? user.uid : 'guest-user',
-      teamName,
-      teamColor,
-      awayTeam,
-      awayColor,
-      date: new Date().toISOString(),
-      totalXG: totalXG,
-      totalGoals: goals,
-      ipoEvents,
-      ipoEventsAway,
-      goals,
-      goalsAway,
-      matchEvents // Added for live feed state persistence
-    };
-
-    let matchId = currentMatchId;
-    const finalMatchId = matchId || 'match-' + Math.random().toString(36).substr(2, 9);
-    
-    if (!currentMatchId) {
-      setCurrentMatchId(finalMatchId);
-      try {
-        const url = new URL(window.location.href);
-        url.searchParams.set('matchId', finalMatchId);
-        window.history.replaceState({}, '', url.pathname + url.search);
-      } catch (e) {
-        console.error("Failed to update window location query:", e);
-      }
-    }
-
-    // 1. ALWAYS save to localStorage first as a persistent failsafe cache!
     try {
-      const stored = localStorage.getItem('local_premium_matches_all');
-      let localMatches: Match[] = [];
-      if (stored) {
-        try {
-          localMatches = JSON.parse(stored);
-        } catch (e) {}
-      }
-      
-      const mockMatchData: any = {
-        ...matchData,
-        id: finalMatchId,
+      // Construct match data
+      const matchData = {
+        userId: user ? user.uid : 'guest-user',
+        teamName,
+        teamColor,
+        awayTeam,
+        awayColor,
         date: new Date().toISOString(),
-        createdAt: new Date().toISOString()
+        totalXG: totalXG,
+        totalGoals: goals,
+        ipoEvents,
+        ipoEventsAway,
+        goals,
+        goalsAway,
+        matchEvents // Added for live feed state persistence
       };
 
-      if (localMatches.some(m => m.id === finalMatchId)) {
-        localMatches = localMatches.map(m => m.id === finalMatchId ? mockMatchData : m);
-      } else {
-        localMatches = [mockMatchData, ...localMatches];
+      let matchId = currentMatchId;
+      const finalMatchId = matchId || 'match-' + Math.random().toString(36).substr(2, 9);
+      
+      if (!currentMatchId) {
+        setCurrentMatchId(finalMatchId);
+        try {
+          const url = new URL(window.location.href);
+          url.searchParams.set('matchId', finalMatchId);
+          window.history.replaceState({}, '', url.pathname + url.search);
+        } catch (e) {
+          console.error("Failed to update window location query:", e);
+        }
       }
 
-      // Save shots to localStorage
-      const localShotsKey = 'local_premium_shots_' + finalMatchId;
-      localStorage.setItem(localShotsKey, JSON.stringify(shots));
-
-      // Save match list to localStorage
-      localStorage.setItem('local_premium_matches_all', JSON.stringify(localMatches));
-      
-      // Update local state matches
-      setMatches(prev => {
-        const filtered = prev.filter(m => m.id !== finalMatchId);
-        return [mockMatchData, ...filtered];
-      });
-      
-    } catch (err) {
-      console.error("Local save failsafe error:", err);
-    }
-
-    // 2. If we are guest-user or starting with local mock premium, we are done saving since local is successfully written!
-    if (!user || user.uid.startsWith('premium-mock-') || user.uid === 'guest-user') {
-      setIsSaving(false);
-      setShowToast({ 
-        message: "Partita salvata localmente con successo!", 
-        type: 'success' 
-      });
-      return;
-    }
-
-    // Helper unique timeout function to prevent Firestore client from hanging forever
-    const withTimeout = async <T,>(p: Promise<T>, ms: number, errorMsg: string): Promise<T> => {
-      let timeoutId: any;
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        timeoutId = setTimeout(() => {
-          reject(new Error(errorMsg));
-        }, ms);
-      });
+      // 1. ALWAYS save to localStorage first as a persistent failsafe cache!
       try {
-        return await Promise.race([p, timeoutPromise]);
-      } finally {
-        clearTimeout(timeoutId);
-      }
-    };
+        const stored = localStorage.getItem('local_premium_matches_all');
+        let localMatches: Match[] = [];
+        if (stored) {
+          try {
+            localMatches = JSON.parse(stored);
+          } catch (e) {}
+        }
+        
+        const mockMatchData: any = {
+          ...matchData,
+          id: finalMatchId,
+          date: new Date().toISOString(),
+          createdAt: new Date().toISOString()
+        };
 
-    // 3. Otherwise, save to Firestore for cloud sync
-    try {
-      const dbMatchData = {
-        ...matchData,
-        createdAt: serverTimestamp()
+        if (localMatches.some(m => m.id === finalMatchId)) {
+          localMatches = localMatches.map(m => m.id === finalMatchId ? mockMatchData : m);
+        } else {
+          localMatches = [mockMatchData, ...localMatches];
+        }
+
+        // Save shots to localStorage
+        const localShotsKey = 'local_premium_shots_' + finalMatchId;
+        localStorage.setItem(localShotsKey, JSON.stringify(shots));
+
+        // Save match list to localStorage
+        localStorage.setItem('local_premium_matches_all', JSON.stringify(localMatches));
+        
+        // Update local state matches
+        setMatches(prev => {
+          const filtered = prev.filter(m => m.id !== finalMatchId);
+          return [mockMatchData, ...filtered];
+        });
+        
+      } catch (err) {
+        console.error("Local save failsafe error:", err);
+      }
+
+      // 2. If we are guest-user or starting with local mock premium, we are done saving since local is successfully written!
+      if (!user || user.uid.startsWith('premium-mock-') || user.uid === 'guest-user') {
+        setIsSaving(false);
+        setShowToast({ 
+          message: "Partita salvata localmente con successo!", 
+          type: 'success' 
+        });
+        return;
+      }
+
+      // Helper unique timeout function to prevent Firestore client from hanging forever
+      const withTimeout = async <T,>(p: Promise<T>, ms: number, errorMsg: string): Promise<T> => {
+        let timeoutId: any;
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          timeoutId = setTimeout(() => {
+            reject(new Error(errorMsg));
+          }, ms);
+        });
+        try {
+          return await Promise.race([p, timeoutPromise]);
+        } finally {
+          clearTimeout(timeoutId);
+        }
       };
-      
-      // Save primary document with a 3-second timeout
-      await withTimeout(
-        setDoc(doc(db, 'matches', finalMatchId), dbMatchData, { merge: true }),
-        3000,
-        "Il Cloud Firestore ha impiegato troppo tempo per rispondere."
-      );
 
-      // Save shots - Delete existing shots first to avoid duplicates/stale data
+      // 3. Otherwise, save to Firestore for cloud sync
       try {
-        const shotsSnapshot = await withTimeout(
-          getDocs(collection(db, 'matches', finalMatchId, 'shots')),
-          2500,
-          "Lettura tiri Cloud in timeout"
-        );
+        const sanitizedMatchData = sanitizeForFirestore(matchData);
+        const dbMatchData = {
+          ...sanitizedMatchData,
+          createdAt: serverTimestamp()
+        };
         
-        const deletePromises = shotsSnapshot.docs.map(shotDoc => 
-          deleteDoc(doc(db, 'matches', finalMatchId, 'shots', shotDoc.id))
+        // Save primary document with a 3-second timeout
+        await withTimeout(
+          setDoc(doc(db, 'matches', finalMatchId), dbMatchData, { merge: true }),
+          3000,
+          "Il Cloud Firestore ha impiegato troppo tempo per rispondere."
         );
-        
-        if (deletePromises.length > 0) {
-          await withTimeout(
-            Promise.all(deletePromises),
+
+        // Save shots - Delete existing shots first to avoid duplicates/stale data
+        try {
+          const shotsSnapshot = await withTimeout(
+            getDocs(collection(db, 'matches', finalMatchId, 'shots')),
             2500,
-            "Eliminazione tiri Cloud in timeout"
+            "Lettura tiri Cloud in timeout"
+          );
+          
+          const deletePromises = shotsSnapshot.docs.map(shotDoc => 
+            deleteDoc(doc(db, 'matches', finalMatchId, 'shots', shotDoc.id))
+          );
+          
+          if (deletePromises.length > 0) {
+            await withTimeout(
+              Promise.all(deletePromises),
+              2500,
+              "Eliminazione tiri Cloud in timeout"
+            );
+          }
+        } catch (err) {
+          console.warn("Could not clear existing shots on Cloud, continuing anyway:", err);
+        }
+
+        // Add current shots to Cloud after sanitizing undefined parameters
+        if (shots.length > 0) {
+          const shotPromises = shots.map(shot => {
+            const sanitizedShot = sanitizeForFirestore(shot);
+            return addDoc(collection(db, 'matches', finalMatchId, 'shots'), {
+              ...sanitizedShot,
+              matchId: finalMatchId,
+              timestamp: new Date().toISOString()
+            });
+          });
+          await withTimeout(
+            Promise.all(shotPromises),
+            2500,
+            "Salvataggio tiri Cloud in timeout"
           );
         }
-      } catch (err) {
-        console.warn("Could not clear existing shots on Cloud, continuing anyway:", err);
-      }
 
-      // Add current shots to Cloud
-      if (shots.length > 0) {
-        const shotPromises = shots.map(shot => 
-          addDoc(collection(db, 'matches', finalMatchId, 'shots'), {
-            ...shot,
-            matchId: finalMatchId,
-            timestamp: new Date().toISOString()
-          })
-        );
-        await withTimeout(
-          Promise.all(shotPromises),
-          2500,
-          "Salvataggio tiri Cloud in timeout"
-        );
+        setShowToast({ 
+          message: isOnline ? "Partita salvata in Cloud con successo!" : "Salvato localmente (sincronizzazione appena torni online)", 
+          type: 'success' 
+        });
+      } catch (error: any) {
+        console.error("Cloud Save Match Error:", error);
+        // We don't crash the whole UI or block if cloud fails because the local save succeeded perfectly!
+        setShowToast({ 
+          message: `Salvataggio Cloud fallito (${error.message || "Errore"}). Backup locale completato!`, 
+          type: 'success' 
+        });
       }
-
-      setShowToast({ 
-        message: isOnline ? "Partita salvata in Cloud con successo!" : "Salvato localmente (sincronizzazione appena torni online)", 
-        type: 'success' 
-      });
-    } catch (error) {
-      console.error("Cloud Save Match Error:", error);
-      // We don't crash the whole UI or block if cloud fails because the local save succeeded perfectly!
-      setShowToast({ 
-        message: "Partita salvata localmente (Cloud non ha risposto in tempo).", 
-        type: 'success' 
+    } catch (globalErr: any) {
+      console.error("Global save error:", globalErr);
+      setShowToast({
+        message: "Errore durante il salvataggio: " + (globalErr.message || String(globalErr)),
+        type: 'error'
       });
     } finally {
       setIsSaving(false);
