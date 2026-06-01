@@ -3117,63 +3117,7 @@ export default function App() {
                       )}
                     </AnimatePresence>
 
-                    {/* Selected Shot Trajectory Arc */}
-                    {selectedShot && (
-                      <svg className="absolute inset-0 w-full h-full pointer-events-none z-10 animate-fade-in" viewBox="0 0 68 34">
-                        <defs>
-                          <linearGradient id="shot-trajectory-grad" x1="0%" y1="100%" x2="0%" y2="0%">
-                            <stop offset="0%" stopColor={selectedShot.isGoal ? "#fbbf24" : "#3b82f6"} stopOpacity="1" />
-                            <stop offset="100%" stopColor={selectedShot.isGoal ? "#fef08a" : "#60a5fa"} stopOpacity="0.8" />
-                          </linearGradient>
-                          <filter id="soft-glow" x="-20%" y="-20%" width="140%" height="140%">
-                            <feGaussianBlur in="SourceGraphic" stdDeviation="0.15" />
-                            <feMerge>
-                              <feMergeNode />
-                              <feMergeNode in="SourceGraphic" />
-                            </feMerge>
-                          </filter>
-                        </defs>
-                        {/* Shadow curve */}
-                        <path 
-                          d={`M ${selectedShot.y} ${selectedShot.x} C ${selectedShot.y} ${selectedShot.x * 0.7}, 34 ${selectedShot.x * 0.3}, 34 0`}
-                          fill="none"
-                          stroke="black"
-                          strokeOpacity="0.1"
-                          strokeWidth="0.4"
-                        />
-                        {/* Soft Ambient Glow Path */}
-                        <path 
-                          d={`M ${selectedShot.y} ${selectedShot.x} C ${selectedShot.y} ${selectedShot.x * 0.7}, 34 ${selectedShot.x * 0.3}, 34 0`}
-                          fill="none"
-                          stroke="url(#shot-trajectory-grad)"
-                          strokeWidth="0.35"
-                          filter="url(#soft-glow)"
-                          strokeOpacity="0.4"
-                        />
-                        {/* Main Crisp Trajectory Line (Ultra sleek!) */}
-                        <path 
-                          d={`M ${selectedShot.y} ${selectedShot.x} C ${selectedShot.y} ${selectedShot.x * 0.7}, 34 ${selectedShot.x * 0.3}, 34 0`}
-                          fill="none"
-                          stroke="url(#shot-trajectory-grad)"
-                          strokeWidth="0.18"
-                          strokeLinecap="round"
-                        />
-                        {/* High-tech Traveling Light Overlay (Stream "flow" effect) */}
-                        <motion.path 
-                          d={`M ${selectedShot.y} ${selectedShot.x} C ${selectedShot.y} ${selectedShot.x * 0.7}, 34 ${selectedShot.x * 0.3}, 34 0`}
-                          fill="none"
-                          stroke="url(#shot-trajectory-grad)"
-                          strokeWidth="0.22"
-                          strokeLinecap="round"
-                          strokeDasharray="1.5 5"
-                          animate={{ strokeDashoffset: [13, 0] }}
-                          transition={{ repeat: Infinity, ease: "linear", duration: 1.2 }}
-                        />
-                        {/* Goal impact pulse */}
-                        <circle cx="34" cy="0" r="1" fill={selectedShot.isGoal ? "#facc15" : "#60a5fa"} className="animate-ping" fillOpacity="0.4" />
-                        <circle cx="34" cy="0" r="0.4" fill={selectedShot.isGoal ? "#facc15" : "#60a5fa"} />
-                      </svg>
-                    )}
+                    {/* Selected Shot Trajectory Arc (Removed) */}
 
                     {/* Selected Shot Laser Targeting Guides & Radar Pulse */}
                     {selectedShot && (
