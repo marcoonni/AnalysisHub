@@ -2659,9 +2659,9 @@ export default function App() {
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto justify-center lg:justify-start">
+          <div className="flex items-center gap-3 w-full lg:w-auto justify-center lg:justify-start">
             {/* Timer Controllers and Reset Milestones */}
-            <div className="flex items-center gap-3 w-full sm:w-auto justify-center flex-wrap">
+            <div className="flex items-center gap-3 w-full sm:w-auto justify-center flex-nowrap whitespace-nowrap">
               <button 
                 onClick={() => setIsTimerRunning(!isTimerRunning)}
                 className={cn(
@@ -2732,7 +2732,7 @@ export default function App() {
           </div>
 
           {/* Right actions and tools grouped cleanly */}
-          <div className="flex flex-wrap items-center justify-center lg:justify-end gap-2.5 w-full lg:w-auto border-t lg:border-t-0 border-white/5 lg:pt-0 pt-3">
+          <div className="flex flex-wrap lg:flex-nowrap items-center justify-center lg:justify-end gap-2.5 w-full lg:w-auto border-t lg:border-t-0 border-white/5 lg:pt-0 pt-3">
             <button 
               onClick={() => setShowSquadModal(true)}
               className={cn(
