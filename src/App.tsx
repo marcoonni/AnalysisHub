@@ -313,13 +313,57 @@ export default function App() {
   const getActiveSessionField = <T,>(fieldName: string, defaultValue: T): T => {
     try {
       const params = new URLSearchParams(window.location.search);
-      if (!params.get('matchId')) {
-        const saved = localStorage.getItem('active_match_session');
-        if (saved) {
-          const session = JSON.parse(saved);
-          if (session[fieldName] !== undefined) {
-            return session[fieldName] as T;
+      const urlMatchId = params.get('matchId');
+      
+      const savedSessionStr = localStorage.getItem('active_match_session');
+      let savedSession: any = null;
+      if (savedSessionStr) {
+        try {
+          savedSession = JSON.parse(savedSessionStr);
+        } catch (e) {}
+      }
+
+      if (urlMatchId) {
+        // If the URL has a matchId parameter
+        if (savedSession && savedSession.currentMatchId === urlMatchId) {
+          // If the active session is for this match, load directly from it!
+          if (savedSession[fieldName] !== undefined) {
+            return savedSession[fieldName] as T;
           }
+        }
+        
+        // If not, check in local matches list to recover state immediately
+        const storedMatches = localStorage.getItem('local_premium_matches_all');
+        if (storedMatches) {
+          try {
+            const localMatches: Match[] = JSON.parse(storedMatches);
+            const foundMatch = localMatches.find(m => m.id === urlMatchId);
+            if (foundMatch) {
+              if (fieldName === 'currentMatchId') return foundMatch.id as any as T;
+              if (fieldName === 'teamName') return (foundMatch.teamName || 'Bologna U15') as any as T;
+              if (fieldName === 'teamColor') return (foundMatch.teamColor || '#eab308') as any as T;
+              if (fieldName === 'awayTeam') return (foundMatch.awayTeam || 'Avversario') as any as T;
+              if (fieldName === 'awayColor') return (foundMatch.awayColor || '#3b82f6') as any as T;
+              if (fieldName === 'goals') return (foundMatch.goals ?? 0) as any as T;
+              if (fieldName === 'goalsAway') return (foundMatch.goalsAway ?? 0) as any as T;
+              if (fieldName === 'ipoEvents') return (foundMatch.ipoEvents || { shotsIn: 0, shotsOut: 0, penalties: 0, freeKicks: 0, corners: 0, crosses: 0 }) as any as T;
+              if (fieldName === 'ipoEventsAway') return (foundMatch.ipoEventsAway || { shotsIn: 0, shotsOut: 0, penalties: 0, freeKicks: 0, corners: 0, crosses: 0 }) as any as T;
+              if (fieldName === 'matchEvents') return (foundMatch.matchEvents || []) as any as T;
+              if (fieldName === 'timerSeconds') return 0 as any as T;
+              if (fieldName === 'shots') {
+                const storedShots = localStorage.getItem('local_premium_shots_' + urlMatchId);
+                if (storedShots) {
+                  return JSON.parse(storedShots) as T;
+                }
+                return [] as any as T;
+              }
+            }
+          } catch (e) {}
+        }
+      } else {
+        // No matchId in URL - load from active match session normally
+        if (savedSession && savedSession[fieldName] !== undefined) {
+          return savedSession[fieldName] as T;
         }
       }
     } catch (e) {
@@ -640,6 +684,45 @@ export default function App() {
     setIsReadOnly(true);
     
     try {
+      // 1. Try checking local matches first for instant, zero-latency and offline access
+      const stored = localStorage.getItem('local_premium_matches_all');
+      if (stored) {
+        try {
+          const localMatches: Match[] = JSON.parse(stored);
+          const found = localMatches.find(m => m.id === matchId);
+          if (found) {
+            setCurrentMatchId(found.id);
+            setTeamName(found.teamName || 'Bologna U15');
+            setTeamColor(found.teamColor || '#eab308');
+            setAwayTeam(found.awayTeam || 'Avversario');
+            setAwayColor(found.awayColor || '#3b82f6');
+            setIpoEvents(found.ipoEvents || { shotsIn: 0, shotsOut: 0, penalties: 0, freeKicks: 0, corners: 0, crosses: 0 });
+            setIpoEventsAway(found.ipoEventsAway || { shotsIn: 0, shotsOut: 0, penalties: 0, freeKicks: 0, corners: 0, crosses: 0 });
+            setGoals(found.goals || 0);
+            setGoalsAway(found.goalsAway || 0);
+            setIsReadOnly(found.userId !== (user ? user.uid : 'guest-user'));
+
+            let shotsData: Shot[] = [];
+            const localShotsKey = 'local_premium_shots_' + found.id;
+            const storedShots = localStorage.getItem(localShotsKey);
+            if (storedShots) {
+              try {
+                shotsData = JSON.parse(storedShots);
+              } catch (e) {}
+            }
+            setShots(shotsData);
+            setMatchEvents(found.matchEvents || []);
+            setSelectedShot(null);
+            setLoadingMatchId(null);
+            setShowToast({ message: "Partita caricata dalla memoria locale con successo!", type: 'success' });
+            return;
+          }
+        } catch (e) {
+          console.warn("Could not load from local storage during loadSharedMatch:", e);
+        }
+      }
+
+      // 2. Otherwise load from Firestore
       const matchDoc = await getDoc(doc(db, 'matches', matchId));
       if (!matchDoc.exists()) {
         setShowToast({ message: "Partita non trovata o link scaduto.", type: 'error' });
@@ -756,8 +839,10 @@ export default function App() {
   };
 
   const calculateIPO = (events: any) => {
+    if (!events) return 0;
     return Object.entries(events).reduce((sum: number, [key, count]) => {
-      return sum + (Number(count) * weights[key as keyof typeof weights]);
+      const weight = weights[key as keyof typeof weights] || 0;
+      return sum + (Number(count || 0) * weight);
     }, 0);
   };
 
@@ -1187,7 +1272,11 @@ export default function App() {
             }
           });
           
-          combined.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+          combined.sort((a, b) => {
+            const bTime = b.date ? new Date(b.date).getTime() : 0;
+            const aTime = a.date ? new Date(a.date).getTime() : 0;
+            return (isNaN(bTime) ? 0 : bTime) - (isNaN(aTime) ? 0 : aTime);
+          });
           setMatches(combined);
         }, (error) => {
           // Fallback to local matches ONLY in case of Firestore error
@@ -5277,20 +5366,7 @@ export default function App() {
                                     />
                                   ))}
 
-                                  {/* Highlighted active trajectory path curve */}
-                                  {activeShot && (
-                                    <motion.path
-                                      key={`history-traj-${activeShot.id}`}
-                                      d={`M ${activeShot.y} ${activeShot.x} C ${activeShot.y} ${activeShot.x * 0.7}, 34 ${activeShot.x * 0.3}, 34 0`}
-                                      fill="none"
-                                      stroke={activeShot.isGoal ? "#10b981" : "#f59e0b"}
-                                      strokeWidth="0.45"
-                                      strokeDasharray="1 0.4"
-                                      initial={{ strokeDashoffset: 10 }}
-                                      animate={{ strokeDashoffset: 0 }}
-                                      transition={{ repeat: Infinity, ease: "linear", duration: 1 }}
-                                    />
-                                  )}
+                                  {/* Highlighted active trajectory path curve (Removed as requested) */}
                                 </svg>
                               </div>
 
