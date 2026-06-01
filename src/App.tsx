@@ -369,6 +369,11 @@ export default function App() {
 
   const [isAddingNewPlayer, setIsAddingNewPlayer] = useState(false);
   const [showSquadModal, setShowSquadModal] = useState(false);
+  const [showShotsHistoryModal, setShowShotsHistoryModal] = useState(false);
+  const [selectedHistoryPlayer, setSelectedHistoryPlayer] = useState<string | null>(null);
+  const [activeHistoryShotId, setActiveHistoryShotId] = useState<string | null>(null);
+  const [historySearch, setHistorySearch] = useState('');
+  const [historyOutcomeFilter, setHistoryOutcomeFilter] = useState<'all' | 'goal' | 'no-goal'>('all');
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
   const [squadSearch, setSquadSearch] = useState('');
   const [newFolderName, setNewFolderName] = useState('');
@@ -794,6 +799,44 @@ export default function App() {
   // Stats
   const displayShotsHome = useMemo(() => shots.filter(s => s.team !== 'away'), [shots]);
   const displayShotsAway = useMemo(() => shots.filter(s => s.team === 'away'), [shots]);
+
+  const getAllHistoricShots = useMemo(() => {
+    const allShotsMap = new Map<string, Shot>();
+    
+    // 1. Traverse all historic matches and extract their cached shots from local storage
+    matches.forEach(m => {
+      const localShotsKey = 'local_premium_shots_' + m.id;
+      const storedShots = localStorage.getItem(localShotsKey);
+      if (storedShots) {
+        try {
+          const parsedShots = JSON.parse(storedShots) as Shot[];
+          parsedShots.forEach(s => {
+            const formattedDate = new Date(m.date).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: '2-digit' });
+            const sWithMatch = {
+              ...s,
+              matchName: s.matchName || `${m.teamName} vs ${m.awayTeam || 'Avversario'} (${formattedDate})`
+            };
+            allShotsMap.set(sWithMatch.id, sWithMatch);
+          });
+        } catch (e) {}
+      }
+    });
+
+    // 2. Add current active session shots (overwriting or supplementing)
+    shots.forEach(s => {
+      const matchNameCurrent = currentMatchId 
+        ? (matches.find(m => m.id === currentMatchId) 
+          ? `${matches.find(m => m.id === currentMatchId)?.teamName} vs ${matches.find(m => m.id === currentMatchId)?.awayTeam || 'Avversario'}`
+          : "Partita Corrente")
+        : "Partita Attiva (Live)";
+      allShotsMap.set(s.id, {
+        ...s,
+        matchName: s.matchName || matchNameCurrent
+      });
+    });
+
+    return Array.from(allShotsMap.values()).sort((a, b) => b.timestamp - a.timestamp);
+  }, [shots, matches, currentMatchId]);
 
   const displayXG = useMemo(() => displayShotsHome.reduce((sum, s) => sum + s.xg, 0), [displayShotsHome]);
   const displayXGAway = useMemo(() => displayShotsAway.reduce((sum, s) => sum + s.xg, 0), [displayShotsAway]);
@@ -2511,6 +2554,22 @@ export default function App() {
             >
               <Users className="w-3.5 h-3.5 text-blue-500" />
               <span className="text-[9px] font-black uppercase tracking-wider">Roster</span>
+            </button>
+            <button 
+              onClick={() => {
+                setShowShotsHistoryModal(true);
+                if (!selectedHistoryPlayer && squadPlayers.length > 0) {
+                  setSelectedHistoryPlayer(squadPlayers[0].name);
+                }
+              }}
+              className={cn(
+                "p-2.5 sm:px-3 sm:py-2 rounded-xl border transition-all outline-none flex items-center gap-1.5 focus:outline-none",
+                theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-50 border-gray-150 text-gray-600 hover:text-gray-900"
+              )}
+              title="Storico dei Tiri per Ragazzo (Griglia)"
+            >
+              <Target className="w-3.5 h-3.5 text-red-500" />
+              <span className="text-[9px] font-black uppercase tracking-wider">Storico Tiri</span>
             </button>
             <button 
               onClick={() => setShowMatchList(true)}
@@ -4658,6 +4717,24 @@ export default function App() {
 
                             {/* Selectable toggle switch + delete buttons */}
                             <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
+                              {/* Quick Shots History Access */}
+                              <button
+                                onClick={() => {
+                                  setSelectedHistoryPlayer(player.name);
+                                  setShowSquadModal(false);
+                                  setShowShotsHistoryModal(true);
+                                }}
+                                className={cn(
+                                  "w-8 h-8 rounded-xl flex items-center justify-center transition-all outline-none border shrink-0",
+                                  theme === 'dark' 
+                                    ? "bg-white/[0.02] hover:bg-white/[0.08] border-white/5 text-gray-400 hover:text-white" 
+                                    : "bg-gray-50 hover:bg-gray-100 border-gray-150 text-gray-500 hover:text-gray-900"
+                                )}
+                                title={`Visualizza lo storico tiri di ${player.name}`}
+                              >
+                                <Target className="w-3.5 h-3.5 text-red-500" />
+                              </button>
+
                               {/* Quick Selectable Toggle */}
                               <button
                                 onClick={() => {
@@ -4789,6 +4866,433 @@ export default function App() {
                     Chiudi Roster
                   </button>
                 </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Storico dei Tiri / Individual Shot History Modal */}
+      <AnimatePresence>
+        {showShotsHistoryModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 overflow-y-auto w-full">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => {
+                setShowShotsHistoryModal(false);
+                setActiveHistoryShotId(null);
+              }}
+              className="absolute inset-0 bg-black/80 backdrop-blur-sm shadow-full"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className={cn(
+                "relative w-full max-w-6xl border rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] z-50",
+                theme === 'dark' ? "bg-[#0d0d0e] border-white/[0.05]" : "bg-white border-gray-150"
+              )}
+            >
+              {/* Modal Head */}
+              <div className={cn(
+                "p-6 sm:p-8 border-b flex items-center justify-between shrink-0",
+                theme === 'dark' ? "border-white/[0.03]" : "border-gray-100"
+              )}>
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-red-500/10 rounded-2xl flex items-center justify-center text-red-500">
+                    <Target className="w-6 h-6 animate-pulse" />
+                  </div>
+                  <div>
+                    <h2 className={cn("text-base sm:text-lg font-black uppercase tracking-tight", theme === 'dark' ? "text-white" : "text-gray-900")}>Storico Tiri per Atleta</h2>
+                    <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mt-1">Griglia Analitica Dettagliata Dei Tiri Effettuati</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => {
+                    setShowShotsHistoryModal(false);
+                    setActiveHistoryShotId(null);
+                  }}
+                  className={cn(
+                    "w-12 h-12 rounded-2xl flex items-center justify-center transition-all outline-none cursor-pointer",
+                    theme === 'dark' ? "bg-white/[0.03] hover:bg-white/[0.06] text-gray-500 hover:text-white" : "bg-gray-50 hover:bg-gray-100 text-gray-500 hover:text-gray-900"
+                  )}
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Main Body */}
+              <div className="flex-1 overflow-y-auto p-6 flex flex-col lg:flex-row gap-6 min-h-0">
+                {/* Left Column: Player Selector list */}
+                <div className="w-full lg:w-1/4 flex flex-col gap-4">
+                  <div className="relative">
+                    <input 
+                      type="text"
+                      value={historySearch}
+                      onChange={(e) => setHistorySearch(e.target.value)}
+                      placeholder="Cerca atleta..."
+                      className={cn(
+                        "w-full border rounded-2xl py-3 pl-10 pr-4 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all",
+                        theme === 'dark' ? "bg-white/[0.02] border-white/5 text-white placeholder:font-medium" : "bg-gray-100 border-gray-200 text-gray-900 placeholder:font-medium"
+                      )}
+                    />
+                    <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                    {historySearch && (
+                      <button 
+                        onClick={() => setHistorySearch('')}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+
+                  <div className={cn(
+                    "flex-1 overflow-y-auto max-h-[350px] lg:max-h-[480px] border rounded-2xl divide-y",
+                    theme === 'dark' ? "bg-[#070708]/30 border-white/5 divide-white/5" : "bg-gray-50 border-gray-150 divide-gray-100"
+                  )}>
+                    {squadPlayers
+                      .filter(p => !historySearch || p.name.toUpperCase().includes(historySearch.trim().toUpperCase()))
+                      .map(player => {
+                        const count = getAllHistoricShots.filter(s => s.playerName === player.name).length;
+                        const isSelected = selectedHistoryPlayer === player.name;
+                        return (
+                          <div 
+                            key={player.id}
+                            onClick={() => {
+                              setSelectedHistoryPlayer(player.name);
+                              setActiveHistoryShotId(null);
+                            }}
+                            className={cn(
+                              "p-3.5 flex items-center justify-between cursor-pointer transition-all duration-250 border-l-4",
+                              isSelected 
+                                ? (theme === 'dark' ? "bg-blue-600/10 border-blue-500" : "bg-blue-50/65 border-blue-500") 
+                                : (theme === 'dark' ? "hover:bg-white/[0.02] border-transparent" : "hover:bg-gray-100 border-transparent")
+                            )}
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <span className={cn(
+                                "text-[7.5px] font-black px-1.5 py-0.5 rounded leading-none shrink-0 border uppercase",
+                                player.role === 'Portiere' ? "bg-purple-500/10 border-purple-500/15 text-purple-400" :
+                                player.role === 'Difensore' ? "bg-yellow-500/10 border-yellow-500/15 text-yellow-500" :
+                                player.role === 'Centrocampista' ? "bg-blue-500/10 border-blue-500/15 text-blue-400" :
+                                player.role === 'Attaccante' ? "bg-red-500/10 border-red-500/15 text-red-450" : "bg-gray-500/10 border-transparent text-gray-400"
+                              )}>
+                                {player.role === 'Portiere' ? 'GK' :
+                                 player.role === 'Difensore' ? 'DF' :
+                                 player.role === 'Centrocampista' ? 'MF' :
+                                 player.role === 'Attaccante' ? 'FW' : '-'}
+                              </span>
+                              <span className={cn(
+                                "text-xs font-bold uppercase truncate",
+                                isSelected 
+                                  ? (theme === 'dark' ? "text-blue-400 font-extrabold" : "text-blue-700 font-extrabold") 
+                                  : (theme === 'dark' ? "text-gray-300" : "text-gray-800")
+                              )}>
+                                {player.name}
+                              </span>
+                            </div>
+                            <span className={cn(
+                              "text-[8px] font-black uppercase px-2 py-0.5 rounded-full border shrink-0",
+                              count > 0 
+                                ? "bg-red-500/5 border-red-500/25 text-red-400" 
+                                : "bg-gray-500/5 border-transparent text-gray-500"
+                            )}>
+                              {count} {count === 1 ? 'Tiro' : 'Tiri'}
+                            </span>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
+
+                {/* Right Column: Historical Shots Details */}
+                <div className="w-full lg:w-3/4 flex flex-col gap-5">
+                  {!selectedHistoryPlayer ? (
+                    <div className="flex-1 flex flex-col items-center justify-center py-20">
+                      <Target className="w-16 h-16 text-gray-500/30 mb-4 animate-pulse" />
+                      <p className="text-sm font-black uppercase tracking-widest text-gray-500">Seleziona un ragazzo</p>
+                      <p className="text-[10px] text-gray-600 uppercase tracking-widest mt-1">Clicca su un atleta a sinistra per consultare il suo storico tiri</p>
+                    </div>
+                  ) : (() => {
+                    const playerShots = getAllHistoricShots.filter(s => s.playerName === selectedHistoryPlayer);
+                    const filteredShots = playerShots.filter(s => {
+                      if (historyOutcomeFilter === 'goal') return s.isGoal;
+                      if (historyOutcomeFilter === 'no-goal') return !s.isGoal;
+                      return true;
+                    });
+
+                    // Stats calculations
+                    const total = playerShots.length;
+                    const goals = playerShots.filter(s => s.isGoal).length;
+                    const convRate = total > 0 ? ((goals / total) * 100).toFixed(0) : '0';
+                    const sumXG = playerShots.reduce((acc, s) => acc + s.xg, 0);
+                    const avgXG = total > 0 ? (sumXG / total).toFixed(2) : '0.00';
+                    
+                    const avgDist = total > 0 ? (playerShots.reduce((acc, s) => {
+                      const d = Math.sqrt(s.x * s.x + (s.y - 34) * (s.y - 34));
+                      return acc + d;
+                    }, 0) / total).toFixed(1) : '0.0';
+
+                    const activeShot = filteredShots.find(s => s.id === activeHistoryShotId) || filteredShots[0];
+
+                    if (total === 0) {
+                      return (
+                        <div className="flex-1 flex flex-col items-center justify-center py-20">
+                          <Target className="w-14 h-14 text-gray-500/20 mb-3 animate-pulse" />
+                          <p className="text-xs font-black uppercase tracking-widest text-gray-500">Storico Vuoto</p>
+                          <p className="text-[9px] text-gray-650 font-bold uppercase mt-1">Nessun tiro registrato per l'atleta {selectedHistoryPlayer}.</p>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="flex-1 flex flex-col gap-5 min-h-0">
+                        {/* Profile metrics ribbons */}
+                        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 shrink-0">
+                          <div className={cn("p-4 border rounded-2xl flex flex-col justify-center", theme === 'dark' ? "bg-white/[0.01] border-white/5" : "bg-gray-50/50 border-gray-200")}>
+                            <span className="text-[7.5px] font-extrabold text-gray-500 uppercase tracking-wider">Tiri Totali</span>
+                            <span className={cn("text-base font-black mt-1 leading-none", theme === 'dark' ? "text-white" : "text-gray-900")}>{total}</span>
+                          </div>
+                          <div className={cn("p-4 border rounded-2xl flex flex-col justify-center", theme === 'dark' ? "bg-white/[0.01] border-white/5" : "bg-gray-50/50 border-gray-200")}>
+                            <span className="text-[7.5px] font-extrabold text-emerald-500 uppercase tracking-wider">Gol Segnati</span>
+                            <span className="text-base font-black text-emerald-500 mt-1 leading-none">{goals}</span>
+                          </div>
+                          <div className={cn("p-4 border rounded-2xl flex flex-col justify-center", theme === 'dark' ? "bg-white/[0.01] border-white/5" : "bg-gray-50/50 border-gray-200")}>
+                            <span className="text-[7.5px] font-extrabold text-amber-500 uppercase tracking-wider">Tasso Conversione</span>
+                            <span className="text-base font-black text-amber-500 mt-1 leading-none">{convRate}%</span>
+                          </div>
+                          <div className={cn("p-4 border rounded-2xl flex flex-col justify-center", theme === 'dark' ? "bg-white/[0.01] border-white/5" : "bg-gray-50/50 border-gray-200")}>
+                            <span className="text-[7.5px] font-extrabold text-blue-500 uppercase tracking-wider">xG Totale [Medio]</span>
+                            <span className="text-sm font-black text-blue-500 mt-1 leading-none">{sumXG.toFixed(2)} [~{avgXG}]</span>
+                          </div>
+                          <div className={cn("p-4 border rounded-2xl flex flex-col justify-center", theme === 'dark' ? "bg-white/[0.01] border-white/5" : "bg-gray-50/50 border-gray-200")}>
+                            <span className="text-[7.5px] font-extrabold text-purple-500 uppercase tracking-wider">Distanza Media</span>
+                            <span className="text-base font-black text-purple-500 mt-1 leading-none">{avgDist}m</span>
+                          </div>
+                        </div>
+
+                        {/* Dual Panel Body: Grid Table of Shots & Tactical Pitch Preview */}
+                        <div className="flex-1 flex flex-col xl:flex-row gap-5 min-h-[300px]">
+                          {/* Grid table section */}
+                          <div className="flex-1 flex flex-col gap-3">
+                            {/* Outcome Selector Filter bar */}
+                            <div className="flex items-center justify-between shrink-0">
+                              <span className="text-[9px] font-black text-gray-500 uppercase tracking-wider">Lista Eventi Tiro ({filteredShots.length})</span>
+                              <div className={cn(
+                                "flex p-0.5 rounded-lg border gap-0.5",
+                                theme === 'dark' ? "bg-[#0d0d0e] border-white/5" : "bg-gray-100 border-gray-200"
+                              )}>
+                                {(['all', 'goal', 'no-goal'] as const).map(opt => (
+                                  <button
+                                    key={opt}
+                                    onClick={() => {
+                                      setHistoryOutcomeFilter(opt);
+                                      setActiveHistoryShotId(null);
+                                    }}
+                                    className={cn(
+                                      "px-2.5 py-1 rounded text-[7.5px] font-black uppercase tracking-wider transition-all whitespace-nowrap cursor-pointer",
+                                      historyOutcomeFilter === opt 
+                                        ? "bg-blue-600 text-white" 
+                                        : (theme === 'dark' ? "text-gray-500 hover:text-white" : "text-gray-500 hover:text-gray-900")
+                                    )}
+                                  >
+                                    {opt === 'all' ? 'Tutti' : opt === 'goal' ? 'Gol' : 'No Gol'}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Table Container */}
+                            <div className={cn(
+                              "border rounded-2xl overflow-hidden flex-1 flex flex-col max-h-[300px] xl:max-h-[360px]",
+                              theme === 'dark' ? "bg-[#0d0d0e] border-white/5" : "bg-white border-gray-150"
+                            )}>
+                              {/* Header row */}
+                              <div className={cn(
+                                "grid grid-cols-12 p-3 text-[7.5px] font-black text-gray-500 uppercase tracking-widest border-b shrink-0",
+                                theme === 'dark' ? "border-white/5 bg-[#070708]" : "border-gray-150 bg-gray-50"
+                              )}>
+                                <span className="col-span-5">Incontro</span>
+                                <span className="col-span-1 text-center font-bold">Min</span>
+                                <span className="col-span-2 text-center font-bold">Esito</span>
+                                <span className="col-span-2 text-center font-bold">xG</span>
+                                <span className="col-span-2 text-right pr-2 font-bold">Dettagli</span>
+                              </div>
+
+                              {/* Rows list */}
+                              <div className="flex-1 overflow-y-auto divide-y divide-white/5 no-scrollbar">
+                                {filteredShots.map(shot => {
+                                  const shotDist = Math.sqrt(shot.x * shot.x + (shot.y - 34) * (shot.y - 34)).toFixed(1);
+                                  const isActive = activeShot?.id === shot.id;
+                                  return (
+                                    <div 
+                                      key={shot.id}
+                                      onClick={() => setActiveHistoryShotId(shot.id)}
+                                      className={cn(
+                                        "grid grid-cols-12 p-3 items-center text-xs cursor-pointer transition-all hover:bg-blue-500/[0.015]",
+                                        isActive 
+                                          ? (theme === 'dark' ? "bg-blue-600/5 text-blue-400" : "bg-blue-50/60 text-blue-850") 
+                                          : (theme === 'dark' ? "text-gray-300" : "text-gray-700")
+                                      )}
+                                    >
+                                      <div className="col-span-5 flex flex-col min-w-0 pr-2">
+                                        <span className="text-[10px] font-black uppercase truncate tracking-wide leading-tight">
+                                          {shot.matchName}
+                                        </span>
+                                        <span className="text-[8px] text-gray-500 font-medium mt-0.5">
+                                          {new Date(shot.timestamp).toLocaleDateString('it-IT')} · {shotDist}m
+                                        </span>
+                                      </div>
+                                      <div className="col-span-1 text-center font-mono text-[10px] font-black">
+                                        {shot.minute}'
+                                      </div>
+                                      <div className="col-span-2 flex items-center justify-center">
+                                        <span className={cn(
+                                          "text-[7px] font-black px-1.5 py-0.5 rounded-full select-none leading-none border tracking-wider uppercase",
+                                          shot.isGoal 
+                                            ? "bg-emerald-500/10 border-emerald-500/25 text-emerald-400" 
+                                            : (shot.ipoCategory === 'shotsIn' 
+                                              ? "bg-amber-500/10 border-amber-500/20 text-amber-500" 
+                                              : "bg-gray-500/10 border-transparent text-gray-500")
+                                        )}>
+                                          {shot.isGoal ? "GOL" : (shot.ipoCategory === 'shotsIn' ? "PARATO" : "FUORI")}
+                                        </span>
+                                      </div>
+                                      <div className="col-span-2 text-center font-mono text-[10px] font-black">
+                                        {shot.xg.toFixed(2)}
+                                      </div>
+                                      <div className="col-span-2 text-right flex flex-col pr-2">
+                                        <span className="text-[8px] font-black uppercase tracking-wider text-gray-400">
+                                          {shot.bodyPart === 'head' ? 'TESTA' : 'PIEDE'}
+                                        </span>
+                                        <span className="text-[7.5px] text-gray-500 font-bold tracking-widest uppercase mt-0.5 leading-none">
+                                          {shot.assistType === 'none' ? 'SOLO' : shot.assistType}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Interactive Pitch visual preview pane */}
+                          <div className="w-full xl:w-72 flex flex-col gap-3 shrink-0">
+                            <span className="text-[9px] font-black text-gray-500 uppercase tracking-wider">Anteprima Pitch</span>
+                            
+                            <div className={cn(
+                              "border rounded-2xl p-4 flex flex-col items-center justify-between relative overflow-hidden h-[240px] xl:h-full justify-center lg:justify-between",
+                              theme === 'dark' ? "bg-[#070708]/30 border-white/5" : "bg-gray-55/10 border-gray-150"
+                            )}>
+                              {/* Small half-pitch SVG */}
+                              <div className="w-full aspect-[2/1] relative rounded-lg border border-black/5 bg-emerald-800/10 shrink-0 overflow-hidden">
+                                <svg className={cn("absolute inset-0 w-full h-full pointer-events-none text-gray-500/35")} viewBox="0 0 68 34">
+                                  {/* Pitch mark lines */}
+                                  <rect x="0" y="0" width="68" height="34" fill="none" stroke="currentColor" strokeWidth="0.25" />
+                                  <rect x="13.84" y="0" width="40.32" height="16.5" fill="none" stroke="currentColor" strokeWidth="0.25" />
+                                  <rect x="24.84" y="0" width="18.32" height="5.5" fill="none" stroke="currentColor" strokeWidth="0.25" />
+                                  <circle cx="34" cy="11" r="0.25" fill="currentColor" />
+                                  <path d="M 27.5 16.5 A 9.15 9.15 0 0 0 40.5 16.5" fill="none" stroke="currentColor" strokeWidth="0.25" />
+                                  <circle cx="30.34" cy="0" r="0.38" fill="currentColor" />
+                                  <circle cx="37.66" cy="0" r="0.38" fill="currentColor" />
+
+                                  {/* Roster of all shots of this player on this mini pitch */}
+                                  {filteredShots.map(s => (
+                                    <circle
+                                      key={s.id}
+                                      cx={s.y}
+                                      cy={s.x}
+                                      r={activeShot?.id === s.id ? 1.5 : 0.85}
+                                      className={cn(
+                                        "transition-all duration-300",
+                                        activeShot?.id === s.id ? "animate-pulse stroke-white fill-amber-400 stroke-[0.3]" : "",
+                                        activeShot?.id !== s.id && s.isGoal ? "fill-emerald-450 stroke-white/40 stroke-[0.1]" : "",
+                                        activeShot?.id !== s.id && !s.isGoal ? "fill-red-400/95" : ""
+                                      )}
+                                      style={{ pointerEvents: 'auto', cursor: 'pointer' }}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setActiveHistoryShotId(s.id);
+                                      }}
+                                    />
+                                  ))}
+
+                                  {/* Highlighted active trajectory path curve */}
+                                  {activeShot && (
+                                    <motion.path
+                                      key={`history-traj-${activeShot.id}`}
+                                      d={`M ${activeShot.y} ${activeShot.x} C ${activeShot.y} ${activeShot.x * 0.7}, 34 ${activeShot.x * 0.3}, 34 0`}
+                                      fill="none"
+                                      stroke={activeShot.isGoal ? "#10b981" : "#f59e0b"}
+                                      strokeWidth="0.45"
+                                      strokeDasharray="1 0.4"
+                                      initial={{ strokeDashoffset: 10 }}
+                                      animate={{ strokeDashoffset: 0 }}
+                                      transition={{ repeat: Infinity, ease: "linear", duration: 1 }}
+                                    />
+                                  )}
+                                </svg>
+                              </div>
+
+                              {/* Active Shot Metadata Readout */}
+                              {activeShot ? (
+                                <div className="mt-2 w-full flex flex-col gap-1.5 p-3 rounded-xl bg-blue-500/5 border border-blue-500/10">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-[8px] font-black uppercase text-gray-500 tracking-wider">Incontro</span>
+                                    <span className={cn(
+                                      "text-[7px] font-black px-1.5 py-0.5 rounded leading-none border",
+                                      activeShot.isGoal 
+                                        ? "bg-emerald-500/10 border-emerald-500/25 text-emerald-400" 
+                                        : "bg-yellow-500/10 border-yellow-500/20 text-yellow-500"
+                                    )}>
+                                      {activeShot.isGoal ? "GOAL" : (activeShot.ipoCategory === 'shotsIn' ? "PARATA" : "FUORI")}
+                                    </span>
+                                  </div>
+                                  
+                                  <div className="grid grid-cols-2 gap-2 mt-1">
+                                    <div className="flex flex-col">
+                                      <span className="text-[7.5px] font-bold text-gray-500 uppercase tracking-widest leading-none">Indice xG</span>
+                                      <span className="text-[10px] font-bold text-blue-400 mt-1">{(activeShot.xg * 100).toFixed(0)}% xG</span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                      <span className="text-[7.5px] font-bold text-gray-500 uppercase tracking-widest leading-none">Distanza</span>
+                                      <span className="text-[10px] font-bold text-gray-400 mt-1">
+                                        {Math.sqrt(activeShot.x * activeShot.x + (activeShot.y - 34) * (activeShot.y - 34)).toFixed(1)}m
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="mt-2 w-full text-center text-[8px] text-gray-500 uppercase tracking-wider p-3">
+                                  Seleziona riga per tracciato
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+
+              {/* Modal Footer Controls */}
+              <div className={cn(
+                "p-6 border-t flex items-center justify-end gap-3 shrink-0",
+                theme === 'dark' ? "border-white/[0.03] bg-white/[0.01]" : "border-gray-100 bg-gray-50/50"
+              )}>
+                <button
+                  onClick={() => {
+                    setShowShotsHistoryModal(false);
+                    setActiveHistoryShotId(null);
+                  }}
+                  className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white text-[9px] font-black uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-blue-500/20 cursor-pointer"
+                >
+                  Chiudi Storico
+                </button>
               </div>
             </motion.div>
           </div>
