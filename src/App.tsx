@@ -307,6 +307,25 @@ function useOnlineStatus() {
 
 export default function App() {
   const isOnline = useOnlineStatus();
+
+  // Simple helper to load a specific field from the active match session
+  const getActiveSessionField = <T,>(fieldName: string, defaultValue: T): T => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (!params.get('matchId')) {
+        const saved = localStorage.getItem('active_match_session');
+        if (saved) {
+          const session = JSON.parse(saved);
+          if (session[fieldName] !== undefined) {
+            return session[fieldName] as T;
+          }
+        }
+      }
+    } catch (e) {
+      console.error("Error reading active session field:", fieldName, e);
+    }
+    return defaultValue;
+  };
   
   // Auth state defined early so memoized selectors can reference it
   const [user, setUser] = useState<User | null>(() => {
@@ -352,7 +371,7 @@ export default function App() {
     (effectiveSubStatus.plan === 'demo_free' || effectiveSubStatus.plan === 'DEMO GRATUITA')
   );
 
-  const [shots, setShots] = useState<Shot[]>([]);
+  const [shots, setShots] = useState<Shot[]>(() => getActiveSessionField<Shot[]>('shots', []));
   const [showHeatmap, setShowHeatmap] = useState(false);
   const [selectedShot, setSelectedShot] = useState<Shot | null>(null);
   const [mapClickCoord, setMapClickCoord] = useState<{
@@ -461,10 +480,10 @@ export default function App() {
   }, [activeFolderId]);
 
   // Team and Match configuration State variables
-  const [teamName, setTeamName] = useState('Bologna U18');
-  const [teamColor, setTeamColor] = useState('#eab308'); // Yellow-500
-  const [awayTeam, setAwayTeam] = useState('Avversario');
-  const [awayColor, setAwayColor] = useState('#3b82f6'); // Blue-500
+  const [teamName, setTeamName] = useState(() => getActiveSessionField<string>('teamName', 'Bologna U18'));
+  const [teamColor, setTeamColor] = useState(() => getActiveSessionField<string>('teamColor', '#eab308')); // Yellow-500
+  const [awayTeam, setAwayTeam] = useState(() => getActiveSessionField<string>('awayTeam', 'Avversario'));
+  const [awayColor, setAwayColor] = useState(() => getActiveSessionField<string>('awayColor', '#3b82f6')); // Blue-500
 
   // Update player list whenever squad players or shots change
   useEffect(() => {
@@ -501,7 +520,7 @@ export default function App() {
   const [matches, setMatches] = useState<Match[]>([]);
   const [showMatchList, setShowMatchList] = useState(false);
   const [showMatchSettings, setShowMatchSettings] = useState(false);
-  const [currentMatchId, setCurrentMatchId] = useState<string | null>(null);
+  const [currentMatchId, setCurrentMatchId] = useState<string | null>(() => getActiveSessionField<string | null>('currentMatchId', null));
   const [isSaving, setIsSaving] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [loadingMatchId, setLoadingMatchId] = useState<string | null>(null);
@@ -674,11 +693,11 @@ export default function App() {
   }, []);
 
   // Timer state
-  const [timerSeconds, setTimerSeconds] = useState(0);
+  const [timerSeconds, setTimerSeconds] = useState(() => getActiveSessionField<number>('timerSeconds', 0));
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const lastTickRef = useRef<number>(Date.now());
   const [isTimerRunning, setIsTimerRunning] = useState(false);
-  const [matchEvents, setMatchEvents] = useState<MatchEvent[]>([]);
+  const [matchEvents, setMatchEvents] = useState<MatchEvent[]>(() => getActiveSessionField<MatchEvent[]>('matchEvents', []));
   const [ripples, setRipples] = useState<{ id: string, x: number, y: number }[]>([]);
   const [heatmapOpacity, setHeatmapOpacity] = useState(0.4);
   const [heatmapSaturation, setHeatmapSaturation] = useState(100);
@@ -699,26 +718,26 @@ export default function App() {
   };
 
   // IPO State
-  const [ipoEvents, setIpoEvents] = useState({
+  const [ipoEvents, setIpoEvents] = useState(() => getActiveSessionField('ipoEvents', {
     shotsIn: 0,
     shotsOut: 0,
     penalties: 0,
     freeKicks: 0,
     corners: 0,
     crosses: 0
-  });
+  }));
 
-  const [ipoEventsAway, setIpoEventsAway] = useState({
+  const [ipoEventsAway, setIpoEventsAway] = useState(() => getActiveSessionField('ipoEventsAway', {
     shotsIn: 0,
     shotsOut: 0,
     penalties: 0,
     freeKicks: 0,
     corners: 0,
     crosses: 0
-  });
+  }));
 
-  const [goals, setGoals] = useState(0);
-  const [goalsAway, setGoalsAway] = useState(0);
+  const [goals, setGoals] = useState(() => getActiveSessionField<number>('goals', 0));
+  const [goalsAway, setGoalsAway] = useState(() => getActiveSessionField<number>('goalsAway', 0));
   const prevGoals = usePrevious(goals);
   const prevGoalsAway = usePrevious(goalsAway);
 
@@ -793,6 +812,42 @@ export default function App() {
       prevIsTimerRunning.current = isTimerRunning;
     }
   }, [isTimerRunning]);
+
+  // Save active match session on change to any of the fields
+  useEffect(() => {
+    try {
+      const session = {
+        currentMatchId,
+        teamName,
+        teamColor,
+        awayTeam,
+        awayColor,
+        shots,
+        matchEvents,
+        goals,
+        goalsAway,
+        ipoEvents,
+        ipoEventsAway,
+        timerSeconds
+      };
+      localStorage.setItem('active_match_session', JSON.stringify(session));
+    } catch (e) {
+      console.error("Error saving active_match_session:", e);
+    }
+  }, [
+    currentMatchId,
+    teamName,
+    teamColor,
+    awayTeam,
+    awayColor,
+    shots,
+    matchEvents,
+    goals,
+    goalsAway,
+    ipoEvents,
+    ipoEventsAway,
+    timerSeconds
+  ]);
 
   const currentMinute = Math.floor(timerSeconds / 60);
 
