@@ -1535,6 +1535,13 @@ export default function App() {
     
     if (!currentMatchId) {
       setCurrentMatchId(finalMatchId);
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.set('matchId', finalMatchId);
+        window.history.replaceState({}, '', url.pathname + url.search);
+      } catch (e) {
+        console.error("Failed to update window location query:", e);
+      }
     }
 
     // 1. ALWAYS save to localStorage first as a persistent failsafe cache!
@@ -1587,6 +1594,21 @@ export default function App() {
       return;
     }
 
+    // Helper unique timeout function to prevent Firestore client from hanging forever
+    const withTimeout = async <T,>(p: Promise<T>, ms: number, errorMsg: string): Promise<T> => {
+      let timeoutId: any;
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => {
+          reject(new Error(errorMsg));
+        }, ms);
+      });
+      try {
+        return await Promise.race([p, timeoutPromise]);
+      } finally {
+        clearTimeout(timeoutId);
+      }
+    };
+
     // 3. Otherwise, save to Firestore for cloud sync
     try {
       const dbMatchData = {
@@ -1594,15 +1616,32 @@ export default function App() {
         createdAt: serverTimestamp()
       };
       
-      await setDoc(doc(db, 'matches', finalMatchId), dbMatchData, { merge: true });
+      // Save primary document with a 3-second timeout
+      await withTimeout(
+        setDoc(doc(db, 'matches', finalMatchId), dbMatchData, { merge: true }),
+        3000,
+        "Il Cloud Firestore ha impiegato troppo tempo per rispondere."
+      );
 
       // Save shots - Delete existing shots first to avoid duplicates/stale data
       try {
-        const shotsSnapshot = await getDocs(collection(db, 'matches', finalMatchId, 'shots'));
+        const shotsSnapshot = await withTimeout(
+          getDocs(collection(db, 'matches', finalMatchId, 'shots')),
+          2500,
+          "Lettura tiri Cloud in timeout"
+        );
+        
         const deletePromises = shotsSnapshot.docs.map(shotDoc => 
           deleteDoc(doc(db, 'matches', finalMatchId, 'shots', shotDoc.id))
         );
-        await Promise.all(deletePromises);
+        
+        if (deletePromises.length > 0) {
+          await withTimeout(
+            Promise.all(deletePromises),
+            2500,
+            "Eliminazione tiri Cloud in timeout"
+          );
+        }
       } catch (err) {
         console.warn("Could not clear existing shots on Cloud, continuing anyway:", err);
       }
@@ -1616,7 +1655,11 @@ export default function App() {
             timestamp: new Date().toISOString()
           })
         );
-        await Promise.all(shotPromises);
+        await withTimeout(
+          Promise.all(shotPromises),
+          2500,
+          "Salvataggio tiri Cloud in timeout"
+        );
       }
 
       setShowToast({ 
@@ -1627,7 +1670,7 @@ export default function App() {
       console.error("Cloud Save Match Error:", error);
       // We don't crash the whole UI or block if cloud fails because the local save succeeded perfectly!
       setShowToast({ 
-        message: "Partita salvata localmente (Cloud temporaneamente non disponibile).", 
+        message: "Partita salvata localmente (Cloud non ha risposto in tempo).", 
         type: 'success' 
       });
     } finally {
@@ -2640,18 +2683,6 @@ export default function App() {
               <span className="text-[9px] font-black uppercase tracking-wider">Partite</span>
             </button>
 
-            <button 
-              onClick={() => setShowNewMatchConfirm(true)}
-              className={cn(
-                "p-2.5 sm:px-3 sm:py-2 rounded-xl border transition-all outline-none flex items-center gap-1.5 focus:outline-none",
-                theme === 'dark' ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20" : "bg-emerald-50 border-emerald-150 text-emerald-650 hover:bg-emerald-100"
-              )}
-              title="Crea una nuova partita"
-            >
-              <PlusCircle className="w-3.5 h-3.5" />
-              <span className="text-[9px] font-black uppercase tracking-wider">Nuova Partita</span>
-            </button>
-
             {effectiveSubStatus && effectiveSubStatus.active && (
               <button
                 onClick={() => {
@@ -2734,19 +2765,32 @@ export default function App() {
                   </button>
                 )}
 
-                 {!isReadOnly && (
+                <button 
+                  onClick={() => setShowNewMatchConfirm(true)}
+                  className={cn(
+                    "p-2.5 rounded-xl border transition-all outline-none flex items-center justify-center gap-1.5 focus:outline-none",
+                    theme === 'dark' ? "bg-[#1d2d24] border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20" : "bg-emerald-50 border-emerald-150 text-emerald-650 hover:bg-emerald-100"
+                  )}
+                  title="Crea Nuova Partita"
+                >
+                  <PlusCircle className="w-3.5 h-3.5" />
+                  <span className="text-[9px] font-black uppercase tracking-wider hidden sm:inline">Nuova Partita</span>
+                </button>
+
+                {!isReadOnly && (
                   <button 
                     onClick={saveMatch}
                     disabled={isSaving}
                     className={cn(
-                      "p-2.5 rounded-xl border transition-all outline-none",
+                      "p-2.5 rounded-xl border transition-all outline-none flex items-center justify-center gap-1.5 focus:outline-none",
                       isSaving 
                         ? "opacity-50 cursor-not-allowed" 
-                        : (theme === 'dark' ? "bg-blue-600/15 border-blue-500/25 text-blue-500 hover:bg-blue-600/25" : "bg-blue-600 text-white border-blue-650 shadow-md shadow-blue-500/15")
+                        : (theme === 'dark' ? "bg-blue-600/15 border-blue-500/25 text-blue-500 hover:bg-blue-600/25" : "bg-blue-600 text-white border-blue-150 shadow-md shadow-blue-500/15")
                     )}
                     title="Salva Partita"
                   >
                     {isSaving ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                    <span className="text-[9px] font-black uppercase tracking-wider hidden sm:inline">Salva</span>
                   </button>
                 )}
               </div>
