@@ -51,7 +51,8 @@ import {
   Mail,
   Key,
   Check,
-  Sparkles
+  Sparkles,
+  PlusCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Papa from 'papaparse';
@@ -528,6 +529,7 @@ export default function App() {
   // UI States
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showClearShotsConfirm, setShowClearShotsConfirm] = useState(false);
+  const [showNewMatchConfirm, setShowNewMatchConfirm] = useState(false);
   const [matchToDelete, setMatchToDelete] = useState<string | null>(null);
   const [showToast, setShowToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
   const [activeTab, setActiveTab] = useState<'xg' | 'ipo'>('xg');
@@ -2636,6 +2638,18 @@ export default function App() {
             >
               <List className="w-3.5 h-3.5 text-blue-500" />
               <span className="text-[9px] font-black uppercase tracking-wider">Partite</span>
+            </button>
+
+            <button 
+              onClick={() => setShowNewMatchConfirm(true)}
+              className={cn(
+                "p-2.5 sm:px-3 sm:py-2 rounded-xl border transition-all outline-none flex items-center gap-1.5 focus:outline-none",
+                theme === 'dark' ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20" : "bg-emerald-50 border-emerald-150 text-emerald-650 hover:bg-emerald-100"
+              )}
+              title="Crea una nuova partita"
+            >
+              <PlusCircle className="w-3.5 h-3.5" />
+              <span className="text-[9px] font-black uppercase tracking-wider">Nuova Partita</span>
             </button>
 
             {effectiveSubStatus && effectiveSubStatus.active && (
@@ -5565,6 +5579,60 @@ export default function App() {
                 </button>
                 <button 
                   onClick={() => setShowClearShotsConfirm(false)}
+                  className={cn(
+                    "w-full py-4 border font-bold rounded-2xl transition-all",
+                    theme === 'dark' ? "bg-white/5 hover:bg-white/10 text-white border-white/10" : "bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-100"
+                  )}
+                >
+                  Annulla
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {showNewMatchConfirm && (
+          <div className="fixed inset-0 z-[111] flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowNewMatchConfirm(false)}
+              className="absolute inset-0 bg-black/90 backdrop-blur-md"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className={cn(
+                "relative w-full max-w-sm border rounded-3xl p-8 shadow-2xl text-center transition-colors z-10",
+                theme === 'dark' ? "bg-[#121212] border-white/10" : "bg-white border-gray-100"
+              )}
+            >
+              <div className="w-20 h-20 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                <PlusCircle className="text-emerald-500 w-10 h-10" />
+              </div>
+              <h2 className={cn("text-2xl font-black mb-2", theme === 'dark' ? "text-white" : "text-gray-900")}>Nuova Partita?</h2>
+              <p className="text-gray-500 text-sm mb-8 font-medium">
+                Sei sicuro di voler creare una nuova partita? Tutti i tiri, i gol e l'indice di questa sessione verranno resettati per iniziare una nuova registrazione. Assicurati di aver salvato i dati della partita corrente se desideri conservarli nel database o in locale.
+              </p>
+              <div className="flex flex-col gap-3">
+                <button 
+                  onClick={() => {
+                    clearAll();
+                    setTeamName('Bologna U15');
+                    setTeamColor('#eab308');
+                    setAwayTeam('Avversario');
+                    setAwayColor('#3b82f6');
+                    setShowNewMatchConfirm(false);
+                    setShowToast({ message: "Nuova partita creata con successo!", type: 'success' });
+                  }}
+                  className="w-full py-4 bg-emerald-500 hover:bg-emerald-400 text-white font-black rounded-2xl transition-all shadow-lg shadow-emerald-500/20"
+                >
+                  Sì, Nuova Partita
+                </button>
+                <button 
+                  onClick={() => setShowNewMatchConfirm(false)}
                   className={cn(
                     "w-full py-4 border font-bold rounded-2xl transition-all",
                     theme === 'dark' ? "bg-white/5 hover:bg-white/10 text-white border-white/10" : "bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-100"
