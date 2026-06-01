@@ -2767,7 +2767,7 @@ export default function App() {
           </div>
 
           {/* Right actions and tools grouped cleanly */}
-          <div className="flex flex-wrap lg:flex-nowrap items-center justify-center lg:justify-end gap-2.5 w-full lg:w-auto border-t lg:border-t-0 border-white/5 lg:pt-0 pt-3">
+          <div className="flex flex-wrap lg:flex-nowrap items-center justify-center lg:justify-end gap-1.5 sm:gap-2 xl:gap-2.5 w-full lg:w-auto border-t lg:border-t-0 border-white/5 lg:pt-0 pt-3">
             <button 
               onClick={() => setShowSquadModal(true)}
               className={cn(
@@ -2836,7 +2836,7 @@ export default function App() {
             )}
 
             {activeTab === 'xg' && (
-              <div className="flex items-center gap-2 flex-wrap justify-center">
+              <>
                 <button 
                   onClick={() => setShowHeatmap(!showHeatmap)}
                   className={cn(
@@ -2917,7 +2917,7 @@ export default function App() {
                     <span className="text-[9px] font-black uppercase tracking-wider hidden sm:inline">Salva</span>
                   </button>
                 )}
-              </div>
+              </>
             )}
 
             {/* Desktop Only theme and login togglers */}
