@@ -83,3 +83,20 @@
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* Beautiful custom thin scrollbars globally for a sleek look on tablets and desktop alike */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.22);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(156, 163, 175, 0.45);
+}
+

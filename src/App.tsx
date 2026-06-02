@@ -2633,11 +2633,11 @@ export default function App() {
 
       {/* Header */}
       <header className={cn(
-        "border-b backdrop-blur-3xl lg:sticky static lg:top-0 z-50 transition-colors duration-500",
+        "border-b backdrop-blur-3xl md:sticky static md:top-0 z-50 transition-colors duration-500",
         theme === 'dark' ? "bg-[#070708]/85 border-white/[0.03]" : "bg-white/80 border-gray-100"
       )}>
-        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-2.5 lg:py-2 flex flex-col lg:flex-row lg:items-center justify-between gap-3.5 flex-wrap">
-          <div className="flex items-center justify-between w-full lg:w-auto gap-4 shrink-0">
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-2.5 md:py-2 flex flex-col md:flex-row md:items-center justify-between gap-3.5 flex-wrap">
+          <div className="flex items-center justify-between w-full md:w-auto gap-4 shrink-0">
             <div className="flex items-center gap-4">
               <div className={cn(
                 "w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-xl shadow-xl relative group overflow-hidden transition-all duration-500 hover:border-blue-500/20 border shrink-0",
@@ -2670,7 +2670,7 @@ export default function App() {
             </div>
 
             {/* Mobile/Tablet Quick Toggles */}
-            <div className="flex lg:hidden items-center gap-2 shrink-0">
+            <div className="flex md:hidden items-center gap-2 shrink-0">
               <button 
                 onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
                 className={cn(
@@ -2694,7 +2694,7 @@ export default function App() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3 w-full lg:w-auto justify-center lg:justify-start shrink-0">
+          <div className="flex items-center gap-3 w-full md:w-auto justify-center md:justify-start shrink-0">
             {/* Timer Controllers and Reset Milestones */}
             <div className="flex items-center gap-3 w-full sm:w-auto justify-center flex-nowrap whitespace-nowrap">
               <button 
@@ -2765,7 +2765,7 @@ export default function App() {
           </div>
 
           {/* Right actions and tools grouped cleanly */}
-          <div className="flex flex-wrap items-center justify-center lg:justify-end gap-1.5 sm:gap-2 w-full lg:w-auto border-t lg:border-t-0 border-white/5 lg:pt-0 pt-3 shrink-0">
+          <div className="flex flex-wrap items-center justify-center md:justify-end gap-1.5 sm:gap-2 w-full md:w-auto border-t md:border-t-0 border-white/5 md:pt-0 pt-3 shrink-0">
             <button 
               onClick={() => setShowSquadModal(true)}
               className={cn(
@@ -2919,7 +2919,7 @@ export default function App() {
             )}
 
             {/* Desktop Only theme and login togglers */}
-            <div className="hidden lg:flex items-center gap-2">
+            <div className="hidden md:flex items-center gap-2">
               <button 
                 onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
                 className={cn(
@@ -3142,9 +3142,9 @@ export default function App() {
               ))}
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-5 lg:gap-8">
               {/* Pitch Area */}
-              <div className="lg:col-span-8 flex flex-col gap-6">
+              <div className="md:col-span-8 flex flex-col gap-6">
                 <div className={cn(
                   "relative border rounded-none p-4 sm:p-6 lg:p-8 overflow-hidden group/field transition-colors",
                   theme === 'dark' ? "bg-white/[0.01] border-white/[0.03]" : "bg-white border-gray-100 shadow-sm"
@@ -3506,7 +3506,7 @@ export default function App() {
               </div>
 
               {/* Sidebar Action Zone */}
-              <div className="lg:col-span-4 flex flex-col gap-6">
+              <div className="md:col-span-4 flex flex-col gap-6">
                 <section className={cn(
                   "border rounded-[2.5rem] p-7 transition-all duration-300 relative overflow-hidden",
                   theme === 'dark' 
@@ -3675,7 +3675,7 @@ export default function App() {
                     <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Live Feed</h3>
                     <div className="px-2 py-1 bg-blue-500/10 rounded-lg text-[8px] font-black text-blue-500">{matchEvents.length} EVENTI</div>
                   </div>
-                  <div className="flex-1 overflow-y-auto no-scrollbar space-y-4">
+                  <div className="flex-1 overflow-y-auto space-y-4">
                     {matchEvents.length === 0 ? (
                       <div className="h-full flex flex-col items-center justify-center text-gray-500 opacity-40">
                         <Activity className="w-10 h-10 mb-4 animate-pulse" />
@@ -4601,7 +4601,7 @@ export default function App() {
               </div>
 
               {/* Bento Content Panels */}
-              <div className="p-6 sm:p-8 flex-1 overflow-y-auto no-scrollbar grid grid-cols-1 md:grid-cols-12 gap-8">
+              <div className="p-6 sm:p-8 flex-1 overflow-y-auto grid grid-cols-1 md:grid-cols-12 gap-8">
                 {/* Panel 1: Player Creator/Editor (5 cols) */}
                 <div className="md:col-span-5 flex flex-col gap-6">
                   <div className={cn(
@@ -4817,7 +4817,7 @@ export default function App() {
                       <span>Stato / Azioni</span>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto max-h-[350px] no-scrollbar divide-y divide-white/5">
+                    <div className="flex-1 overflow-y-auto max-h-[350px] divide-y divide-white/5">
                       {(() => {
                         const filtered = squadPlayers.filter(p => {
                           const matchesSearch = p.name.toUpperCase().includes(squadSearch.trim().toUpperCase());
@@ -5254,7 +5254,7 @@ export default function App() {
                         </div>
 
                         {/* Dual Panel Body: Grid Table of Shots & Tactical Pitch Preview */}
-                        <div className="flex-1 flex flex-col xl:flex-row gap-5 min-h-[300px]">
+                        <div className="flex-1 flex flex-col lg:flex-row gap-5 min-h-[300px]">
                           {/* Grid table section */}
                           <div className="flex-1 flex flex-col gap-3">
                             {/* Outcome Selector Filter bar */}
@@ -5302,7 +5302,7 @@ export default function App() {
                               </div>
 
                               {/* Rows list */}
-                              <div className="flex-1 overflow-y-auto divide-y divide-white/5 no-scrollbar">
+                              <div className="flex-1 overflow-y-auto divide-y divide-white/5">
                                 {filteredShots.map(shot => {
                                   const shotDist = Math.sqrt(shot.x * shot.x + (shot.y - 34) * (shot.y - 34)).toFixed(1);
                                   const isActive = activeShot?.id === shot.id;
@@ -5359,11 +5359,11 @@ export default function App() {
                           </div>
 
                           {/* Interactive Pitch visual preview pane */}
-                          <div className="w-full xl:w-72 flex flex-col gap-3 shrink-0">
+                          <div className="w-full lg:w-72 flex flex-col gap-3 shrink-0">
                             <span className="text-[9px] font-black text-gray-500 uppercase tracking-wider">Anteprima Pitch</span>
                             
                             <div className={cn(
-                              "border rounded-2xl p-4 flex flex-col items-center justify-between relative overflow-hidden h-[240px] xl:h-full justify-center lg:justify-between",
+                              "border rounded-2xl p-4 flex flex-col items-center justify-between relative overflow-hidden h-[240px] lg:h-full justify-center lg:justify-between",
                               theme === 'dark' ? "bg-[#070708]/30 border-white/5" : "bg-gray-55/10 border-gray-150"
                             )}>
                               {/* Small half-pitch SVG */}
@@ -5512,7 +5512,7 @@ export default function App() {
                 </button>
               </div>
 
-              <div className="max-h-[60vh] overflow-y-auto p-6 space-y-4 no-scrollbar">
+              <div className="max-h-[60vh] overflow-y-auto p-6 space-y-4">
                 {matches.length === 0 ? (
                   <div className="py-24 text-center">
                     <div className="w-20 h-20 bg-gray-500/5 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -5868,7 +5868,7 @@ export default function App() {
                     {playerList.length > 0 && (
                       <div className="space-y-2">
                         <p className="text-[8px] font-bold text-gray-500 uppercase tracking-widest">Scelta Rapida:</p>
-                        <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto pr-1 no-scrollbar">
+                        <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto pr-1">
                           {playerList.slice(0, 10).map(pName => {
                             const isSel = popupPlayer === pName;
                             return (
