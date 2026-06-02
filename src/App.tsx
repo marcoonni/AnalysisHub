@@ -2633,11 +2633,11 @@ export default function App() {
 
       {/* Header */}
       <header className={cn(
-        "border-b backdrop-blur-3xl lg:sticky static lg:top-0 z-50 transition-colors duration-500",
+        "border-b backdrop-blur-3xl xl:sticky static xl:top-0 z-50 transition-colors duration-500",
         theme === 'dark' ? "bg-[#070708]/85 border-white/[0.03]" : "bg-white/80 border-gray-100"
       )}>
-        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-3 lg:py-0 lg:h-18 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div className="flex items-center justify-between w-full lg:w-auto gap-4">
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-3 xl:py-0 xl:h-18 flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+          <div className="flex items-center justify-between w-full xl:w-auto gap-4 shrink-0">
             <div className="flex items-center gap-4">
               <div className={cn(
                 "w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-xl shadow-xl relative group overflow-hidden transition-all duration-500 hover:border-blue-500/20 border shrink-0",
@@ -2670,7 +2670,7 @@ export default function App() {
             </div>
 
             {/* Mobile/Tablet Quick Toggles */}
-            <div className="flex lg:hidden items-center gap-2 shrink-0">
+            <div className="flex xl:hidden items-center gap-2 shrink-0">
               <button 
                 onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
                 className={cn(
@@ -2694,7 +2694,7 @@ export default function App() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3 w-full lg:w-auto justify-center lg:justify-start">
+          <div className="flex items-center gap-3 w-full xl:w-auto justify-center xl:justify-start shrink-0">
             {/* Timer Controllers and Reset Milestones */}
             <div className="flex items-center gap-3 w-full sm:w-auto justify-center flex-nowrap whitespace-nowrap">
               <button 
@@ -2724,7 +2724,7 @@ export default function App() {
                   onClick={() => { setTimerSeconds(45 * 60); setIsTimerRunning(false); }}
                   className={cn(
                     "h-10 px-3 text-[9px] font-black border rounded-xl transition-all uppercase tracking-tight flex items-center justify-center shrink-0",
-                    theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-55 border-gray-150 text-gray-600 hover:text-gray-900"
+                    theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-50 border-gray-200 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                   )}
                   title="Inizio 2° Tempo (45:00)"
                 >
@@ -2734,7 +2734,7 @@ export default function App() {
                   onClick={() => { setTimerSeconds(90 * 60); setIsTimerRunning(false); }}
                   className={cn(
                     "h-10 px-3 text-[9px] font-black border rounded-xl transition-all uppercase tracking-tight flex items-center justify-center shrink-0",
-                    theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-55 border-gray-150 text-gray-600 hover:text-gray-900"
+                    theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-50 border-gray-200 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                   )}
                   title="Fine Partita (90:00)"
                 >
@@ -2744,7 +2744,7 @@ export default function App() {
                   onClick={() => { setTimerSeconds(105 * 60); setIsTimerRunning(false); }}
                   className={cn(
                     "h-10 px-3 text-[9px] font-black border rounded-xl transition-all uppercase tracking-tight flex items-center justify-center shrink-0",
-                    theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-55 border-gray-150 text-gray-600 hover:text-gray-900"
+                    theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-50 border-gray-200 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                   )}
                   title="Overtime (105:00)"
                 >
@@ -2754,7 +2754,7 @@ export default function App() {
                   onClick={() => { setTimerSeconds(0); setIsTimerRunning(false); }}
                   className={cn(
                     "h-10 px-3 text-[9px] font-black border rounded-xl transition-all uppercase tracking-tight flex items-center justify-center shrink-0",
-                    theme === 'dark' ? "bg-red-500/10 border-red-500/20 text-red-400 hover:bg-red-500/20" : "bg-red-50 border-red-150 text-red-650 hover:bg-red-100"
+                    theme === 'dark' ? "bg-red-500/10 border-red-500/20 text-red-400 hover:bg-red-500/20" : "bg-red-50 border-red-200 text-red-650 hover:bg-red-100"
                   )}
                   title="Reset totale a 00:00"
                 >
@@ -2765,12 +2765,12 @@ export default function App() {
           </div>
 
           {/* Right actions and tools grouped cleanly */}
-          <div className="flex flex-wrap lg:flex-nowrap items-center justify-center lg:justify-end gap-1.5 sm:gap-2 xl:gap-2.5 w-full lg:w-auto border-t lg:border-t-0 border-white/5 lg:pt-0 pt-3">
+          <div className="flex flex-wrap xl:flex-nowrap items-center justify-center xl:justify-end gap-1.5 sm:gap-2 xl:gap-2.5 w-full xl:w-auto border-t xl:border-t-0 border-white/5 xl:pt-0 pt-3 shrink-0">
             <button 
               onClick={() => setShowSquadModal(true)}
               className={cn(
                 "h-10 px-3 rounded-xl border transition-all outline-none flex items-center justify-center gap-1.5 focus:outline-none shrink-0",
-                theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-55 border-gray-150 text-gray-600 hover:text-gray-900"
+                theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-50 border-gray-200 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
               )}
               title="Scheda Squadra"
             >
@@ -2786,7 +2786,7 @@ export default function App() {
               }}
               className={cn(
                 "h-10 px-3 rounded-xl border transition-all outline-none flex items-center justify-center gap-1.5 focus:outline-none shrink-0",
-                theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-55 border-gray-150 text-gray-600 hover:text-gray-900"
+                theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-50 border-gray-200 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
               )}
               title="Storico dei Tiri per Ragazzo (Griglia)"
             >
@@ -2797,7 +2797,7 @@ export default function App() {
               onClick={() => setShowMatchList(true)}
               className={cn(
                 "h-10 px-3 rounded-xl border transition-all outline-none flex items-center justify-center gap-1.5 focus:outline-none shrink-0",
-                theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-55 border-gray-150 text-gray-600 hover:text-gray-900"
+                theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-50 border-gray-200 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
               )}
               title="Le mie partite"
             >
@@ -2841,7 +2841,7 @@ export default function App() {
                     "h-10 px-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1.5 border shrink-0",
                     showHeatmap 
                       ? "bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-600/10" 
-                      : (theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-55 border-gray-150 hover:bg-gray-100 text-gray-550")
+                      : (theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-50 border-gray-200 hover:bg-gray-100 text-gray-500 hover:text-gray-900")
                   )}
                 >
                   <Flame className="w-3.5 h-3.5" />
@@ -2852,7 +2852,7 @@ export default function App() {
                   onClick={exportToExcel}
                   className={cn(
                     "h-10 w-10 flex items-center justify-center rounded-xl border transition-all outline-none shrink-0",
-                    theme === 'dark' ? "bg-emerald-600/10 border-emerald-500/25 text-emerald-500 hover:bg-emerald-600/20" : "bg-emerald-50 border-emerald-150 text-emerald-650 hover:bg-emerald-100"
+                    theme === 'dark' ? "bg-emerald-600/10 border-emerald-500/25 text-emerald-500 hover:bg-emerald-600/20" : "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100"
                   )}
                   title="Esporta Excel"
                 >
@@ -2863,7 +2863,7 @@ export default function App() {
                   onClick={() => setShowXGTuning(true)}
                   className={cn(
                     "h-10 w-10 flex items-center justify-center rounded-xl border transition-all outline-none shrink-0",
-                    theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-55 border-gray-150 text-gray-550 hover:text-gray-900"
+                    theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-50 border-gray-200 text-gray-500 hover:text-gray-900"
                   )}
                   title="Personalizza Modello"
                 >
@@ -2879,7 +2879,7 @@ export default function App() {
                     }}
                     className={cn(
                       "h-10 w-10 flex items-center justify-center rounded-xl border transition-all outline-none shrink-0",
-                      theme === 'dark' ? "bg-blue-600/10 border-blue-500/20 text-blue-400 hover:bg-blue-600/20" : "bg-blue-50 border-blue-150 text-blue-655 hover:bg-blue-100"
+                      theme === 'dark' ? "bg-blue-600/10 border-blue-500/20 text-blue-400 hover:bg-blue-600/20" : "bg-blue-50 border-blue-200 text-blue-600 hover:bg-blue-100"
                     )}
                     title="Invita Collaboratori"
                   >
@@ -2891,7 +2891,7 @@ export default function App() {
                   onClick={() => setShowNewMatchConfirm(true)}
                   className={cn(
                     "h-10 px-3 rounded-xl border transition-all outline-none flex items-center justify-center gap-1.5 focus:outline-none shrink-0",
-                    theme === 'dark' ? "bg-[#1d2d24] border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20" : "bg-emerald-50 border-emerald-150 text-emerald-650 hover:bg-emerald-100"
+                    theme === 'dark' ? "bg-[#1d2d24] border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20" : "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100"
                   )}
                   title="Crea Nuova Partita"
                 >
@@ -2919,12 +2919,12 @@ export default function App() {
             )}
 
             {/* Desktop Only theme and login togglers */}
-            <div className="hidden lg:flex items-center gap-2">
+            <div className="hidden xl:flex items-center gap-2">
               <button 
                 onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
                 className={cn(
                   "h-10 w-10 flex items-center justify-center rounded-xl border transition-all outline-none shrink-0",
-                  theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-500 hover:text-white" : "bg-gray-55 border-gray-100 text-gray-400 hover:text-gray-900"
+                  theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-500 hover:text-white" : "bg-gray-50 border-gray-100 text-gray-500 hover:text-gray-900"
                 )}
                 title={theme === 'dark' ? "Modalità Chiara" : "Modalità Scura"}
               >
@@ -2934,7 +2934,7 @@ export default function App() {
                 onClick={() => user ? logout() : login()}
                 className={cn(
                   "h-10 w-10 flex items-center justify-center rounded-xl border transition-all outline-none shrink-0",
-                  theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-500 hover:text-white" : "bg-gray-55 border-gray-100 text-gray-400 hover:text-gray-900"
+                  theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-500 hover:text-white" : "bg-gray-50 border-gray-100 text-gray-500 hover:text-gray-900"
                 )}
                 title={user ? "Logout" : "Accedi"}
               >
