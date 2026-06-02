@@ -2674,7 +2674,7 @@ export default function App() {
               <button 
                 onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
                 className={cn(
-                  "p-2 rounded-xl border transition-all outline-none",
+                  "h-10 w-10 flex items-center justify-center rounded-xl border transition-all outline-none",
                   theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-500 hover:text-white" : "bg-gray-50 border-gray-100 text-gray-400 hover:text-gray-900"
                 )}
                 title={theme === 'dark' ? "Modalità Chiara" : "Modalità Scura"}
@@ -2684,7 +2684,7 @@ export default function App() {
               <button 
                 onClick={() => user ? logout() : login()}
                 className={cn(
-                  "p-2 rounded-xl border transition-all outline-none",
+                  "h-10 w-10 flex items-center justify-center rounded-xl border transition-all outline-none",
                   theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-500 hover:text-white" : "bg-gray-50 border-gray-100 text-gray-400 hover:text-gray-900"
                 )}
                 title={user ? "Logout" : "Accedi"}
@@ -2700,24 +2700,22 @@ export default function App() {
               <button 
                 onClick={() => setIsTimerRunning(!isTimerRunning)}
                 className={cn(
-                  "px-4 py-2 rounded-xl transition-all border outline-none font-black uppercase tracking-widest text-[9px] flex-1 sm:flex-initial",
+                  "h-10 px-4 rounded-xl transition-all border outline-none font-black uppercase tracking-widest text-[9px] flex items-center justify-center gap-1.5 shrink-0 flex-1 sm:flex-initial",
                   isTimerRunning 
                     ? (theme === 'dark' ? "bg-yellow-500/10 border-yellow-500/20 text-yellow-500 hover:bg-yellow-500/20" : "bg-yellow-500 text-white border-yellow-500 shadow-lg shadow-yellow-500/20")
                     : (theme === 'dark' ? "bg-blue-600/10 border-blue-500/20 text-blue-500 hover:bg-blue-600/20" : "bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-600/20")
                 )}
               >
-                <div className="flex items-center justify-center gap-2">
-                  {isTimerRunning ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
-                  <span>{isTimerRunning ? 'Pausa' : 'Avvia'}</span>
-                </div>
+                {isTimerRunning ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                <span>{isTimerRunning ? 'Pausa' : 'Avvia'}</span>
               </button>
 
               <div className={cn(
-                "flex items-center border rounded-xl px-3.5 py-1.5 gap-2 font-mono text-[10px] sm:text-xs font-black tabular-nums leading-none tracking-wider",
+                "h-10 px-3.5 flex items-center justify-center border rounded-xl gap-2 font-mono text-[10px] sm:text-xs font-black tabular-nums leading-none tracking-wider shrink-0",
                 theme === 'dark' ? "bg-white/[0.03] border-white/5 text-white/90" : "bg-gray-50 border-gray-150 text-gray-900"
               )}>
                 <Clock className="w-3.5 h-3.5 text-gray-400" />
-                {String(Math.floor(timerSeconds / 60)).padStart(2, '0')}:{String(timerSeconds % 60).padStart(2, '0')}
+                <span>{String(Math.floor(timerSeconds / 60)).padStart(2, '0')}:{String(timerSeconds % 60).padStart(2, '0')}</span>
               </div>
 
               {/* Reset Milestones */}
@@ -2725,8 +2723,8 @@ export default function App() {
                 <button 
                   onClick={() => { setTimerSeconds(45 * 60); setIsTimerRunning(false); }}
                   className={cn(
-                    "px-2 py-1 text-[9px] font-black border rounded-lg transition-all uppercase tracking-tight",
-                    theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-50 border-gray-150 text-gray-600 hover:text-gray-900"
+                    "h-10 px-3 text-[9px] font-black border rounded-xl transition-all uppercase tracking-tight flex items-center justify-center shrink-0",
+                    theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-55 border-gray-150 text-gray-600 hover:text-gray-900"
                   )}
                   title="Inizio 2° Tempo (45:00)"
                 >
@@ -2735,8 +2733,8 @@ export default function App() {
                 <button 
                   onClick={() => { setTimerSeconds(90 * 60); setIsTimerRunning(false); }}
                   className={cn(
-                    "px-2 py-1 text-[9px] font-black border rounded-lg transition-all uppercase tracking-tight",
-                    theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-50 border-gray-150 text-gray-600 hover:text-gray-900"
+                    "h-10 px-3 text-[9px] font-black border rounded-xl transition-all uppercase tracking-tight flex items-center justify-center shrink-0",
+                    theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-55 border-gray-150 text-gray-600 hover:text-gray-900"
                   )}
                   title="Fine Partita (90:00)"
                 >
@@ -2745,8 +2743,8 @@ export default function App() {
                 <button 
                   onClick={() => { setTimerSeconds(105 * 60); setIsTimerRunning(false); }}
                   className={cn(
-                    "px-2 py-1 text-[9px] font-black border rounded-lg transition-all uppercase tracking-tight",
-                    theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-50 border-gray-150 text-gray-600 hover:text-gray-900"
+                    "h-10 px-3 text-[9px] font-black border rounded-xl transition-all uppercase tracking-tight flex items-center justify-center shrink-0",
+                    theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-55 border-gray-150 text-gray-600 hover:text-gray-900"
                   )}
                   title="Overtime (105:00)"
                 >
@@ -2755,7 +2753,7 @@ export default function App() {
                 <button 
                   onClick={() => { setTimerSeconds(0); setIsTimerRunning(false); }}
                   className={cn(
-                    "px-1.5 py-1 text-[9px] font-black border rounded-lg transition-all uppercase tracking-tight",
+                    "h-10 px-3 text-[9px] font-black border rounded-xl transition-all uppercase tracking-tight flex items-center justify-center shrink-0",
                     theme === 'dark' ? "bg-red-500/10 border-red-500/20 text-red-400 hover:bg-red-500/20" : "bg-red-50 border-red-150 text-red-650 hover:bg-red-100"
                   )}
                   title="Reset totale a 00:00"
@@ -2771,12 +2769,12 @@ export default function App() {
             <button 
               onClick={() => setShowSquadModal(true)}
               className={cn(
-                "p-2.5 sm:px-3 sm:py-2 rounded-xl border transition-all outline-none flex items-center gap-1.5 focus:outline-none",
-                theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-50 border-gray-150 text-gray-600 hover:text-gray-900"
+                "h-10 px-3 rounded-xl border transition-all outline-none flex items-center justify-center gap-1.5 focus:outline-none shrink-0",
+                theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-55 border-gray-150 text-gray-600 hover:text-gray-900"
               )}
               title="Scheda Squadra"
             >
-              <Users className="w-3.5 h-3.5 text-blue-500" />
+              <Users className="w-3.5 h-3.5 text-blue-500 shrink-0" />
               <span className="text-[9px] font-black uppercase tracking-wider">Roster</span>
             </button>
             <button 
@@ -2787,23 +2785,23 @@ export default function App() {
                 }
               }}
               className={cn(
-                "p-2.5 sm:px-3 sm:py-2 rounded-xl border transition-all outline-none flex items-center gap-1.5 focus:outline-none",
-                theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-50 border-gray-150 text-gray-600 hover:text-gray-900"
+                "h-10 px-3 rounded-xl border transition-all outline-none flex items-center justify-center gap-1.5 focus:outline-none shrink-0",
+                theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-55 border-gray-150 text-gray-600 hover:text-gray-900"
               )}
               title="Storico dei Tiri per Ragazzo (Griglia)"
             >
-              <Target className="w-3.5 h-3.5 text-red-500" />
+              <Target className="w-3.5 h-3.5 text-red-500 shrink-0" />
               <span className="text-[9px] font-black uppercase tracking-wider">Storico Tiri</span>
             </button>
             <button 
               onClick={() => setShowMatchList(true)}
               className={cn(
-                "p-2.5 sm:px-3 sm:py-2 rounded-xl border transition-all outline-none flex items-center gap-1.5 focus:outline-none",
-                theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-50 border-gray-150 text-gray-600 hover:text-gray-900"
+                "h-10 px-3 rounded-xl border transition-all outline-none flex items-center justify-center gap-1.5 focus:outline-none shrink-0",
+                theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-55 border-gray-150 text-gray-600 hover:text-gray-900"
               )}
               title="Le mie partite"
             >
-              <List className="w-3.5 h-3.5 text-blue-500" />
+              <List className="w-3.5 h-3.5 text-blue-500 shrink-0" />
               <span className="text-[9px] font-black uppercase tracking-wider">Partite</span>
             </button>
 
@@ -2817,7 +2815,7 @@ export default function App() {
                   }
                 }}
                 className={cn(
-                  "px-2.5 py-1.5 border rounded-xl transition-all outline-none flex items-center gap-1 cursor-pointer shrink-0 max-w-full text-ellipsis overflow-hidden",
+                  "h-10 px-3 border rounded-xl transition-all outline-none flex items-center justify-center gap-1 cursor-pointer shrink-0 max-w-full text-ellipsis overflow-hidden",
                   isDemoMode
                     ? (theme === 'dark' 
                         ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20" 
@@ -2829,7 +2827,7 @@ export default function App() {
                 title={isDemoMode ? "Sei in modalità Demo. Clicca per sbloccare tutti i piani!" : "Dettagli Licenza Abbonamento"}
               >
                 <Sparkles className={cn("w-3 h-3 shrink-0", isDemoMode ? "text-emerald-400 animate-bounce" : "text-amber-500")} />
-                <span className="text-[8px] font-black uppercase tracking-wider">
+                <span className="text-[8px] font-black uppercase tracking-wider shrink-0">
                   {isDemoMode ? "DEMO 🚀" : "PREMIUM"}
                 </span>
               </button>
@@ -2840,10 +2838,10 @@ export default function App() {
                 <button 
                   onClick={() => setShowHeatmap(!showHeatmap)}
                   className={cn(
-                    "p-2 sm:px-3 sm:py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5 border",
+                    "h-10 px-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1.5 border shrink-0",
                     showHeatmap 
                       ? "bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-600/10" 
-                      : (theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-50 border-gray-150 hover:bg-gray-100 text-gray-550")
+                      : (theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-55 border-gray-150 hover:bg-gray-100 text-gray-550")
                   )}
                 >
                   <Flame className="w-3.5 h-3.5" />
@@ -2853,23 +2851,23 @@ export default function App() {
                 <button 
                   onClick={exportToExcel}
                   className={cn(
-                    "p-2.5 rounded-xl border transition-all outline-none",
+                    "h-10 w-10 flex items-center justify-center rounded-xl border transition-all outline-none shrink-0",
                     theme === 'dark' ? "bg-emerald-600/10 border-emerald-500/25 text-emerald-500 hover:bg-emerald-600/20" : "bg-emerald-50 border-emerald-150 text-emerald-650 hover:bg-emerald-100"
                   )}
                   title="Esporta Excel"
                 >
-                  <FileSpreadsheet className="w-3.5 h-3.5" />
+                  <FileSpreadsheet className="w-3.5 h-3.5 shrink-0" />
                 </button>
 
                 <button 
                   onClick={() => setShowXGTuning(true)}
                   className={cn(
-                    "p-2.5 rounded-xl border transition-all outline-none",
-                    theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-50 border-gray-150 text-gray-550 hover:text-gray-900"
+                    "h-10 w-10 flex items-center justify-center rounded-xl border transition-all outline-none shrink-0",
+                    theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-55 border-gray-150 text-gray-550 hover:text-gray-900"
                   )}
                   title="Personalizza Modello"
                 >
-                  <Settings2 className="w-3.5 h-3.5" />
+                  <Settings2 className="w-3.5 h-3.5 shrink-0" />
                 </button>
 
                 {user && currentMatchId && !isReadOnly && (
@@ -2880,24 +2878,24 @@ export default function App() {
                       setShowToast({ message: "Link di invito copiato!", type: 'success' });
                     }}
                     className={cn(
-                      "p-2.5 rounded-xl border transition-all outline-none",
+                      "h-10 w-10 flex items-center justify-center rounded-xl border transition-all outline-none shrink-0",
                       theme === 'dark' ? "bg-blue-600/10 border-blue-500/20 text-blue-400 hover:bg-blue-600/20" : "bg-blue-50 border-blue-150 text-blue-655 hover:bg-blue-100"
                     )}
                     title="Invita Collaboratori"
                   >
-                    <UserPlus className="w-3.5 h-3.5" />
+                    <UserPlus className="w-3.5 h-3.5 shrink-0" />
                   </button>
                 )}
 
                 <button 
                   onClick={() => setShowNewMatchConfirm(true)}
                   className={cn(
-                    "p-2.5 rounded-xl border transition-all outline-none flex items-center justify-center gap-1.5 focus:outline-none",
+                    "h-10 px-3 rounded-xl border transition-all outline-none flex items-center justify-center gap-1.5 focus:outline-none shrink-0",
                     theme === 'dark' ? "bg-[#1d2d24] border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20" : "bg-emerald-50 border-emerald-150 text-emerald-650 hover:bg-emerald-100"
                   )}
                   title="Crea Nuova Partita"
                 >
-                  <PlusCircle className="w-3.5 h-3.5" />
+                  <PlusCircle className="w-3.5 h-3.5 shrink-0" />
                   <span className="text-[9px] font-black uppercase tracking-wider hidden sm:inline">Nuova Partita</span>
                 </button>
 
@@ -2906,14 +2904,14 @@ export default function App() {
                     onClick={saveMatch}
                     disabled={isSaving}
                     className={cn(
-                      "p-2.5 rounded-xl border transition-all outline-none flex items-center justify-center gap-1.5 focus:outline-none",
+                      "h-10 px-3 rounded-xl border transition-all outline-none flex items-center justify-center gap-1.5 focus:outline-none shrink-0",
                       isSaving 
                         ? "opacity-50 cursor-not-allowed" 
                         : (theme === 'dark' ? "bg-blue-600/15 border-blue-500/25 text-blue-500 hover:bg-blue-600/25" : "bg-blue-600 text-white border-blue-150 shadow-md shadow-blue-500/15")
                     )}
                     title="Salva Partita"
                   >
-                    {isSaving ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                    {isSaving ? <RefreshCw className="w-3.5 h-3.5 animate-spin shrink-0" /> : <Save className="w-3.5 h-3.5 shrink-0" />}
                     <span className="text-[9px] font-black uppercase tracking-wider hidden sm:inline">Salva</span>
                   </button>
                 )}
@@ -2925,22 +2923,22 @@ export default function App() {
               <button 
                 onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
                 className={cn(
-                  "p-2.5 rounded-xl border transition-all outline-none",
-                  theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-500 hover:text-white" : "bg-gray-50 border-gray-100 text-gray-400 hover:text-gray-900"
+                  "h-10 w-10 flex items-center justify-center rounded-xl border transition-all outline-none shrink-0",
+                  theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-500 hover:text-white" : "bg-gray-55 border-gray-100 text-gray-400 hover:text-gray-900"
                 )}
                 title={theme === 'dark' ? "Modalità Chiara" : "Modalità Scura"}
               >
-                {theme === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+                {theme === 'dark' ? <Sun className="w-3.5 h-3.5 shrink-0" /> : <Moon className="w-3.5 h-3.5 shrink-0" />}
               </button>
               <button 
                 onClick={() => user ? logout() : login()}
                 className={cn(
-                  "p-2.5 rounded-xl border transition-all outline-none",
-                  theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-500 hover:text-white" : "bg-gray-50 border-gray-100 text-gray-400 hover:text-gray-900"
+                  "h-10 w-10 flex items-center justify-center rounded-xl border transition-all outline-none shrink-0",
+                  theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-500 hover:text-white" : "bg-gray-55 border-gray-100 text-gray-400 hover:text-gray-900"
                 )}
                 title={user ? "Logout" : "Accedi"}
               >
-                {user ? <LogOut className="w-3.5 h-3.5" /> : <LogIn className="w-3.5 h-3.5" />}
+                {user ? <LogOut className="w-3.5 h-3.5 shrink-0" /> : <LogIn className="w-3.5 h-3.5 shrink-0" />}
               </button>
             </div>
           </div>
