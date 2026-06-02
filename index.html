@@ -1,9 +1,31 @@
 <!doctype html>
-<html lang="en">
+<html lang="it">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Analysis Hub</title>
+    <title>Analysis Hub • Advanced Football Analytics & Dangerzone Dashboard</title>
+    
+    <!-- Meta SEO & Description -->
+    <meta name="description" content="Dashboard interattiva e professionale per l'analisi avanzata dei match di calcio, statistiche xG (Expected Goals), heat map, tracciamento IPO e monitoraggio Dangerzone in tempo reale." />
+    <meta name="keywords" content="analisi calcio, match analysis, xg, expected goals, dangerzone, heat map, statistiche calcio, football analytics, ipo" />
+    <meta name="author" content="Analysis Hub" />
+    <meta name="robots" content="index, follow" />
+    <meta name="theme-color" content="#070708" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://ais-pre-pg6t2afr3fpvswm4ezekl7-742011197330.europe-west2.run.app" />
+    <meta property="og:title" content="Analysis Hub • Advanced Football Analytics" />
+    <meta property="og:description" content="Dashboard interattiva e professionale per l'analisi avanzata dei match con xG, heat map e tracciamento Dangerzone." />
+    <meta property="og:image" content="https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=1200&h=630&fit=crop" />
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://ais-pre-pg6t2afr3fpvswm4ezekl7-742011197330.europe-west2.run.app" />
+    <meta property="twitter:title" content="Analysis Hub • Advanced Football Analytics" />
+    <meta property="twitter:description" content="Dashboard interattiva e professionale per l'analisi avanzata dei match con xG, heat map e tracciamento Dangerzone." />
+    <meta property="twitter:image" content="https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=1200&h=630&fit=crop" />
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -12,27 +34,14 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <script>
-      // Self-healing: Unregister any service workers and clear caches to prevent stale cache-lock freezes
+      // Register Service Worker for true Offline capability during matches
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(function(registrations) {
-          for (let registration of registrations) {
-            registration.unregister().then(function(unregistered) {
-              if (unregistered) {
-                console.log('Stale service worker cleared.');
-                if ('caches' in window) {
-                  caches.keys().then(function(keys) {
-                    keys.forEach(function(key) {
-                      caches.delete(key);
-                    });
-                  });
-                }
-                // Reload once to fetch fresh assets directly from the network
-                window.location.reload();
-              }
-            });
-          }
-        }).catch(function(err) {
-          console.warn('Failed to clean service worker:', err);
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/sw.js').then(function(reg) {
+            console.log('Service Worker registered successfully:', reg.scope);
+          }).catch(function(err) {
+            console.warn('Service Worker registration failed:', err);
+          });
         });
       }
 
@@ -52,41 +61,81 @@
         }
       })();
 
-      // Global error handler to catch boot errors
-      window.onerror = function(msg, url, lineNo, columnNo, error) {
+      // Global error storage queue to safely defer reporting until DOM is available
+      window.bootErrors = [];
+      
+      function showBootError(msg) {
+        window.bootErrors.push(msg);
         const statusEl = document.getElementById('boot-status');
         if (statusEl) {
-          statusEl.textContent = 'Errore: ' + msg + (lineNo ? ' (Linea ' + lineNo + ')' : '');
+          statusEl.textContent = msg;
           statusEl.style.color = '#ef4444';
+        } else {
+          // If the DOM elements are not parsed yet, wait for DOMContentLoaded to render the error
+          document.addEventListener('DOMContentLoaded', function() {
+            const statusElDeferred = document.getElementById('boot-status');
+            if (statusElDeferred) {
+              statusElDeferred.textContent = msg;
+              statusElDeferred.style.color = '#ef4444';
+            }
+          });
         }
+      }
+
+      // Global error handler to catch boot errors
+      window.onerror = function(msg, url, lineNo, columnNo, error) {
+        showBootError('Errore: ' + msg + (lineNo ? ' (Linea ' + lineNo + ')' : ''));
         return false;
       };
 
       // Catch module and asset loading failures
       window.addEventListener('error', function(event) {
-        const statusEl = document.getElementById('boot-status');
-        if (statusEl) {
-          const target = event.target || event.srcElement;
-          if (target && (target.tagName === 'SCRIPT' || target.tagName === 'LINK')) {
-            statusEl.textContent = 'Errore di caricamento risorsa: ' + (target.src || target.href || 'unknown script/link');
-          } else {
-            statusEl.textContent = 'Errore: ' + (event.message || 'Errore di sintassi o runtime');
-          }
-          statusEl.style.color = '#ef4444';
+        const target = event.target || event.srcElement;
+        if (target && (target.tagName === 'SCRIPT' || target.tagName === 'LINK')) {
+          showBootError('Errore di caricamento risorsa: ' + (target.src || target.href || 'script o stile non trovato'));
+        } else {
+          showBootError('Errore: ' + (event.message || 'Errore di sintassi o runtime indefinita'));
         }
       }, true);
 
       // Catch unhandled promise rejections (Firestore, Auth, etc)
       window.addEventListener('unhandledrejection', function(event) {
-        const statusEl = document.getElementById('boot-status');
-        if (statusEl) {
-          statusEl.textContent = 'Errore Promessa: ' + (event.reason?.message || event.reason || 'Connessione/Auth fallita');
-          statusEl.style.color = '#ef4444';
-        }
+        showBootError('Errore Promessa: ' + (event.reason?.message || event.reason || 'Connessione/Autenticazione fallita'));
       });
+
+      // Watchdog Timer: If the React container does not remove the loader within 8 seconds,
+      // it means JavaScript initialized but either silent-errored or froze. We display a helpful action box.
+      setTimeout(function() {
+        const rootEl = document.getElementById('root');
+        // Check if our custom inline loader element is still mounting inside root
+        if (rootEl && rootEl.innerHTML.indexOf('Avvio in corso...') !== -1) {
+          const statusEl = document.getElementById('boot-status');
+          if (statusEl && !statusEl.textContent) {
+            statusEl.innerHTML = 'Il caricamento sta richiedendo più tempo del previsto.<br/>' +
+              '<span style="color: rgba(156, 163, 175, 0.7); display: block; margin-top: 6px; font-size: 0.7rem;">Possibili cause: connessione lenta, script bloccati o errore interno.</span>' +
+              '<button onclick="window.location.reload()" style="margin-top: 14px; padding: 6px 14px; background: #2563eb; color: white; border: none; border-radius: 6px; font-size: 0.72rem; font-weight: bold; cursor: pointer; transition: background 0.2s; text-transform: uppercase; letter-spacing: 0.05em;">Riprova</button>';
+          }
+        }
+      }, 8000);
     </script>
   </head>
   <body>
+    <!-- Fallback beautiful screen for disabled JavaScript -->
+    <noscript>
+      <div style="height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #070708; color: white; font-family: system-ui, -apple-system, sans-serif; text-align: center; padding: 24px; box-sizing: border-box; position: fixed; inset: 0; z-index: 99999;">
+        <div style="width: 56px; height: 56px; background: rgba(239, 68, 68, 0.1); border: 2px solid #ef4444; border-radius: 16px; display: flex; align-items: center; justify-content: center; margin-bottom: 24px;">
+          <svg style="width: 28px; height: 28px; color: #ef4444;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+          </svg>
+        </div>
+        <h1 style="font-weight: 900; font-size: 1.5rem; letter-spacing: -0.05em; margin: 0; text-transform: uppercase;">Abilita JavaScript</h1>
+        <p style="font-size: 0.85rem; color: #9ca3af; max-width: 400px; line-height: 1.6; margin-top: 12px; font-weight: 500;">
+          L'applicazione richiede JavaScript abilitato per l'analisi interattiva dei tiri (xG), heat map e monitoraggio delle statistiche calcistiche. Abilita gli script nel tuo browser e ricarica per continuare.
+        </p>
+        <button onclick="window.location.reload()" style="margin-top: 20px; padding: 8px 160px; max-width: 100%; width: auto; background: #2563eb; color: white; border: none; border-radius: 8px; font-size: 0.8rem; font-weight: bold; cursor: pointer; text-transform: uppercase; letter-spacing: 0.05em;">Ricarica la pagina</button>
+      </div>
+    </noscript>
+
     <div id="root">
       <div style="height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #070708; color: white; font-family: system-ui, -apple-system, sans-serif;">
         <div style="text-align: center;">
@@ -104,13 +153,72 @@
               <circle cx="76" cy="22" r="3" fill="#10b981" />
             </svg>
           </div>
-          <h1 style="font-weight: 900; font-size: 1.5rem; letter-spacing: -0.05em; margin: 0; text-transform: uppercase;">
+          <h1 style="font-weight: 950; font-size: 1.7rem; letter-spacing: -0.06em; margin: 0; text-transform: uppercase;">
             ANALYSIS <span style="color: #3b82f6;">HUB</span>
           </h1>
-          <p style="font-size: 0.6rem; font-weight: 800; color: #4b5563; text-transform: uppercase; letter-spacing: 0.3em; margin-top: 12px; animation: pulse 2s infinite;">Avvio in corso...</p>
-          <div id="boot-status" style="font-size: 0.75rem; color: #ef4444; margin-top: 12px; font-family: monospace; max-width: 320px; text-align: center; margin-left: auto; margin-right: auto; line-height: 1.4; word-break: break-word;"></div>
+          <p style="font-size: 0.58rem; font-weight: 900; color: #6b7280; text-transform: uppercase; letter-spacing: 0.25em; margin-top: 6px; margin-bottom: 20px;">
+            FOOTBALL ANALYTICS
+          </p>
+
+          <!-- Beautiful Custom Simulated Progress Bar -->
+          <div style="width: 240px; height: 5px; background: rgba(255, 255, 255, 0.05); border-radius: 99px; margin: 12px auto; overflow: hidden; position: relative; border: 1px solid rgba(255, 255, 255, 0.03);">
+            <div id="loader-progress-bar" style="width: 2%; height: 100%; background: linear-gradient(90deg, #2563eb, #10b981); border-radius: 99px; transition: width 0.4s cubic-bezier(0.1, 0.8, 0.25, 1);"></div>
+          </div>
+          
+          <div style="display: flex; align-items: center; justify-content: space-between; width: 240px; margin: 0 auto; color: #4b5563; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">
+            <span id="loader-phase" style="font-size: 0.58rem; color: #9ca3af;">Inizializzazione...</span>
+            <span id="loader-percent" style="font-family: monospace; color: #3b82f6;">2%</span>
+          </div>
+
+          <div id="boot-status" style="font-size: 0.75rem; color: #ef4444; margin-top: 16px; font-family: monospace; max-width: 320px; text-align: center; margin-left: auto; margin-right: auto; line-height: 1.4; word-break: break-word;"></div>
         </div>
       </div>
+      
+      <script>
+        (function() {
+          var bar = document.getElementById('loader-progress-bar');
+          var pct = document.getElementById('loader-percent');
+          var phase = document.getElementById('loader-phase');
+          var progress = 2;
+          var phases = [
+            { limit: 25, label: "DOM GENERATION..." },
+            { limit: 55, label: "BOOT ENGINE..." },
+            { limit: 80, label: "CALCOLO XG PITCH..." },
+            { limit: 95, label: "ANALISI LIVE..." }
+          ];
+          var interval = setInterval(function() {
+            if (progress < 98) {
+              progress += Math.floor(Math.random() * 8) + 2;
+              if (progress > 98) progress = 98;
+            }
+            
+            if (bar) bar.style.width = progress + '%';
+            if (pct) pct.textContent = progress + '%';
+            
+            var currentLabel = "AVVIO IN CORSO...";
+            for (var i = 0; i < phases.length; i++) {
+              if (progress <= phases[i].limit) {
+                currentLabel = phases[i].label;
+                break;
+              }
+            }
+            if (phase) phase.textContent = currentLabel;
+            
+            if (progress >= 98) {
+              clearInterval(interval);
+            }
+          }, 120);
+          
+          // Expose completion function
+          window.completeAppBoot = function() {
+            clearInterval(interval);
+            if (bar) bar.style.width = '100%';
+            if (pct) pct.textContent = '100%';
+            if (phase) phase.textContent = 'PRONTO!';
+          };
+        })();
+      </script>
+
       <style>
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         @keyframes pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 0.7; } }

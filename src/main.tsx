@@ -10,3 +10,8 @@ createRoot(document.getElementById('root')!).render(
     <App />
   </ErrorBoundary>,
 );
+
+// Terminate simulated loading screen and complete PWA boot indication
+if (typeof (window as any).completeAppBoot === 'function') {
+  (window as any).completeAppBoot();
+}

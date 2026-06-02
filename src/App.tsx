@@ -2006,6 +2006,124 @@ export default function App() {
     return `hsla(0, 0%, 0%, ${heatmapOpacity})`;
   };
 
+  const handleQuickShotRegister = (category: string, isGoal: boolean, team: 'home' | 'away', playerNameOverride?: string) => {
+    if (!mapClickCoord) return;
+    
+    const finalPlayer = playerNameOverride !== undefined ? playerNameOverride : (popupPlayer || 'Nessuno');
+    const isAway = team === 'away';
+
+    // 1. Add event to chosen IPO category of selected team
+    if (isAway) {
+      setIpoEventsAway(prev => ({
+        ...prev,
+        [category]: (prev[category as keyof typeof prev] || 0) + 1
+      }));
+    } else {
+      setIpoEvents(prev => ({
+        ...prev,
+        [category]: (prev[category as keyof typeof prev] || 0) + 1
+      }));
+    }
+
+    // 2. Add real Goals count if it is Goal
+    const finalIsGoal = isGoal && (category === 'shotsIn' || category === 'shotsOut' || category === 'penalties' || category === 'freeKicks');
+    if (finalIsGoal) {
+      if (isAway) {
+        setGoalsAway(prev => prev + 1);
+      } else {
+        setGoals(prev => prev + 1);
+      }
+    }
+
+    // 3. Register Shot at those coordinates
+    const xgVal = calculateXG(mapClickCoord.mX, mapClickCoord.mY, 'foot', 'none', xgCoeffs);
+    const newShot: Shot = {
+      id: Math.random().toString(36).substr(2, 9),
+      x: mapClickCoord.mX,
+      y: mapClickCoord.mY,
+      isGoal: finalIsGoal,
+      bodyPart: 'foot',
+      assistType: 'none',
+      xg: xgVal,
+      timestamp: Date.now(),
+      minute: currentMinute,
+      playerName: finalPlayer,
+      ipoCategory: category,
+      team: team,
+    };
+
+    setShots(prev => [...prev, newShot]);
+    setSelectedShot(newShot);
+
+    // 4. Record Match event logs
+    const catLabels: Record<string, string> = {
+      shotsIn: 'Tiro in Area',
+      shotsOut: 'Tiro Fuori',
+      penalties: 'Calcio di Rigore',
+      freeKicks: 'Calcio di Punizione',
+      corners: "Calcio d'angolo",
+      crosses: 'Cross/Traversone'
+    };
+    const categoryLabel = catLabels[category] || category;
+    const activeTeamName = isAway ? (awayTeam || 'Avversario') : teamName;
+
+    addMatchEvent({
+      type: finalIsGoal ? 'goal' : 'ipo_event',
+      description: finalIsGoal 
+        ? `⚽ GOL Reale! ${finalPlayer} segna da ${categoryLabel} (${activeTeamName})` 
+        : `📈 ${categoryLabel} - ${finalPlayer} (${activeTeamName})`,
+      value: xgVal,
+      shotId: newShot.id,
+      minute: newShot.minute
+    });
+
+    // 5. Add ripple feedback
+    const rippleId = Math.random().toString(36).substr(2, 9);
+    setRipples(prev => [...prev, { id: rippleId, x: mapClickCoord.clickX, y: mapClickCoord.clickY }]);
+    setTimeout(() => {
+      setRipples(prev => prev.filter(r => r.id !== rippleId));
+    }, 1000);
+
+    // Toast message
+    setShowToast({ 
+      message: finalIsGoal 
+        ? `GOL e ${categoryLabel} registrati per ${finalPlayer}! (${activeTeamName})` 
+        : `${categoryLabel} aggiunto per ${finalPlayer}! (${activeTeamName})`, 
+      type: 'success' 
+    });
+
+    // Reset and close
+    setMapClickCoord(null);
+  };
+
+  // Keyboard shortcut listener for live matches
+  useEffect(() => {
+    if (!mapClickCoord) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'SELECT') {
+        return;
+      }
+
+      if (e.key === '1') {
+        e.preventDefault();
+        handleQuickShotRegister('shotsOut', false, popupTeam);
+      } else if (e.key === '2') {
+        e.preventDefault();
+        handleQuickShotRegister('shotsIn', false, popupTeam);
+      } else if (e.key === '3') {
+        e.preventDefault();
+        handleQuickShotRegister('shotsIn', true, popupTeam);
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        setMapClickCoord(null);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [mapClickCoord, popupTeam, popupPlayer]);
+
   return (
     <div className={cn(
       "relative min-h-screen font-sans selection:bg-blue-500/30 overflow-x-hidden transition-colors duration-500",
@@ -2651,8 +2769,12 @@ export default function App() {
                   <h1 className={cn("font-black text-sm sm:text-base tracking-tight leading-none uppercase", theme === 'dark' ? "text-white" : "text-gray-900")}>
                     Analysis <span className="text-blue-500">Hub</span>
                   </h1>
-                  <div className="flex gap-1 items-center">
-                    <span className="w-1 h-1 rounded-full bg-blue-500 animate-pulse" />
+                  <div className="flex gap-1.5 items-center">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                    <span className="px-1.5 py-0.5 rounded-[4px] bg-emerald-500/10 border border-emerald-500/25 text-[6.5px] font-black uppercase text-emerald-400 tracking-wider flex items-center gap-1 leading-none shadow-sm select-none">
+                      <span className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                      Offline active
+                    </span>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 mt-1">
@@ -5786,6 +5908,72 @@ export default function App() {
 
               {/* Form Content */}
               <div className="space-y-6">
+
+                {/* REGISTRAZIONE SUPER RAPIDA (1-CLICK / TASTIERA) */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className={cn("text-[10px] font-black uppercase tracking-[0.15em]", theme === 'dark' ? "text-blue-400" : "text-blue-600")}>Registrazione Ultra Rapida (1-Click)</label>
+                    <span className="text-[8px] text-gray-500 font-bold uppercase tracking-widest hidden sm:inline">Scorciatoie attive: [1], [2], [3]</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => handleQuickShotRegister('shotsOut', false, popupTeam)}
+                      className={cn(
+                        "group py-4 px-2 rounded-2xl border transition-all flex flex-col items-center justify-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-rose-500/30",
+                        theme === 'dark' 
+                          ? "border-rose-500/10 hover:border-rose-500/30 bg-rose-500/5 hover:bg-rose-500/10 text-rose-400" 
+                          : "border-rose-200 hover:border-rose-300 bg-rose-50/50 hover:bg-rose-50 text-rose-600"
+                      )}
+                    >
+                      <span className="text-[8px] font-bold tracking-widest uppercase opacity-60">Fuori / Palo</span>
+                      <span className="text-xs font-black flex items-center gap-1">
+                        🔴 <span className="group-hover:scale-105 transition-transform">TIRO FUORI</span>
+                      </span>
+                      <kbd className="text-[8px] font-mono px-1.5 py-0.5 bg-rose-500/10 text-rose-400 rounded border border-rose-500/20">tasto [1]</kbd>
+                    </button>
+                    
+                    <button
+                      type="button"
+                      onClick={() => handleQuickShotRegister('shotsIn', false, popupTeam)}
+                      className={cn(
+                        "group py-4 px-2 rounded-2xl border transition-all flex flex-col items-center justify-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-amber-500/30",
+                        theme === 'dark' 
+                          ? "border-amber-500/10 hover:border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 text-amber-400" 
+                          : "border-amber-200 hover:border-amber-300 bg-amber-50/50 hover:bg-amber-50 text-amber-600"
+                      )}
+                    >
+                      <span className="text-[8px] font-bold tracking-widest uppercase opacity-60">Parato / Respinto</span>
+                      <span className="text-xs font-black flex items-center gap-1">
+                        🟡 <span className="group-hover:scale-105 transition-transform">IN AREA</span>
+                      </span>
+                      <kbd className="text-[8px] font-mono px-1.5 py-0.5 bg-amber-500/10 text-amber-400 rounded border border-amber-500/20">tasto [2]</kbd>
+                    </button>
+                    
+                    <button
+                      type="button"
+                      onClick={() => handleQuickShotRegister('shotsIn', true, popupTeam)}
+                      className={cn(
+                        "group py-4 px-2 rounded-2xl border transition-all flex flex-col items-center justify-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-500/30",
+                        theme === 'dark' 
+                          ? "border-emerald-500/10 hover:border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/10 text-emerald-400" 
+                          : "border-emerald-200 hover:border-emerald-300 bg-emerald-50/50 hover:bg-emerald-50 text-emerald-600"
+                      )}
+                    >
+                      <span className="text-[8px] font-bold tracking-widest uppercase opacity-60">Rete Reale</span>
+                      <span className="text-xs font-black flex items-center gap-1">
+                        ⚽ <span className="group-hover:scale-105 transition-transform font-black">GOL!</span>
+                      </span>
+                      <kbd className="text-[8px] font-mono px-1.5 py-0.5 bg-emerald-500/10 text-emerald-400 rounded border border-emerald-500/20">tasto [3]</kbd>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <div className={cn("flex-1 h-px", theme === 'dark' ? "bg-white/5" : "bg-gray-100")} />
+                  <span className="text-[8px] text-gray-500 font-bold uppercase tracking-widest whitespace-nowrap">Oppure personalizza l'evento</span>
+                  <div className={cn("flex-1 h-px", theme === 'dark' ? "bg-white/5" : "bg-gray-100")} />
+                </div>
                 
                 {/* Selezione Squadra */}
                 <div className="space-y-3">
@@ -5984,90 +6172,7 @@ export default function App() {
                     type="button"
                     onClick={() => {
                       const finalPlayer = popupPlayer || 'Nessuno';
-                      const isAway = popupTeam === 'away';
-
-                      // 1. Add event to chosen IPO category of selected team
-                      if (isAway) {
-                        setIpoEventsAway(prev => ({
-                          ...prev,
-                          [popupCategory]: prev[popupCategory] + 1
-                        }));
-                      } else {
-                        setIpoEvents(prev => ({
-                          ...prev,
-                          [popupCategory]: prev[popupCategory] + 1
-                        }));
-                      }
-
-                      // 2. Add real Goals count if it is Goal
-                      const finalIsGoal = popupIsGoal && (popupCategory === 'shotsIn' || popupCategory === 'shotsOut' || popupCategory === 'penalties' || popupCategory === 'freeKicks');
-                      if (finalIsGoal) {
-                        if (isAway) {
-                          setGoalsAway(prev => prev + 1);
-                        } else {
-                          setGoals(prev => prev + 1);
-                        }
-                      }
-
-                      // 3. Register Shot at those coordinates
-                      const xgVal = calculateXG(mapClickCoord.mX, mapClickCoord.mY, 'foot', 'none', xgCoeffs);
-                      const newShot: Shot = {
-                        id: Math.random().toString(36).substr(2, 9),
-                        x: mapClickCoord.mX,
-                        y: mapClickCoord.mY,
-                        isGoal: finalIsGoal,
-                        bodyPart: 'foot',
-                        assistType: 'none',
-                        xg: xgVal,
-                        timestamp: Date.now(),
-                        minute: currentMinute,
-                        playerName: finalPlayer,
-                        ipoCategory: popupCategory,
-                        team: popupTeam,
-                      };
-
-                      setShots(prev => [...prev, newShot]);
-                      setSelectedShot(newShot);
-
-                      // 4. Record Match event logs
-                      const catLabels: Record<string, string> = {
-                        shotsIn: 'Tiro in Area',
-                        shotsOut: 'Tiro Fuori',
-                        penalties: 'Calcio di Rigore',
-                        freeKicks: 'Calcio di Punizione',
-                        corners: "Calcio d'angolo",
-                        crosses: 'Cross/Traversone'
-                      };
-                      const categoryLabel = catLabels[popupCategory] || popupCategory;
-                      const activeTeamName = isAway ? (awayTeam || 'Avversario') : teamName;
-
-                      addMatchEvent({
-                        type: finalIsGoal ? 'goal' : 'ipo_event',
-                        description: finalIsGoal 
-                          ? `⚽ GOL Reale! ${finalPlayer} segna da ${categoryLabel} (${activeTeamName})` 
-                          : `📈 ${categoryLabel} - ${finalPlayer} (${activeTeamName})`,
-                        value: xgVal,
-                        shotId: newShot.id,
-                        minute: newShot.minute
-                      });
-
-                      // 5. Add ripple feedback
-                      const rippleId = Math.random().toString(36).substr(2, 9);
-                      setRipples(prev => [...prev, { id: rippleId, x: mapClickCoord.clickX, y: mapClickCoord.clickY }]);
-                      setTimeout(() => {
-                        setRipples(prev => prev.filter(r => r.id !== rippleId));
-                      }, 1000);
-
-                      // Toast message
-                      setShowToast({ 
-                        message: finalIsGoal 
-                          ? `GOL e ${categoryLabel} registrati per ${finalPlayer}! (${activeTeamName})` 
-                          : `${categoryLabel} aggiunto per ${finalPlayer}! (${activeTeamName})`, 
-                        type: 'success' 
-                      });
-
-                      // Reset and close
-                      setMapClickCoord(null);
+                      handleQuickShotRegister(popupCategory, popupIsGoal, popupTeam, finalPlayer);
                     }}
                     className="flex-1 py-4 bg-blue-500 hover:bg-blue-400 text-white text-xs font-black uppercase tracking-widest rounded-2xl transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2"
                   >
