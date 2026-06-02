@@ -2633,11 +2633,11 @@ export default function App() {
 
       {/* Header */}
       <header className={cn(
-        "border-b backdrop-blur-3xl xl:sticky static xl:top-0 z-50 transition-colors duration-500",
+        "border-b backdrop-blur-3xl lg:sticky static lg:top-0 z-50 transition-colors duration-500",
         theme === 'dark' ? "bg-[#070708]/85 border-white/[0.03]" : "bg-white/80 border-gray-100"
       )}>
-        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-3 xl:py-0 xl:h-18 flex flex-col xl:flex-row xl:items-center justify-between gap-4">
-          <div className="flex items-center justify-between w-full xl:w-auto gap-4 shrink-0">
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-2.5 lg:py-2 flex flex-col lg:flex-row lg:items-center justify-between gap-3.5 flex-wrap">
+          <div className="flex items-center justify-between w-full lg:w-auto gap-4 shrink-0">
             <div className="flex items-center gap-4">
               <div className={cn(
                 "w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-xl shadow-xl relative group overflow-hidden transition-all duration-500 hover:border-blue-500/20 border shrink-0",
@@ -2670,7 +2670,7 @@ export default function App() {
             </div>
 
             {/* Mobile/Tablet Quick Toggles */}
-            <div className="flex xl:hidden items-center gap-2 shrink-0">
+            <div className="flex lg:hidden items-center gap-2 shrink-0">
               <button 
                 onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
                 className={cn(
@@ -2694,7 +2694,7 @@ export default function App() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3 w-full xl:w-auto justify-center xl:justify-start shrink-0">
+          <div className="flex items-center gap-3 w-full lg:w-auto justify-center lg:justify-start shrink-0">
             {/* Timer Controllers and Reset Milestones */}
             <div className="flex items-center gap-3 w-full sm:w-auto justify-center flex-nowrap whitespace-nowrap">
               <button 
@@ -2765,7 +2765,7 @@ export default function App() {
           </div>
 
           {/* Right actions and tools grouped cleanly */}
-          <div className="flex flex-wrap xl:flex-nowrap items-center justify-center xl:justify-end gap-1.5 sm:gap-2 xl:gap-2.5 w-full xl:w-auto border-t xl:border-t-0 border-white/5 xl:pt-0 pt-3 shrink-0">
+          <div className="flex flex-wrap items-center justify-center lg:justify-end gap-1.5 sm:gap-2 w-full lg:w-auto border-t lg:border-t-0 border-white/5 lg:pt-0 pt-3 shrink-0">
             <button 
               onClick={() => setShowSquadModal(true)}
               className={cn(
@@ -2791,7 +2791,7 @@ export default function App() {
               title="Storico dei Tiri per Ragazzo (Griglia)"
             >
               <Target className="w-3.5 h-3.5 text-red-500 shrink-0" />
-              <span className="text-[9px] font-black uppercase tracking-wider">Storico Tiri</span>
+              <span className="text-[9px] font-black uppercase tracking-wider">Shots</span>
             </button>
             <button 
               onClick={() => setShowMatchList(true)}
@@ -2919,7 +2919,7 @@ export default function App() {
             )}
 
             {/* Desktop Only theme and login togglers */}
-            <div className="hidden xl:flex items-center gap-2">
+            <div className="hidden lg:flex items-center gap-2">
               <button 
                 onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
                 className={cn(
@@ -4909,7 +4909,7 @@ export default function App() {
                                     ? "bg-white/[0.02] hover:bg-white/[0.08] border-white/5 text-gray-400 hover:text-white" 
                                     : "bg-gray-50 hover:bg-gray-100 border-gray-150 text-gray-500 hover:text-gray-900"
                                 )}
-                                title={`Visualizza lo storico tiri di ${player.name}`}
+                                title={`Visualizza gli Shots di ${player.name}`}
                               >
                                 <Target className="w-3.5 h-3.5 text-red-500" />
                               </button>
@@ -5084,8 +5084,8 @@ export default function App() {
                     <Target className="w-6 h-6 animate-pulse" />
                   </div>
                   <div>
-                    <h2 className={cn("text-base sm:text-lg font-black uppercase tracking-tight", theme === 'dark' ? "text-white" : "text-gray-900")}>Storico Tiri per Atleta</h2>
-                    <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mt-1">Griglia Analitica Dettagliata Dei Tiri Effettuati</p>
+                    <h2 className={cn("text-base sm:text-lg font-black uppercase tracking-tight", theme === 'dark' ? "text-white" : "text-gray-900")}>Shots per Atleta</h2>
+                    <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mt-1">Griglia Analitica Dettagliata Dei Tiri</p>
                   </div>
                 </div>
                 <button 
