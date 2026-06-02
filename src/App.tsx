@@ -2197,13 +2197,16 @@ export default function App() {
 
       if (e.key === '1') {
         e.preventDefault();
-        handleQuickShotRegister('shotsOut', false, popupTeam);
+        handleQuickShotRegister('corners', false, popupTeam);
       } else if (e.key === '2') {
         e.preventDefault();
-        handleQuickShotRegister('shotsIn', false, popupTeam);
+        handleQuickShotRegister('freeKicks', false, popupTeam);
       } else if (e.key === '3') {
         e.preventDefault();
-        handleQuickShotRegister('shotsIn', true, popupTeam);
+        handleQuickShotRegister('penalties', false, popupTeam);
+      } else if (e.key === '4') {
+        e.preventDefault();
+        handleQuickShotRegister('crosses', false, popupTeam);
       } else if (e.key === 'Escape') {
         e.preventDefault();
         setMapClickCoord(null);
@@ -2930,22 +2933,42 @@ export default function App() {
                 <button 
                   onClick={() => { setTimerSeconds(90 * 60); setIsTimerRunning(false); }}
                   className={cn(
-                    "h-10 px-3 text-[9px] font-black border rounded-xl transition-all uppercase tracking-tight flex items-center justify-center shrink-0",
-                    theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-50 border-gray-200 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                    "h-10 px-2.5 text-[9px] font-black border rounded-xl transition-all uppercase tracking-tight flex items-center justify-center shrink-0",
+                    theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-50 border-gray-200 text-gray-650 hover:text-gray-900 hover:bg-gray-100"
                   )}
                   title="Fine Partita (90:00)"
                 >
                   90'
                 </button>
                 <button 
+                  onClick={() => { setTimerSeconds(90 * 60); setIsTimerRunning(false); }}
+                  className={cn(
+                    "h-10 px-2.5 text-[9px] font-black border rounded-xl transition-all uppercase tracking-tight flex items-center justify-center shrink-0",
+                    theme === 'dark' ? "bg-blue-500/10 border-blue-500/20 text-blue-400 hover:text-blue-300 hover:bg-blue-500/20" : "bg-blue-50 border-blue-200 text-blue-650 hover:text-blue-900 hover:bg-blue-100"
+                  )}
+                  title="Inizio Supplementari (90:00)"
+                >
+                  90' OTS
+                </button>
+                <button 
                   onClick={() => { setTimerSeconds(105 * 60); setIsTimerRunning(false); }}
                   className={cn(
-                    "h-10 px-3 text-[9px] font-black border rounded-xl transition-all uppercase tracking-tight flex items-center justify-center shrink-0",
-                    theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-50 border-gray-200 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                    "h-10 px-2.5 text-[9px] font-black border rounded-xl transition-all uppercase tracking-tight flex items-center justify-center shrink-0",
+                    theme === 'dark' ? "bg-blue-500/10 border-blue-500/20 text-blue-400 hover:text-blue-300 hover:bg-blue-500/20" : "bg-blue-50 border-blue-200 text-blue-650 hover:text-blue-900 hover:bg-blue-100"
                   )}
-                  title="Overtime (105:00)"
+                  title="2° Tempo Supplementare (105:00)"
                 >
-                  overtime
+                  105' OTS
+                </button>
+                <button 
+                  onClick={() => { setTimerSeconds(120 * 60); setIsTimerRunning(false); }}
+                  className={cn(
+                    "h-10 px-2.5 text-[9px] font-black border rounded-xl transition-all uppercase tracking-tight flex items-center justify-center shrink-0",
+                    theme === 'dark' ? "bg-rose-500/10 border-rose-500/20 text-rose-400 hover:text-rose-300 hover:bg-rose-500/20" : "bg-rose-50 border-rose-200 text-rose-650 hover:text-rose-900 hover:bg-rose-100"
+                  )}
+                  title="Fine Tempi Supplementari (120:00)"
+                >
+                  120' OTS
                 </button>
                 <button 
                   onClick={() => { setTimerSeconds(0); setIsTimerRunning(false); }}
@@ -6345,58 +6368,75 @@ export default function App() {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <label className={cn("text-[10px] font-black uppercase tracking-[0.15em]", theme === 'dark' ? "text-blue-400" : "text-blue-600")}>Registrazione Ultra Rapida (1-Click)</label>
-                    <span className="text-[8px] text-gray-500 font-bold uppercase tracking-widest hidden sm:inline">Scorciatoie attive: [1], [2], [3]</span>
+                    <span className="text-[8px] text-gray-500 font-bold uppercase tracking-widest hidden sm:inline">Scorciatoie attive: [1], [2], [3], [4]</span>
                   </div>
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <button
                       type="button"
-                      onClick={() => handleQuickShotRegister('shotsOut', false, popupTeam)}
+                      onClick={() => handleQuickShotRegister('corners', false, popupTeam)}
                       className={cn(
-                        "group py-4 px-2 rounded-2xl border transition-all flex flex-col items-center justify-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-rose-500/30",
+                        "group py-4 px-1 rounded-2xl border transition-all flex flex-col items-center justify-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500/30",
                         theme === 'dark' 
-                          ? "border-rose-500/10 hover:border-rose-500/30 bg-rose-500/5 hover:bg-rose-500/10 text-rose-400" 
-                          : "border-rose-200 hover:border-rose-300 bg-rose-50/50 hover:bg-rose-50 text-rose-600"
+                          ? "border-blue-500/10 hover:border-blue-500/30 bg-blue-500/5 hover:bg-blue-500/10 text-blue-400" 
+                          : "border-blue-200 hover:border-blue-300 bg-blue-50/50 hover:bg-blue-55 text-blue-600"
                       )}
                     >
-                      <span className="text-[8px] font-bold tracking-widest uppercase opacity-60">Fuori / Palo</span>
-                      <span className="text-xs font-black flex items-center gap-1">
-                        🔴 <span className="group-hover:scale-105 transition-transform">TIRO FUORI</span>
+                      <span className="text-[7.5px] font-bold tracking-widest uppercase opacity-60 text-center leading-none">Angolo</span>
+                      <span className="text-[11px] font-black flex items-center gap-1">
+                        🚩 <span className="group-hover:scale-105 transition-transform">ANGOLO</span>
                       </span>
-                      <kbd className="text-[8px] font-mono px-1.5 py-0.5 bg-rose-500/10 text-rose-400 rounded border border-rose-500/20">tasto [1]</kbd>
+                      <kbd className="text-[7.5px] font-mono px-1.5 py-0.5 bg-blue-500/10 text-blue-400 rounded border border-blue-500/20">tasto [1]</kbd>
                     </button>
                     
                     <button
                       type="button"
-                      onClick={() => handleQuickShotRegister('shotsIn', false, popupTeam)}
+                      onClick={() => handleQuickShotRegister('freeKicks', false, popupTeam)}
                       className={cn(
-                        "group py-4 px-2 rounded-2xl border transition-all flex flex-col items-center justify-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-amber-500/30",
+                        "group py-4 px-1 rounded-2xl border transition-all flex flex-col items-center justify-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-purple-500/30",
+                        theme === 'dark' 
+                          ? "border-purple-500/10 hover:border-purple-500/30 bg-purple-500/5 hover:bg-purple-500/10 text-purple-400" 
+                          : "border-purple-200 hover:border-purple-300 bg-purple-50/50 hover:bg-purple-55 text-purple-600"
+                      )}
+                    >
+                      <span className="text-[7.5px] font-bold tracking-widest uppercase opacity-60 text-center leading-none">Punizione</span>
+                      <span className="text-[11px] font-black flex items-center gap-1">
+                        🎯 <span className="group-hover:scale-105 transition-transform">PUNIZIONE</span>
+                      </span>
+                      <kbd className="text-[7.5px] font-mono px-1.5 py-0.5 bg-purple-500/10 text-purple-400 rounded border border-purple-500/20">tasto [2]</kbd>
+                    </button>
+                    
+                    <button
+                      type="button"
+                      onClick={() => handleQuickShotRegister('penalties', false, popupTeam)}
+                      className={cn(
+                        "group py-4 px-1 rounded-2xl border transition-all flex flex-col items-center justify-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-amber-500/30",
                         theme === 'dark' 
                           ? "border-amber-500/10 hover:border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 text-amber-400" 
-                          : "border-amber-200 hover:border-amber-300 bg-amber-50/50 hover:bg-amber-50 text-amber-600"
+                          : "border-amber-200 hover:border-amber-300 bg-amber-50/50 hover:bg-amber-55 text-amber-650"
                       )}
                     >
-                      <span className="text-[8px] font-bold tracking-widest uppercase opacity-60">Parato / Respinto</span>
-                      <span className="text-xs font-black flex items-center gap-1">
-                        🟡 <span className="group-hover:scale-105 transition-transform">IN AREA</span>
+                      <span className="text-[7.5px] font-bold tracking-widest uppercase opacity-60 text-center leading-none">Rigore</span>
+                      <span className="text-[11px] font-black flex items-center gap-1">
+                        ⚽ <span className="group-hover:scale-105 transition-transform font-black">RIGORE</span>
                       </span>
-                      <kbd className="text-[8px] font-mono px-1.5 py-0.5 bg-amber-500/10 text-amber-400 rounded border border-amber-500/20">tasto [2]</kbd>
+                      <kbd className="text-[7.5px] font-mono px-1.5 py-0.5 bg-amber-500/10 text-amber-400 rounded border border-amber-500/20">tasto [3]</kbd>
                     </button>
-                    
+
                     <button
                       type="button"
-                      onClick={() => handleQuickShotRegister('shotsIn', true, popupTeam)}
+                      onClick={() => handleQuickShotRegister('crosses', false, popupTeam)}
                       className={cn(
-                        "group py-4 px-2 rounded-2xl border transition-all flex flex-col items-center justify-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-500/30",
+                        "group py-4 px-1 rounded-2xl border transition-all flex flex-col items-center justify-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-500/30",
                         theme === 'dark' 
                           ? "border-emerald-500/10 hover:border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/10 text-emerald-400" 
-                          : "border-emerald-200 hover:border-emerald-300 bg-emerald-50/50 hover:bg-emerald-50 text-emerald-600"
+                          : "border-emerald-200 hover:border-emerald-300 bg-emerald-50/50 hover:bg-emerald-55 text-emerald-600"
                       )}
                     >
-                      <span className="text-[8px] font-bold tracking-widest uppercase opacity-60">Rete Reale</span>
-                      <span className="text-xs font-black flex items-center gap-1">
-                        ⚽ <span className="group-hover:scale-105 transition-transform font-black">GOL!</span>
+                      <span className="text-[7.5px] font-bold tracking-widest uppercase opacity-60 text-center leading-none">Cross</span>
+                      <span className="text-[11px] font-black flex items-center gap-1">
+                        🔄 <span className="group-hover:scale-105 transition-transform font-black">CROSS</span>
                       </span>
-                      <kbd className="text-[8px] font-mono px-1.5 py-0.5 bg-emerald-500/10 text-emerald-400 rounded border border-emerald-500/20">tasto [3]</kbd>
+                      <kbd className="text-[7.5px] font-mono px-1.5 py-0.5 bg-emerald-500/10 text-emerald-400 rounded border border-emerald-500/20">tasto [4]</kbd>
                     </button>
                   </div>
                 </div>
