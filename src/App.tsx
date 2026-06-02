@@ -607,6 +607,10 @@ export default function App() {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showClearShotsConfirm, setShowClearShotsConfirm] = useState(false);
   const [showNewMatchConfirm, setShowNewMatchConfirm] = useState(false);
+  const [rapidEventPrompt, setRapidEventPrompt] = useState<{
+    category: 'corners' | 'freeKicks' | 'penalties' | 'crosses';
+    label: string;
+  } | null>(null);
   const [matchToDelete, setMatchToDelete] = useState<string | null>(null);
   const [showToast, setShowToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
   const [activeTab, setActiveTab] = useState<'xg' | 'ipo'>('xg');
@@ -2186,10 +2190,84 @@ export default function App() {
     setMapClickCoord(null);
   };
 
+  const handleGlobalQuickShotRegister = (category: string, team: 'home' | 'away') => {
+    let dx = 15;
+    let dy = 34;
+    if (category === 'corners') {
+      dx = 0.5;
+      dy = 2;
+    } else if (category === 'freeKicks') {
+      dx = 20;
+      dy = 34;
+    } else if (category === 'penalties') {
+      dx = 11;
+      dy = 34;
+    } else if (category === 'crosses') {
+      dx = 15;
+      dy = 58;
+    }
+
+    const finalPlayer = team === 'away' ? 'Avversario' : 'Nessuno';
+    const isAway = team === 'away';
+
+    if (isAway) {
+      setIpoEventsAway(prev => ({
+        ...prev,
+        [category]: (prev[category as keyof typeof prev] || 0) + 1
+      }));
+    } else {
+      setIpoEvents(prev => ({
+        ...prev,
+        [category]: (prev[category as keyof typeof prev] || 0) + 1
+      }));
+    }
+
+    const xgVal = calculateXG(dx, dy, 'foot', 'none', xgCoeffs);
+    const newShot: Shot = {
+      id: Math.random().toString(36).substr(2, 9),
+      x: dx,
+      y: dy,
+      isGoal: false,
+      bodyPart: 'foot',
+      assistType: 'none',
+      xg: xgVal,
+      timestamp: Date.now(),
+      minute: currentMinute,
+      playerName: finalPlayer,
+      ipoCategory: category,
+      team: team,
+    };
+
+    setShots(prev => [...prev, newShot]);
+    setSelectedShot(newShot);
+
+    const catLabels: Record<string, string> = {
+      shotsIn: 'Tiro in Area',
+      shotsOut: 'Tiro Fuori',
+      penalties: 'Calcio di Rigore',
+      freeKicks: 'Calcio di Punizione',
+      corners: "Calcio d'angolo",
+      crosses: 'Cross/Traversone'
+    };
+    const categoryLabel = catLabels[category] || category;
+    const activeTeamName = isAway ? (awayTeam || 'Avversario') : teamName;
+
+    addMatchEvent({
+      type: 'ipo_event',
+      description: `📈 ${categoryLabel} - ${finalPlayer} (${activeTeamName})`,
+      value: xgVal,
+      shotId: newShot.id,
+      minute: newShot.minute
+    });
+
+    setShowToast({ 
+      message: `${categoryLabel} aggiunto per ${finalPlayer}! (${activeTeamName})`, 
+      type: 'success' 
+    });
+  };
+
   // Keyboard shortcut listener for live matches
   useEffect(() => {
-    if (!mapClickCoord) return;
-
     const handleKeyDown = (e: KeyboardEvent) => {
       if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'SELECT') {
         return;
@@ -2197,25 +2275,45 @@ export default function App() {
 
       if (e.key === '1') {
         e.preventDefault();
-        handleQuickShotRegister('corners', false, popupTeam);
+        if (mapClickCoord) {
+          handleQuickShotRegister('corners', false, popupTeam);
+        } else {
+          setRapidEventPrompt({ category: 'corners', label: "Calcio d'angolo" });
+        }
       } else if (e.key === '2') {
         e.preventDefault();
-        handleQuickShotRegister('freeKicks', false, popupTeam);
+        if (mapClickCoord) {
+          handleQuickShotRegister('freeKicks', false, popupTeam);
+        } else {
+          setRapidEventPrompt({ category: 'freeKicks', label: "Calcio di Punizione" });
+        }
       } else if (e.key === '3') {
         e.preventDefault();
-        handleQuickShotRegister('penalties', false, popupTeam);
+        if (mapClickCoord) {
+          handleQuickShotRegister('penalties', false, popupTeam);
+        } else {
+          setRapidEventPrompt({ category: 'penalties', label: "Calcio di Rigore" });
+        }
       } else if (e.key === '4') {
         e.preventDefault();
-        handleQuickShotRegister('crosses', false, popupTeam);
+        if (mapClickCoord) {
+          handleQuickShotRegister('crosses', false, popupTeam);
+        } else {
+          setRapidEventPrompt({ category: 'crosses', label: "Cross / Traversone" });
+        }
       } else if (e.key === 'Escape') {
         e.preventDefault();
-        setMapClickCoord(null);
+        if (mapClickCoord) {
+          setMapClickCoord(null);
+        } else if (rapidEventPrompt) {
+          setRapidEventPrompt(null);
+        }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [mapClickCoord, popupTeam, popupPlayer]);
+  }, [mapClickCoord, popupTeam, popupPlayer, rapidEventPrompt]);
 
   return (
     <div className={cn(
@@ -3361,6 +3459,114 @@ export default function App() {
             <div className="grid grid-cols-1 md:grid-cols-12 gap-5 lg:gap-8">
               {/* Pitch Area */}
               <div className="md:col-span-8 flex flex-col gap-6">
+                {/* GLOBAL REGISTRAZIONE ULTRA RAPIDA (1-CLICK) PANEL */}
+                {!isReadOnly && (
+                  <div className={cn(
+                    "border rounded-[2.5rem] p-6 lg:p-7 space-y-4 transition-all duration-300 relative overflow-hidden",
+                    theme === 'dark' 
+                      ? "bg-white/[0.01] border-white/[0.03]" 
+                      : "bg-white border-gray-150 shadow-sm"
+                  )}>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <label className={cn(
+                        "text-[10px] font-black uppercase tracking-[0.18em]",
+                        theme === 'dark' ? "text-blue-400" : "text-blue-600"
+                      )}>
+                        Registrazione Ultra Rapida (1-Click)
+                      </label>
+                      <span className="text-[8px] text-gray-400 font-bold uppercase tracking-widest">
+                        Scorciatoie attive: [1], [2], [3], [4]
+                      </span>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                      {/* Angolo */}
+                      <button
+                        type="button"
+                        onClick={() => setRapidEventPrompt({ category: 'corners', label: "Calcio d'angolo" })}
+                        className={cn(
+                          "group py-4 px-2 rounded-2xl border transition-all flex flex-col items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-blue-500/30 cursor-pointer",
+                          theme === 'dark' 
+                            ? "border-blue-500/10 hover:border-blue-500/30 bg-blue-500/5 hover:bg-blue-500/10 text-blue-400" 
+                            : "border-blue-200 hover:border-blue-300 bg-blue-50/50 hover:bg-blue-100 text-blue-600"
+                        )}
+                      >
+                        <span className="text-[7.5px] font-bold tracking-widest uppercase opacity-60 text-center leading-none">Angolo</span>
+                        <span className="text-[11px] font-black flex items-center gap-1">
+                          🚩 <span className="group-hover:scale-105 transition-transform">ANGOLO</span>
+                        </span>
+                        <kbd className={cn(
+                          "text-[7.5px] font-mono px-1.5 py-0.5 rounded border",
+                          theme === 'dark' ? "bg-blue-500/10 text-blue-400 border-blue-500/20" : "bg-blue-100 text-blue-700 border-blue-200"
+                        )}>tasto [1]</kbd>
+                      </button>
+
+                      {/* Punizione */}
+                      <button
+                        type="button"
+                        onClick={() => setRapidEventPrompt({ category: 'freeKicks', label: "Calcio di Punizione" })}
+                        className={cn(
+                          "group py-4 px-2 rounded-2xl border transition-all flex flex-col items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-purple-500/30 cursor-pointer",
+                          theme === 'dark' 
+                            ? "border-purple-500/10 hover:border-purple-500/30 bg-purple-500/5 hover:bg-purple-500/10 text-purple-400" 
+                            : "border-purple-200 hover:border-purple-300 bg-purple-50/50 hover:bg-purple-100 text-purple-600"
+                        )}
+                      >
+                        <span className="text-[7.5px] font-bold tracking-widest uppercase opacity-60 text-center leading-none">Punizione</span>
+                        <span className="text-[11px] font-black flex items-center gap-1">
+                          🎯 <span className="group-hover:scale-105 transition-transform">PUNIZIONE</span>
+                        </span>
+                        <kbd className={cn(
+                          "text-[7.5px] font-mono px-1.5 py-0.5 rounded border",
+                          theme === 'dark' ? "bg-purple-500/10 text-purple-400 border-purple-500/20" : "bg-purple-100 text-purple-700 border-purple-200"
+                        )}>tasto [2]</kbd>
+                      </button>
+
+                      {/* Rigore */}
+                      <button
+                        type="button"
+                        onClick={() => setRapidEventPrompt({ category: 'penalties', label: "Calcio di Rigore" })}
+                        className={cn(
+                          "group py-4 px-2 rounded-2xl border transition-all flex flex-col items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-amber-500/30 cursor-pointer",
+                          theme === 'dark' 
+                            ? "border-amber-500/10 hover:border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 text-amber-500" 
+                            : "border-amber-200 hover:border-amber-300 bg-amber-50/50 hover:bg-amber-100 text-amber-650"
+                        )}
+                      >
+                        <span className="text-[7.5px] font-bold tracking-widest uppercase opacity-60 text-center leading-none">Rigore</span>
+                        <span className="text-[11px] font-black flex items-center gap-1">
+                          ⚽ <span className="group-hover:scale-105 transition-transform font-black">RIGORE</span>
+                        </span>
+                        <kbd className={cn(
+                          "text-[7.5px] font-mono px-1.5 py-0.5 rounded border",
+                          theme === 'dark' ? "bg-amber-500/10 text-amber-400 border-amber-500/20" : "bg-amber-100 text-amber-700 border-amber-200"
+                        )}>tasto [3]</kbd>
+                      </button>
+
+                      {/* Cross */}
+                      <button
+                        type="button"
+                        onClick={() => setRapidEventPrompt({ category: 'crosses', label: "Cross / Traversone" })}
+                        className={cn(
+                          "group py-4 px-2 rounded-2xl border transition-all flex flex-col items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 cursor-pointer",
+                          theme === 'dark' 
+                            ? "border-emerald-500/10 hover:border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/10 text-emerald-400" 
+                            : "border-emerald-200 hover:border-emerald-300 bg-emerald-50/50 hover:bg-emerald-100 text-emerald-600"
+                        )}
+                      >
+                        <span className="text-[7.5px] font-bold tracking-widest uppercase opacity-60 text-center leading-none">Cross</span>
+                        <span className="text-[11px] font-black flex items-center gap-1">
+                          🔄 <span className="group-hover:scale-105 transition-transform font-black">CROSS</span>
+                        </span>
+                        <kbd className={cn(
+                          "text-[7.5px] font-mono px-1.5 py-0.5 rounded border",
+                          theme === 'dark' ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-emerald-100 text-emerald-700 border-emerald-200"
+                        )}>tasto [4]</kbd>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 <div className={cn(
                   "relative border rounded-none p-4 sm:p-6 lg:p-8 overflow-hidden group/field transition-colors",
                   theme === 'dark' ? "bg-white/[0.01] border-white/[0.03]" : "bg-white border-gray-100 shadow-sm"
@@ -6279,6 +6485,75 @@ export default function App() {
                   className={cn(
                     "w-full py-4 border font-bold rounded-2xl transition-all",
                     theme === 'dark' ? "bg-white/5 hover:bg-white/10 text-white border-white/10" : "bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-100"
+                  )}
+                >
+                  Annulla
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {rapidEventPrompt && (
+          <div className="fixed inset-0 z-[112] flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setRapidEventPrompt(null)}
+              className="absolute inset-0 bg-[#070708]/85 backdrop-blur-md"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className={cn(
+                "relative w-full max-w-sm border rounded-[2rem] p-8 shadow-2xl text-center transition-colors z-10",
+                theme === 'dark' ? "bg-[#121212] border-white/10" : "bg-white border-gray-150"
+              )}
+            >
+              <div className={cn(
+                "w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6 border text-xl",
+                rapidEventPrompt.category === 'corners' ? "bg-blue-500/10 border-blue-500/20 text-blue-500" :
+                rapidEventPrompt.category === 'freeKicks' ? "bg-purple-500/10 border-purple-500/20 text-purple-500" :
+                rapidEventPrompt.category === 'penalties' ? "bg-amber-500/10 border-amber-500/20 text-amber-500" :
+                "bg-emerald-500/10 border-emerald-500/20 text-emerald-500"
+              )}>
+                {rapidEventPrompt.category === 'corners' ? "🚩" :
+                 rapidEventPrompt.category === 'freeKicks' ? "🎯" :
+                 rapidEventPrompt.category === 'penalties' ? "⚽" :
+                 "🔄"}
+              </div>
+              <h2 className={cn("text-xl font-black mb-1 tracking-tight", theme === 'dark' ? "text-white" : "text-gray-900")}>
+                {rapidEventPrompt.label.toUpperCase()}
+              </h2>
+              <p className="text-gray-500 text-[10px] mb-8 font-extrabold uppercase tracking-widest">
+                A quale squadra vuoi assegnare questo evento?
+              </p>
+              <div className="flex flex-col gap-3">
+                <button 
+                  onClick={() => {
+                    handleGlobalQuickShotRegister(rapidEventPrompt.category, 'home');
+                    setRapidEventPrompt(null);
+                  }}
+                  className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-2xl transition-all shadow-lg shadow-blue-500/20 text-xs uppercase tracking-wider"
+                >
+                  {teamName || 'SQUADRA IN CASA'}
+                </button>
+                <button 
+                  onClick={() => {
+                    handleGlobalQuickShotRegister(rapidEventPrompt.category, 'away');
+                    setRapidEventPrompt(null);
+                  }}
+                  className="w-full py-4 bg-rose-600 hover:bg-rose-500 text-white font-black rounded-2xl transition-all shadow-lg shadow-rose-500/20 text-xs uppercase tracking-wider"
+                >
+                  {awayTeam || 'AVVERSARIO'}
+                </button>
+                <button 
+                  onClick={() => setRapidEventPrompt(null)}
+                  className={cn(
+                    "w-full py-4 border font-bold rounded-2xl transition-all text-xs uppercase tracking-wider",
+                    theme === 'dark' ? "bg-white/5 hover:bg-white/10 text-white border-white/10" : "bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-200"
                   )}
                 >
                   Annulla
