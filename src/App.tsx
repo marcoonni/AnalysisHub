@@ -51,6 +51,7 @@ import {
   Mail,
   Key,
   Check,
+  TrendingUp,
   Sparkles,
   PlusCircle
 } from 'lucide-react';
@@ -119,6 +120,9 @@ interface Match {
   goals?: number;
   goalsAway?: number;
   matchEvents?: MatchEvent[];
+  shots?: any[];
+  ipo?: number;
+  ipoAway?: number;
 }
 
 interface MatchEvent {
@@ -444,6 +448,9 @@ export default function App() {
 
   const [shots, setShots] = useState<Shot[]>(() => getActiveSessionField<Shot[]>('shots', []));
   const [showHeatmap, setShowHeatmap] = useState(false);
+  const [heatmapMode, setHeatmapMode] = useState<'theoretical' | 'shots'>('theoretical');
+  const [selectedCompareMatchIds, setSelectedCompareMatchIds] = useState<string[]>([]);
+  const [showCompareModal, setShowCompareModal] = useState(false);
   const [selectedShot, setSelectedShot] = useState<Shot | null>(null);
   const [mapClickCoord, setMapClickCoord] = useState<{
     mX: number;
@@ -1168,6 +1175,89 @@ export default function App() {
     } catch (error) {
       console.error("Excel Export Error:", error);
       setShowToast({ message: "Errore durante la generazione del file Excel.", type: 'error' });
+    }
+  };
+
+  const exportToCSV = () => {
+    try {
+      if (shots.length === 0 && matchEvents.length === 0) {
+        setShowToast({ message: "Nessun dato da esportare.", type: 'error' });
+        return;
+      }
+
+      // Compose cohesive tabular data for easy analysis
+      const rows = [
+        ["--- INFORMAZIONI MATCH ---"],
+        ["Squadra Casa", teamName, "Goals Casa", goals, "IPO Casa", ipo.toFixed(1)],
+        ["Squadra Ospite", awayTeam || 'Avversario', "Goals Ospite", goalsAway, "IPO Ospite", ipoAway.toFixed(1)],
+        [],
+        ["--- ANALISI DETTAGLIATA TIRI ---"],
+        ["ID", "Squadra", "Giocatore", "Minuto", "xG Calcolato", "Esito", "Parte Corpo", "Tipo Assist", "Coord X", "Coord Y"]
+      ];
+
+      shots.forEach(s => {
+        rows.push([
+          s.id,
+          s.team === 'away' ? (awayTeam || 'Avversario') : teamName,
+          s.playerName,
+          s.minute.toString(),
+          s.xg.toFixed(3),
+          s.isGoal ? "Gol" : "Tiro",
+          s.bodyPart,
+          s.assistType,
+          s.x.toFixed(2),
+          s.y.toFixed(2)
+        ]);
+      });
+
+      rows.push([], ["--- CRONOLOGIA EVENTI MATCH ---"], ["ID Evento", "Minuto", "Tipo", "Descrizione", "Contributo Valore"]);
+
+      matchEvents.forEach(e => {
+        rows.push([
+          e.id,
+          e.minute.toString(),
+          e.type,
+          e.description,
+          e.value ? e.value.toFixed(2) : ""
+        ]);
+      });
+
+      const csvContent = Papa.unparse(rows);
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `MatchReport_CSV_${teamName}_vs_${awayTeam || 'Avversario'}_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setShowToast({ message: 'Backup CSV scaricato con successo!', type: 'success' });
+    } catch (error) {
+      console.error("CSV Export Error:", error);
+      setShowToast({ message: "Errore durante la generazione del backup CSV.", type: 'error' });
+    }
+  };
+
+  const handleEventClick = (event: MatchEvent) => {
+    if (event.type !== 'shot' && event.type !== 'goal') return;
+    
+    // Search by shotId
+    let foundShot = shots.find(s => s.id === event.shotId);
+    
+    // Fallback: search by minute proximity and player
+    if (!foundShot) {
+      foundShot = shots.find(s => s.minute === event.minute);
+    }
+    
+    if (foundShot) {
+      setSelectedShot(foundShot);
+      setShowToast({ message: `Scout: Replay di ${foundShot.playerName} (minuto ${foundShot.minute}')`, type: 'success' });
+      const el = document.getElementById('pitch-canvas');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    } else {
+      setShowToast({ message: "Dato geometrico tiro non presente.", type: 'error' });
     }
   };
 
@@ -2152,17 +2242,12 @@ export default function App() {
           <div className="absolute top-1/4 left-1/4 w-80 h-80 rounded-full bg-blue-500/10 blur-[120px] pointer-events-none" />
           <div className="absolute bottom-1/4 right-1/4 w-96 h-96 rounded-full bg-indigo-500/10 blur-[150px] pointer-events-none" />
 
-          {/* Theme switcher on login screen */}
-          <div className="absolute top-6 right-6 flex items-center gap-1">
-            <button
-              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              className={cn(
-                "p-2.5 rounded-xl border transition-all cursor-pointer",
-                theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-white border-gray-200 text-gray-500 hover:text-gray-900"
-              )}
-            >
-              {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-            </button>
+          {/* Theme switcher on login screen replaced with Secure VPN Cockpit Indicator */}
+          <div className="absolute top-6 right-6 flex items-center gap-2">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border bg-emerald-500/5 border-emerald-500/20 text-emerald-400 text-[9px] font-black uppercase tracking-widest">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Connessione protetta
+            </div>
           </div>
 
           <div className="w-full max-w-md z-10 space-y-8">
@@ -2794,16 +2879,6 @@ export default function App() {
             {/* Mobile/Tablet Quick Toggles */}
             <div className="flex md:hidden items-center gap-2 shrink-0">
               <button 
-                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                className={cn(
-                  "h-10 w-10 flex items-center justify-center rounded-xl border transition-all outline-none",
-                  theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-500 hover:text-white" : "bg-gray-50 border-gray-100 text-gray-400 hover:text-gray-900"
-                )}
-                title={theme === 'dark' ? "Modalità Chiara" : "Modalità Scura"}
-              >
-                {theme === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
-              </button>
-              <button 
                 onClick={() => user ? logout() : login()}
                 className={cn(
                   "h-10 w-10 flex items-center justify-center rounded-xl border transition-all outline-none",
@@ -2966,9 +3041,42 @@ export default function App() {
                       : (theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-50 border-gray-200 hover:bg-gray-100 text-gray-500 hover:text-gray-900")
                   )}
                 >
-                  <Flame className="w-3.5 h-3.5" />
+                  <Flame className={cn("w-3.5 h-3.5", showHeatmap && "animate-pulse")} />
                   <span className="text-[9px]">Heatmap</span>
                 </button>
+
+                {showHeatmap && (
+                  <div className="flex bg-white/[0.02] border border-white/5 rounded-xl p-0.5 shrink-0 select-none">
+                    <button
+                      onClick={() => {
+                        setHeatmapMode('theoretical');
+                        setShowToast({ message: "Heatmap: Modello Previsionale xG caricato!", type: 'success' });
+                      }}
+                      className={cn(
+                        "h-8 px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-wider transition-all",
+                        heatmapMode === 'theoretical'
+                          ? "bg-blue-600 text-white shadow"
+                          : "text-gray-400 hover:text-white hover:bg-white/5"
+                      )}
+                    >
+                      Teorico xG
+                    </button>
+                    <button
+                      onClick={() => {
+                        setHeatmapMode('shots');
+                        setShowToast({ message: "Heatmap: Densità Tiri Reali caricata!", type: 'success' });
+                      }}
+                      className={cn(
+                        "h-8 px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-wider transition-all",
+                        heatmapMode === 'shots'
+                          ? "bg-blue-600 text-white shadow"
+                          : "text-gray-400 hover:text-white hover:bg-white/5"
+                      )}
+                    >
+                      Mappa Tiri
+                    </button>
+                  </div>
+                )}
 
                 <button 
                   onClick={exportToExcel}
@@ -3042,16 +3150,10 @@ export default function App() {
 
             {/* Desktop Only theme and login togglers */}
             <div className="hidden md:flex items-center gap-2">
-              <button 
-                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                className={cn(
-                  "h-10 w-10 flex items-center justify-center rounded-xl border transition-all outline-none shrink-0",
-                  theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-500 hover:text-white" : "bg-gray-50 border-gray-100 text-gray-500 hover:text-gray-900"
-                )}
-                title={theme === 'dark' ? "Modalità Chiara" : "Modalità Scura"}
-              >
-                {theme === 'dark' ? <Sun className="w-3.5 h-3.5 shrink-0" /> : <Moon className="w-3.5 h-3.5 shrink-0" />}
-              </button>
+              <div className="h-10 px-3 flex items-center justify-center rounded-xl border border-white/5 bg-white/[0.02] text-emerald-400 gap-1.5 text-[9px] font-black uppercase tracking-widest shrink-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                V-HUD Attiva
+              </div>
               <button 
                 onClick={() => user ? logout() : login()}
                 className={cn(
@@ -3352,11 +3454,37 @@ export default function App() {
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
                           exit={{ opacity: 0 }}
-                          className="absolute inset-0 grid grid-cols-[repeat(34,1fr)] grid-rows-[repeat(17,1fr)] pointer-events-none"
+                          className="absolute inset-0 pointer-events-none overflow-hidden"
                         >
-                          {xgGrid.map((row, r) => row.map((val, c) => (
-                            <div key={`${r}-${c}`} style={{ backgroundColor: getXGColor(val) }} className="transition-colors duration-1000" />
-                          )))}
+                          {heatmapMode === 'theoretical' ? (
+                            <div className="absolute inset-0 grid grid-cols-[repeat(34,1fr)] grid-rows-[repeat(17,1fr)]">
+                              {xgGrid.map((row, r) => row.map((val, c) => (
+                                <div key={`${r}-${c}`} style={{ backgroundColor: getXGColor(val) }} className="transition-colors duration-1000" />
+                              )))}
+                            </div>
+                          ) : (
+                            <div className="absolute inset-0 bg-black/35 backdrop-blur-[0.5px]">
+                              {shots.map((shot) => {
+                                const isAway = shot.team === 'away';
+                                const leftPct = (shot.y / DEFAULT_PITCH.width) * 100;
+                                const topPct = (shot.x / DEFAULT_PITCH.height) * 100;
+                                return (
+                                  <div 
+                                    key={`heat-${shot.id}`}
+                                    className="absolute w-24 h-24 -ml-12 -mt-12 rounded-full opacity-65"
+                                    style={{
+                                      left: `${leftPct}%`,
+                                      top: `${topPct}%`,
+                                      background: isAway 
+                                        ? 'radial-gradient(circle, rgba(244, 63, 94, 0.5) 0%, rgba(244, 63, 94, 0.18) 50%, rgba(244, 63, 94, 0) 100%)' 
+                                        : 'radial-gradient(circle, rgba(234, 179, 8, 0.5) 0%, rgba(234, 179, 8, 0.18) 50%, rgba(234, 179, 8, 0) 100%)',
+                                      filter: 'blur(8px)'
+                                    }}
+                                  />
+                                );
+                              })}
+                            </div>
+                          )}
                         </motion.div>
                       )}
                     </AnimatePresence>
@@ -3624,6 +3752,103 @@ export default function App() {
                     </div>
                     <p className="text-[9px] font-bold text-gray-600 uppercase tracking-[0.2em]">Interfaccia Tattica v2.0</p>
                   </div>
+
+                  {/* Dynamic xG vs Real Goal Clinical Efficiency Dashboard */}
+                  <div className="mt-6 pt-6 border-t border-white/[0.03] space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Trophy className="w-3.5 h-3.5 text-amber-500" />
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.15em] text-white">Analisi Efficienza Tattica (xG vs Gol Reali)</h4>
+                      </div>
+                      <div className="px-2.5 py-0.5 rounded-full border border-blue-500/10 bg-blue-500/5 text-blue-400 text-[8px] font-black uppercase tracking-wider">
+                        Live Cockpit Feed
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Home Team Efficiency */}
+                      <div className="p-4 rounded-2xl bg-white/[0.01] border border-white/[0.03] space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-black text-gray-300 uppercase tracking-wider">{teamName}</span>
+                          <span className={cn(
+                            "text-[8px] font-black uppercase px-2 py-0.5 rounded-full border",
+                            displayGoals > displayXG ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" :
+                            displayGoals === displayXG ? "bg-gray-500/10 border-transparent text-gray-400" :
+                            "bg-red-500/10 border-red-500/20 text-red-400"
+                          )}>
+                            {displayGoals > displayXG ? "Sovra-Efficiente" :
+                             displayGoals === displayXG ? "Bilanciato" : "Sotto-Efficiente"}
+                          </span>
+                        </div>
+                        <div className="flex items-end justify-between">
+                          <div className="space-y-1">
+                            <span className="text-[8px] text-gray-500 font-bold uppercase tracking-wider block">Goals vs Attesi (xG)</span>
+                            <span className="text-lg font-black text-white tabular-nums">
+                              {displayGoals} <span className="text-[10px] font-bold text-gray-500">vs</span> {displayXG.toFixed(2)}
+                            </span>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-[8px] text-gray-500 font-bold uppercase tracking-wider block">Gap Conversione</span>
+                            <span className={cn(
+                              "text-xs font-mono font-black tabular-nums",
+                              (displayGoals - displayXG) >= 0 ? "text-emerald-400" : "text-rose-500"
+                            )}>
+                              {(displayGoals - displayXG) >= 0 ? "+" : ""}{(displayGoals - displayXG).toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
+                        {/* Clinical remarks */}
+                        <p className="text-[9.5px] text-gray-400 leading-relaxed font-semibold">
+                          {displayGoals > displayXG 
+                            ? "Cinismo d'élite. La squadra ha capitalizzato le occasioni da gol con una precisione letale superiore al modello atteso."
+                            : displayGoals === displayXG && displayGoals > 0
+                            ? "Rendimento perfettamente bilanciato. I tiri rispecchiano fedelmente il volume di pericolosità statistica espresso."
+                            : "Pericolo spreco. Volume di gioco rilevante ma scarsa freddezza sotto porta o interventi decisivi del portiere avversario."}
+                        </p>
+                      </div>
+
+                      {/* Away Team Efficiency */}
+                      <div className="p-4 rounded-2xl bg-white/[0.01] border border-white/[0.03] space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-black text-gray-300 uppercase tracking-wider">{awayTeam || 'Avversario'}</span>
+                          <span className={cn(
+                            "text-[8px] font-black uppercase px-2 py-0.5 rounded-full border",
+                            displayGoalsAway > displayXGAway ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" :
+                            displayGoalsAway === displayXGAway ? "bg-gray-500/10 border-transparent text-gray-400" :
+                            "bg-red-500/10 border-red-500/20 text-red-400"
+                          )}>
+                            {displayGoalsAway > displayXGAway ? "Sovra-Efficiente" :
+                             displayGoalsAway === displayXGAway ? "Bilanciato" : "Sotto-Efficiente"}
+                          </span>
+                        </div>
+                        <div className="flex items-end justify-between">
+                          <div className="space-y-1">
+                            <span className="text-[8px] text-gray-500 font-bold uppercase tracking-wider block">Goals vs Attesi (xG)</span>
+                            <span className="text-lg font-black text-white tabular-nums">
+                              {displayGoalsAway} <span className="text-[10px] font-bold text-gray-500">vs</span> {displayXGAway.toFixed(2)}
+                            </span>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-[8px] text-gray-500 font-bold uppercase tracking-wider block">Gap Conversione</span>
+                            <span className={cn(
+                              "text-xs font-mono font-black tabular-nums",
+                              (displayGoalsAway - displayXGAway) >= 0 ? "text-emerald-400" : "text-rose-500"
+                            )}>
+                              {(displayGoalsAway - displayXGAway) >= 0 ? "+" : ""}{(displayGoalsAway - displayXGAway).toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
+                        {/* Clinical remarks */}
+                        <p className="text-[9.5px] text-gray-400 leading-relaxed font-semibold">
+                          {displayGoalsAway > displayXGAway 
+                            ? "Fase offensiva letale per l'avversario. Hanno realizzato reti di estrema difficoltà balistica."
+                            : displayGoalsAway === displayXGAway && displayGoalsAway > 0
+                            ? "Efficenza lineare. La produzione gol del club avversario ricalca le stime standard di pericolosità."
+                            : "Assalto sterile o sfortuna. L'avversario ha creato tiri insidiosi senza concretizzare reali gol sul tabellone."}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -3804,30 +4029,45 @@ export default function App() {
                         <span className="text-[10px] font-black uppercase tracking-widest">In attesa di eventi...</span>
                       </div>
                     ) : (
-                      matchEvents.map(event => (
-                        <div key={event.id} className={cn(
-                          "flex gap-4 p-4 border rounded-[1.5rem] group transition-all duration-300",
-                          theme === 'dark' ? "bg-white/[0.02] border-white/[0.03] hover:bg-white/[0.04] hover:border-white/10" : "bg-gray-50/50 border-gray-100 hover:bg-white hover:border-gray-200 hover:shadow-sm"
-                        )}>
-                          <div className={cn(
-                            "w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 shadow-sm",
-                            event.type === 'goal' ? 'bg-yellow-500/10 text-yellow-500' : 
-                            event.type === 'shot' ? 'bg-blue-600/10 text-blue-500' :
-                            'bg-gray-500/10 text-gray-400'
-                          )}>
-                            {event.type === 'goal' ? <Trophy className="w-5 h-5" /> : 
-                             event.type === 'shot' ? <Target className="w-5 h-5" /> : 
-                             <Zap className="w-5 h-5" />}
-                          </div>
-                          <div className="flex-1">
-                            <p className={cn("text-xs font-black leading-tight", theme === 'dark' ? "text-white" : "text-gray-900")}>{event.description}</p>
-                            <div className="flex items-center gap-2 mt-1.5 focus:outline-none">
-                              <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest bg-gray-500/5 px-2 py-0.5 rounded-full">Minuto {event.minute}'</span>
-                              {event.value && <span className="text-[9px] font-bold text-blue-500/80 uppercase">+{event.value.toFixed(2)} xG</span>}
+                      matchEvents.map(event => {
+                        const isClickable = event.type === 'shot' || event.type === 'goal';
+                        return (
+                          <div 
+                            key={event.id} 
+                            onClick={() => isClickable && handleEventClick(event)}
+                            className={cn(
+                              "flex gap-4 p-4 border rounded-[1.5rem] group transition-all duration-300 text-left",
+                              isClickable && "cursor-pointer active:scale-[0.99] select-none",
+                              theme === 'dark' 
+                                ? cn("bg-white/[0.02] border-white/[0.03] hover:bg-white/[0.05]", isClickable && "hover:border-blue-500/30 hover:shadow-lg hover:shadow-blue-950/5") 
+                                : cn("bg-gray-50/50 border-gray-100 hover:bg-white", isClickable && "hover:border-blue-300 hover:shadow-sm")
+                            )}
+                          >
+                            <div className={cn(
+                              "w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 shadow-sm transition-transform group-hover:scale-105",
+                              event.type === 'goal' ? 'bg-yellow-500/10 text-yellow-500' : 
+                              event.type === 'shot' ? 'bg-blue-600/10 text-blue-500' :
+                              'bg-gray-500/10 text-gray-400'
+                            )}>
+                              {event.type === 'goal' ? <Trophy className="w-5 h-5" /> : 
+                               event.type === 'shot' ? <Target className="w-5 h-5" /> : 
+                               <Zap className="w-5 h-5" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className={cn("text-xs font-black leading-tight truncate", theme === 'dark' ? "text-white" : "text-gray-900")}>{event.description}</p>
+                              <div className="flex items-center gap-2 mt-1.5 focus:outline-none">
+                                <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest bg-gray-500/5 px-2 py-0.5 rounded-full">Minuto {event.minute}'</span>
+                                {event.value && <span className="text-[9px] font-bold text-blue-500/80 uppercase">+{event.value.toFixed(2)} xG</span>}
+                                {isClickable && (
+                                  <span className="text-[8px] font-black uppercase tracking-wider text-blue-400 animate-pulse ml-auto hidden group-hover:inline-block">
+                                    Tap per replay
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))
+                        );
+                      })
                     )}
                   </div>
                 </div>
@@ -5647,59 +5887,251 @@ export default function App() {
                     <div 
                       key={match.id}
                       className={cn(
-                        "group border rounded-3xl p-5 flex items-center justify-between transition-all",
-                        theme === 'dark' ? "bg-white/[0.01] border-white/5 hover:border-blue-500/20" : "bg-gray-50 border-gray-200 hover:border-blue-500/20 hover:shadow-sm"
+                        "group border rounded-3xl p-5 flex items-center justify-between transition-all text-left",
+                        theme === 'dark' ? "bg-white/[0.01] border-white/5 hover:border-blue-500/20" : "bg-gray-50 border-gray-200 hover:border-blue-500/20 hover:shadow-sm",
+                        selectedCompareMatchIds.includes(match.id) && "border-blue-500/40 bg-blue-500/[0.02]"
                       )}
                     >
-                      <div 
-                        className={cn(
-                          "flex-1 overflow-hidden",
-                          loadingMatchId ? "cursor-not-allowed opacity-50" : "cursor-pointer"
-                        )} 
-                        onClick={() => !loadingMatchId && loadMatch(match)}
-                      >
-                        <div className="flex items-center gap-4 mb-2">
-                          <div className="flex items-center gap-3">
-                            <span className={cn("text-sm font-black uppercase tracking-tight", theme === 'dark' ? "text-white" : "text-gray-900")}>{match.teamName}</span>
-                            <span className="text-[9px] font-bold text-gray-500 uppercase italic">vs</span>
-                            <span className={cn("text-sm font-black uppercase tracking-tight", theme === 'dark' ? "text-white" : "text-gray-900")}>{match.awayTeam || 'Avversario'}</span>
+                      <div className="flex items-center flex-1 min-w-0">
+                        {/* Checkbox for multiselect comparison */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (selectedCompareMatchIds.includes(match.id)) {
+                              setSelectedCompareMatchIds(selectedCompareMatchIds.filter(id => id !== match.id));
+                            } else {
+                              setSelectedCompareMatchIds([...selectedCompareMatchIds, match.id]);
+                            }
+                          }}
+                          className={cn(
+                            "w-5 h-5 rounded-full border flex items-center justify-center mr-4 transition-all active:scale-90 shrink-0 cursor-pointer outline-none",
+                            selectedCompareMatchIds.includes(match.id)
+                              ? "bg-blue-600 border-blue-600 text-white"
+                              : "border-white/20 bg-transparent text-transparent hover:border-white/40"
+                          )}
+                          title="Seleziona per confronto"
+                        >
+                          <Check className="w-3 h-3" />
+                        </button>
+
+                        <div 
+                          className={cn(
+                            "flex-1 overflow-hidden",
+                            loadingMatchId ? "cursor-not-allowed opacity-50" : "cursor-pointer"
+                          )} 
+                          onClick={() => !loadingMatchId && loadMatch(match)}
+                        >
+                          <div className="flex flex-wrap items-center gap-3 mb-2">
+                            <div className="flex items-center gap-2">
+                              <span className={cn("text-xs font-black uppercase tracking-tight", theme === 'dark' ? "text-white" : "text-gray-900")}>{match.teamName}</span>
+                              <span className="text-[9px] font-bold text-gray-500 uppercase italic">vs</span>
+                              <span className={cn("text-xs font-black uppercase tracking-tight", theme === 'dark' ? "text-white" : "text-gray-900")}>{match.awayTeam || 'Avversario'}</span>
+                            </div>
+                            <div className="px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-500 text-[8px] font-black uppercase tracking-widest">
+                              {match.goals} Gol • {match.totalXG.toFixed(2)} xG
+                            </div>
                           </div>
-                          <div className="px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-500 text-[8px] font-black uppercase tracking-widest">
-                            {match.goals} Gol • {match.totalXG.toFixed(2)} xG
-                          </div>
+                          <p className="text-[9px] text-gray-600 font-bold uppercase tracking-[0.2em]">
+                            {new Date(match.date).toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          </p>
                         </div>
-                        <p className="text-[9px] text-gray-600 font-bold uppercase tracking-[0.2em]">
-                          {new Date(match.date).toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' })}
-                        </p>
                       </div>
-                      <div className="flex items-center gap-3 ml-4">
+                      <div className="flex items-center gap-2 ml-4 shrink-0">
                         <button 
                           onClick={() => {
                             const url = `${window.location.origin}${window.location.pathname}?matchId=${match.id}`;
                             navigator.clipboard.writeText(url);
                             setShowToast({ message: "Link copiato!", type: 'success' });
                           }}
-                          className="p-3 bg-white/[0.03] hover:bg-blue-500/10 text-gray-600 hover:text-blue-500 rounded-xl transition-all"
+                          className="p-3 bg-white/[0.03] hover:bg-blue-500/10 text-gray-650 hover:text-blue-500 rounded-xl transition-all outline-none"
                         >
-                          <Share2 className="w-4 h-4" />
+                          <Share2 className="w-3.5 h-3.5" />
                         </button>
                         <button 
                           onClick={() => loadMatch(match)}
                           disabled={loadingMatchId !== null}
-                          className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all disabled:opacity-50"
+                          className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-[9px] font-black uppercase tracking-widest rounded-xl transition-all disabled:opacity-50 outline-none"
                         >
                           {loadingMatchId === match.id ? 'Loading...' : 'Apri'}
                         </button>
                         <button 
                           onClick={() => setMatchToDelete(match.id)}
-                          className="p-3 bg-white/[0.03] hover:bg-red-500/10 text-gray-600 hover:text-red-500 rounded-xl transition-all"
+                          className="p-3 bg-white/[0.03] hover:bg-red-500/10 text-gray-650 hover:text-red-500 rounded-xl transition-all outline-none"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </div>
                   ))
                 )}
+              </div>
+
+              {/* Multiselect Comparison Sticky Panel */}
+              {selectedCompareMatchIds.length >= 2 && (
+                <div className="p-6 border-t border-white/[0.03] bg-black/40 backdrop-blur-md flex items-center justify-between shrink-0">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                    <span className="text-[10px] font-black uppercase text-white tracking-widest">
+                      {selectedCompareMatchIds.length} PARTITE SELEZIONATE
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setSelectedCompareMatchIds([])}
+                      className="px-4 py-2 text-[9px] font-bold uppercase tracking-wider text-gray-400 hover:text-white transition-all outline-none"
+                    >
+                      Annulla
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowCompareModal(true);
+                        setShowMatchList(false);
+                      }}
+                      className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-[9px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-blue-500/20 transition-all flex items-center gap-1.5 outline-none"
+                    >
+                      <TrendingUp className="w-3.5 h-3.5" />
+                      Confronta
+                    </button>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Interactive Multi-Match Analytical Comparison Cockpit Overlay */}
+      <AnimatePresence>
+        {showCompareModal && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-[#070708]/95 backdrop-blur-xl pointer-events-auto"
+              onClick={() => setShowCompareModal(false)}
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 30 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 30 }}
+              className="relative w-full max-w-5xl h-[85vh] border border-white/[0.05] bg-[#0d0d0e] rounded-[3rem] shadow-2xl flex flex-col overflow-hidden pointer-events-auto z-10 text-left"
+            >
+              <div className="p-8 border-b border-white/[0.03] flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-amber-500/10 rounded-2xl flex items-center justify-center text-amber-500">
+                    <TrendingUp className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-black uppercase tracking-widest text-white">Cockpit Comparativo Multi-Match</h3>
+                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Confronto Statistico e Trend Prestazionali</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setShowCompareModal(false)}
+                  className="w-12 h-12 rounded-2xl bg-white/[0.03] hover:bg-white/[0.06] text-gray-400 hover:text-white flex items-center justify-center transition-all outline-none"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-8 space-y-8">
+                {/* Visual statistics dashboard grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {matches
+                    .filter(m => selectedCompareMatchIds.includes(m.id))
+                    .map((m) => {
+                      const matchShots = m.shots || [];
+                      const matchGoals = m.goals || 0;
+                      const matchGoalsAway = m.goalsAway || 0;
+                      const matchXg = m.totalXG || 0;
+                      const isOverperforming = matchGoals > matchXg;
+                      
+                      return (
+                        <div key={m.id} className="p-6 rounded-[2rem] border border-white/5 bg-white/[0.01] hover:bg-white/[0.02] flex flex-col gap-6 transition-all duration-300">
+                          {/* Match header */}
+                          <div className="flex items-center justify-between">
+                            <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest leading-none">
+                              {new Date(m.date).toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            </span>
+                            <span className={cn(
+                              "text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md border",
+                              isOverperforming ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" : "bg-red-500/10 border-red-500/20 text-red-400"
+                            )}>
+                              {isOverperforming ? "Attacco Killer" : "Sotto Portata"}
+                            </span>
+                          </div>
+
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-black text-white truncate max-w-[120px]">{m.teamName}</span>
+                              <span className="text-xs font-black text-gray-450 font-mono tracking-widest">{matchGoals} - {matchGoalsAway}</span>
+                              <span className="text-sm font-black text-white truncate max-w-[120px]">{m.awayTeam || 'Avversario'}</span>
+                            </div>
+                          </div>
+
+                          {/* Stat items */}
+                          <div className="grid grid-cols-2 gap-3 pt-3 border-t border-white/[0.03]">
+                            <div className="p-3 bg-black/25 rounded-2xl border border-white/[0.02]">
+                              <span className="text-[8px] font-bold text-gray-505 uppercase tracking-wider block mb-1">Volume Tiri</span>
+                              <span className="text-xs font-black text-white tabular-nums">{matchShots.length} tiri</span>
+                            </div>
+                            <div className="p-3 bg-black/25 rounded-2xl border border-white/[0.02]">
+                              <span className="text-[8px] font-bold text-gray-505 uppercase tracking-wider block mb-1">Dato Pericolo (xG)</span>
+                              <span className="text-xs font-black text-blue-500 tabular-nums">{matchXg.toFixed(2)} xG</span>
+                            </div>
+                            <div className="p-3 bg-black/25 rounded-2xl border border-white/[0.02]">
+                              <span className="text-[8px] font-bold text-gray-505 uppercase tracking-wider block mb-1">IPO Generato</span>
+                              <span className="text-xs font-black text-indigo-400 tabular-nums">{(m.ipo || 0).toFixed(1)} ipo</span>
+                            </div>
+                            <div className="p-3 bg-black/25 rounded-2xl border border-white/[0.02]">
+                              <span className="text-[8px] font-bold text-gray-505 uppercase tracking-wider block mb-1">Media xG / Tiro</span>
+                              <span className="text-xs font-black text-amber-500 tabular-nums">
+                                {matchShots.length > 0 ? (matchXg / matchShots.length).toFixed(3) : "0.000"}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Efficiency progress bar */}
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between text-[8px] font-bold text-gray-400 uppercase tracking-wider">
+                              <span>Conversione xG</span>
+                              <span className={cn(isOverperforming ? "text-emerald-400" : "text-rose-500")}>
+                                {matchGoals > 0 ? ((matchGoals / (matchXg || 1)) * 100).toFixed(0) : "0"}%
+                              </span>
+                            </div>
+                            <div className="h-1.5 w-full bg-white/[0.02] rounded-full overflow-hidden">
+                              <div 
+                                className={cn(
+                                  "h-full rounded-full transition-all duration-1000",
+                                  isOverperforming ? "bg-emerald-500" : "bg-rose-500"
+                                )}
+                                style={{ width: `${Math.min(100, matchGoals > 0 ? (matchGoals / (matchXg || 1)) * 100 : 0)}%` }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+
+                {/* Analytical recap matrix card */}
+                <div className="p-8 rounded-[2rem] border border-white/5 bg-white/[0.01] space-y-6">
+                  <h4 className="text-xs font-black uppercase tracking-widest text-[#cfd3d7]">Considerazioni della Sala Analisi</h4>
+                  <div className="space-y-4">
+                    <p className="text-xs text-gray-400 leading-relaxed font-semibold">
+                      Analizzando i {selectedCompareMatchIds.length} match di campionato concomitanti selezionati: l'ottimizzazione xG mostra un andamento di conversione prevalentemente {
+                        matches.filter(m => selectedCompareMatchIds.includes(m.id)).filter(m => m.goals > m.totalXG).length / (selectedCompareMatchIds.length || 1) >= 0.5 
+                        ? "altamente cinico e sovra-efficiente, sintomo di eccezionale prolificità o eccellenti capacità balistiche individuali" 
+                        : "sotto le aspettative di rendimento standard, dovuto a scarsa concretezza balistica o a un alto volume di tiri da posizioni decimali difficili."
+                      }
+                    </p>
+                    <p className="text-xs text-gray-400 leading-relaxed font-semibold">
+                      Si suggerisce di massimizzare l'indice IPO medio, stimolando cross assistiti più ravvicinati da percorsi centrali rispetto alle fasce cieche laterali.
+                    </p>
+                  </div>
+                </div>
               </div>
             </motion.div>
           </div>
