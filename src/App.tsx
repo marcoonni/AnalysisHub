@@ -2921,6 +2921,16 @@ export default function App() {
               {/* Reset Milestones */}
               <div className="flex items-center gap-1">
                 <button 
+                  onClick={() => { setTimerSeconds(0); setIsTimerRunning(false); }}
+                  className={cn(
+                    "h-10 px-3 text-[9px] font-black border rounded-xl transition-all uppercase tracking-tight flex items-center justify-center shrink-0",
+                    theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-50 border-gray-200 text-gray-650 hover:text-gray-900 hover:bg-gray-100"
+                  )}
+                  title="Reset totale a 00:00"
+                >
+                  Reset
+                </button>
+                <button 
                   onClick={() => { setTimerSeconds(45 * 60); setIsTimerRunning(false); }}
                   className={cn(
                     "h-10 px-3 text-[9px] font-black border rounded-xl transition-all uppercase tracking-tight flex items-center justify-center shrink-0",
@@ -2933,52 +2943,12 @@ export default function App() {
                 <button 
                   onClick={() => { setTimerSeconds(90 * 60); setIsTimerRunning(false); }}
                   className={cn(
-                    "h-10 px-2.5 text-[9px] font-black border rounded-xl transition-all uppercase tracking-tight flex items-center justify-center shrink-0",
-                    theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-50 border-gray-200 text-gray-650 hover:text-gray-900 hover:bg-gray-100"
-                  )}
-                  title="Fine Partita (90:00)"
-                >
-                  90'
-                </button>
-                <button 
-                  onClick={() => { setTimerSeconds(90 * 60); setIsTimerRunning(false); }}
-                  className={cn(
-                    "h-10 px-2.5 text-[9px] font-black border rounded-xl transition-all uppercase tracking-tight flex items-center justify-center shrink-0",
-                    theme === 'dark' ? "bg-blue-500/10 border-blue-500/20 text-blue-400 hover:text-blue-300 hover:bg-blue-500/20" : "bg-blue-50 border-blue-200 text-blue-650 hover:text-blue-900 hover:bg-blue-100"
-                  )}
-                  title="Inizio Supplementari (90:00)"
-                >
-                  90' OTS
-                </button>
-                <button 
-                  onClick={() => { setTimerSeconds(105 * 60); setIsTimerRunning(false); }}
-                  className={cn(
-                    "h-10 px-2.5 text-[9px] font-black border rounded-xl transition-all uppercase tracking-tight flex items-center justify-center shrink-0",
-                    theme === 'dark' ? "bg-blue-500/10 border-blue-500/20 text-blue-400 hover:text-blue-300 hover:bg-blue-500/20" : "bg-blue-50 border-blue-200 text-blue-650 hover:text-blue-900 hover:bg-blue-100"
-                  )}
-                  title="2° Tempo Supplementare (105:00)"
-                >
-                  105' OTS
-                </button>
-                <button 
-                  onClick={() => { setTimerSeconds(120 * 60); setIsTimerRunning(false); }}
-                  className={cn(
-                    "h-10 px-2.5 text-[9px] font-black border rounded-xl transition-all uppercase tracking-tight flex items-center justify-center shrink-0",
-                    theme === 'dark' ? "bg-rose-500/10 border-rose-500/20 text-rose-400 hover:text-rose-300 hover:bg-rose-500/20" : "bg-rose-50 border-rose-200 text-rose-650 hover:text-rose-900 hover:bg-rose-100"
-                  )}
-                  title="Fine Tempi Supplementari (120:00)"
-                >
-                  120' OTS
-                </button>
-                <button 
-                  onClick={() => { setTimerSeconds(0); setIsTimerRunning(false); }}
-                  className={cn(
                     "h-10 px-3 text-[9px] font-black border rounded-xl transition-all uppercase tracking-tight flex items-center justify-center shrink-0",
-                    theme === 'dark' ? "bg-red-500/10 border-red-500/20 text-red-400 hover:bg-red-500/20" : "bg-red-50 border-red-200 text-red-650 hover:bg-red-100"
+                    theme === 'dark' ? "bg-blue-500/10 border-blue-500/20 text-blue-400 hover:text-blue-350 hover:bg-blue-500/20" : "bg-blue-50 border-blue-200 text-blue-650 hover:text-blue-900 hover:bg-blue-100"
                   )}
-                  title="Reset totale a 00:00"
+                  title="Tempi Supplementari (90:00)"
                 >
-                  Reset
+                  Extratime
                 </button>
               </div>
             </div>
