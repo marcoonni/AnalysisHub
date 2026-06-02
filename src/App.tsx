@@ -2840,10 +2840,11 @@ export default function App() {
       {/* Header */}
       <header className={cn(
         "border-b backdrop-blur-3xl md:sticky static md:top-0 z-50 transition-colors duration-500",
-        theme === 'dark' ? "bg-[#070708]/85 border-white/[0.03]" : "bg-white/80 border-gray-100"
+        theme === 'dark' ? "bg-[#070708]/90 border-white/[0.03]" : "bg-white/90 border-gray-100"
       )}>
-        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-2.5 md:py-2 flex flex-col md:flex-row md:items-center justify-between gap-3.5 flex-wrap">
-          <div className="flex items-center justify-between w-full md:w-auto gap-4 shrink-0">
+        {/* Row 1: Brand, Match Info & Global Utilities */}
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-2.5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="flex items-center justify-between w-full lg:w-auto gap-4 shrink-0">
             <div className="flex items-center gap-4">
               <div className={cn(
                 "w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-xl shadow-xl relative group overflow-hidden transition-all duration-500 hover:border-blue-500/20 border shrink-0",
@@ -2878,25 +2879,92 @@ export default function App() {
                 </div>
               </div>
             </div>
-
-            {/* Mobile/Tablet Quick Toggles */}
-            <div className="flex md:hidden items-center gap-2 shrink-0">
-              <button 
-                onClick={() => user ? logout() : login()}
-                className={cn(
-                  "h-10 w-10 flex items-center justify-center rounded-xl border transition-all outline-none",
-                  theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-500 hover:text-white" : "bg-gray-50 border-gray-100 text-gray-400 hover:text-gray-900"
-                )}
-                title={user ? "Logout" : "Accedi"}
-              >
-                {user ? <LogOut className="w-3.5 h-3.5" /> : <LogIn className="w-3.5 h-3.5" />}
-              </button>
-            </div>
           </div>
 
-          <div className="flex items-center gap-3 w-full md:w-auto justify-center md:justify-start shrink-0">
-            {/* Timer Controllers and Reset Milestones */}
-            <div className="flex items-center gap-3 w-full sm:w-auto justify-center flex-nowrap whitespace-nowrap">
+          {/* Right side Row 1: uscita (logout), nuova partita, vhud attiva, condivisione, setting, export */}
+          <div className="flex flex-wrap items-center justify-center lg:justify-end gap-1.5 sm:gap-2 w-full lg:w-auto shrink-0">
+            {/* V-HUD Attiva badge */}
+            <div className="h-10 px-3 flex items-center justify-center rounded-xl border border-white/5 bg-white/[0.02] text-emerald-400 gap-1.5 text-[9px] font-black uppercase tracking-widest shrink-0">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              V-HUD Attiva
+            </div>
+
+            {/* Nuova Partita */}
+            <button 
+              onClick={() => setShowNewMatchConfirm(true)}
+              className={cn(
+                "h-10 px-3 rounded-xl border transition-all outline-none flex items-center justify-center gap-1.5 focus:outline-none shrink-0",
+                theme === 'dark' ? "bg-[#1d2d24] border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20" : "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100"
+              )}
+              title="Crea Nuova Partita (Nuova Partita)"
+            >
+              <PlusCircle className="w-3.5 h-3.5 shrink-0" />
+              <span className="text-[9px] font-black uppercase tracking-wider">Nuova Partita</span>
+            </button>
+
+            {/* Condivisione (Share link) */}
+            <button 
+              onClick={() => {
+                const url = `${window.location.origin}${window.location.pathname}?matchId=${currentMatchId}`;
+                navigator.clipboard.writeText(url);
+                setShowToast({ message: "Link di invito copiato!", type: 'success' });
+              }}
+              className={cn(
+                "h-10 w-10 flex items-center justify-center rounded-xl border transition-all outline-none shrink-0",
+                theme === 'dark' ? "bg-blue-600/10 border-blue-500/20 text-blue-400 hover:bg-blue-600/20" : "bg-blue-50 border-blue-200 text-blue-600 hover:bg-blue-100"
+              )}
+              title="Invita Collaboratori (Condivisione)"
+            >
+              <UserPlus className="w-3.5 h-3.5 shrink-0" />
+            </button>
+
+            {/* Setting (Model Tuning) */}
+            <button 
+              onClick={() => setShowXGTuning(true)}
+              className={cn(
+                "h-10 w-10 flex items-center justify-center rounded-xl border transition-all outline-none shrink-0",
+                theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-50 border-gray-200 text-gray-500 hover:text-gray-900"
+              )}
+              title="Personalizza Modello (Setting)"
+            >
+              <Settings2 className="w-3.5 h-3.5 shrink-0" />
+            </button>
+
+            {/* Export (Esporta Excel) */}
+            <button 
+              onClick={exportToExcel}
+              className={cn(
+                "h-10 w-10 flex items-center justify-center rounded-xl border transition-all outline-none shrink-0",
+                theme === 'dark' ? "bg-emerald-600/10 border-emerald-500/25 text-emerald-500 hover:bg-emerald-600/20" : "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100"
+              )}
+              title="Esporta Excel (Export)"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 shrink-0" />
+            </button>
+
+            {/* Uscita (LogOut) */}
+            <button 
+              onClick={() => user ? logout() : login()}
+              className={cn(
+                "h-10 px-3 rounded-xl border transition-all outline-none flex items-center justify-center gap-1.5 focus:outline-none shrink-0",
+                theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-50 border-gray-150 text-gray-650 hover:text-gray-900 shadow-sm"
+              )}
+              title={user ? "Logout" : "Accedi"}
+            >
+              {user ? <LogOut className="w-3.5 h-3.5 shrink-0" /> : <LogIn className="w-3.5 h-3.5 shrink-0" />}
+              <span className="text-[9px] font-black uppercase tracking-wider">{user ? "Uscita" : "Accedi"}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Row 2: Active Match Tracking, Views, Timers and Actions */}
+        <div className={cn(
+          "border-t py-2",
+          theme === 'dark' ? "border-white/[0.04]" : "border-gray-100"
+        )}>
+          <div className="max-w-[1600px] mx-auto px-4 sm:px-6 flex flex-col md:flex-row md:items-center justify-between gap-3 flex-wrap">
+            {/* Left side actions: Timer controls and milestones */}
+            <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 w-full md:w-auto justify-center whitespace-nowrap">
               <button 
                 onClick={() => setIsTimerRunning(!isTimerRunning)}
                 className={cn(
@@ -2919,7 +2987,7 @@ export default function App() {
               </div>
 
               {/* Reset Milestones */}
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 shrink-0">
                 <button 
                   onClick={() => { setTimerSeconds(0); setIsTimerRunning(false); }}
                   className={cn(
@@ -2944,7 +3012,7 @@ export default function App() {
                   onClick={() => { setTimerSeconds(90 * 60); setIsTimerRunning(false); }}
                   className={cn(
                     "h-10 px-3 text-[9px] font-black border rounded-xl transition-all uppercase tracking-tight flex items-center justify-center shrink-0",
-                    theme === 'dark' ? "bg-blue-500/10 border-blue-500/20 text-blue-400 hover:text-blue-350 hover:bg-blue-500/20" : "bg-blue-50 border-blue-200 text-blue-650 hover:text-blue-900 hover:bg-blue-100"
+                    theme === 'dark' ? "bg-blue-500/10 border-blue-500/20 text-blue-400 hover:text-blue-350 hover:bg-blue-500/20" : "bg-blue-50 border-blue-200 text-blue-650 hover:text-blue-900 hover:bg-blue-150"
                   )}
                   title="Tempi Supplementari (90:00)"
                 >
@@ -2952,211 +3020,142 @@ export default function App() {
                 </button>
               </div>
             </div>
-          </div>
 
-          {/* Right actions and tools grouped cleanly */}
-          <div className="flex flex-wrap items-center justify-center md:justify-end gap-1.5 sm:gap-2 w-full md:w-auto border-t md:border-t-0 border-white/5 md:pt-0 pt-3 shrink-0">
-            <button 
-              onClick={() => setShowSquadModal(true)}
-              className={cn(
-                "h-10 px-3 rounded-xl border transition-all outline-none flex items-center justify-center gap-1.5 focus:outline-none shrink-0",
-                theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-50 border-gray-200 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-              )}
-              title="Scheda Squadra"
-            >
-              <Users className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-              <span className="text-[9px] font-black uppercase tracking-wider">Roster</span>
-            </button>
-            <button 
-              onClick={() => {
-                setShowShotsHistoryModal(true);
-                if (!selectedHistoryPlayer && squadPlayers.length > 0) {
-                  setSelectedHistoryPlayer(squadPlayers[0].name);
-                }
-              }}
-              className={cn(
-                "h-10 px-3 rounded-xl border transition-all outline-none flex items-center justify-center gap-1.5 focus:outline-none shrink-0",
-                theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-50 border-gray-200 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-              )}
-              title="Storico dei Tiri per Ragazzo (Griglia)"
-            >
-              <Target className="w-3.5 h-3.5 text-red-500 shrink-0" />
-              <span className="text-[9px] font-black uppercase tracking-wider">Shots</span>
-            </button>
-            <button 
-              onClick={() => setShowMatchList(true)}
-              className={cn(
-                "h-10 px-3 rounded-xl border transition-all outline-none flex items-center justify-center gap-1.5 focus:outline-none shrink-0",
-                theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-50 border-gray-200 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-              )}
-              title="Le mie partite"
-            >
-              <List className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-              <span className="text-[9px] font-black uppercase tracking-wider">Partite</span>
-            </button>
-
-            {effectiveSubStatus && effectiveSubStatus.active && (
-              <button
+            {/* Right side actions: View togglers, heatmap & save */}
+            <div className="flex flex-wrap items-center justify-center md:justify-end gap-1.5 sm:gap-2">
+              <button 
+                onClick={() => setShowSquadModal(true)}
+                className={cn(
+                  "h-10 px-3 rounded-xl border transition-all outline-none flex items-center justify-center gap-1.5 focus:outline-none shrink-0",
+                  theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-50 border-gray-200 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                )}
+                title="Scheda Squadra"
+              >
+                <Users className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                <span className="text-[9px] font-black uppercase tracking-wider">Roster</span>
+              </button>
+              <button 
                 onClick={() => {
-                  if (isDemoMode) {
-                    setForceShowPaywall(true);
-                  } else {
-                    setShowSubscriptionStatusInfoModal(true);
+                  setShowShotsHistoryModal(true);
+                  if (!selectedHistoryPlayer && squadPlayers.length > 0) {
+                    setSelectedHistoryPlayer(squadPlayers[0].name);
                   }
                 }}
                 className={cn(
-                  "h-10 px-3 border rounded-xl transition-all outline-none flex items-center justify-center gap-1 cursor-pointer shrink-0 max-w-full text-ellipsis overflow-hidden",
-                  isDemoMode
-                    ? (theme === 'dark' 
-                        ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20" 
-                        : "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100")
-                    : (theme === 'dark' 
-                        ? "bg-amber-500/10 border-amber-500/20 text-amber-500 hover:bg-amber-500/20" 
-                        : "bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100")
+                  "h-10 px-3 rounded-xl border transition-all outline-none flex items-center justify-center gap-1.5 focus:outline-none shrink-0",
+                  theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-50 border-gray-200 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                 )}
-                title={isDemoMode ? "Sei in modalità Demo. Clicca per sbloccare tutti i piani!" : "Dettagli Licenza Abbonamento"}
+                title="Storico dei Tiri per Ragazzo (Griglia)"
               >
-                <Sparkles className={cn("w-3 h-3 shrink-0", isDemoMode ? "text-emerald-400 animate-bounce" : "text-amber-500")} />
-                <span className="text-[8px] font-black uppercase tracking-wider shrink-0">
-                  {isDemoMode ? "DEMO 🚀" : "PREMIUM"}
-                </span>
+                <Target className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                <span className="text-[9px] font-black uppercase tracking-wider">Shots</span>
               </button>
-            )}
-
-            {activeTab === 'xg' && (
-              <>
-                <button 
-                  onClick={() => setShowHeatmap(!showHeatmap)}
-                  className={cn(
-                    "h-10 px-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1.5 border shrink-0",
-                    showHeatmap 
-                      ? "bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-600/10" 
-                      : (theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-50 border-gray-200 hover:bg-gray-100 text-gray-500 hover:text-gray-900")
-                  )}
-                >
-                  <Flame className={cn("w-3.5 h-3.5", showHeatmap && "animate-pulse")} />
-                  <span className="text-[9px]">Heatmap</span>
-                </button>
-
-                {showHeatmap && (
-                  <div className="flex bg-white/[0.02] border border-white/5 rounded-xl p-0.5 shrink-0 select-none">
-                    <button
-                      onClick={() => {
-                        setHeatmapMode('theoretical');
-                        setShowToast({ message: "Heatmap: Modello Previsionale xG caricato!", type: 'success' });
-                      }}
-                      className={cn(
-                        "h-8 px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-wider transition-all",
-                        heatmapMode === 'theoretical'
-                          ? "bg-blue-600 text-white shadow"
-                          : "text-gray-400 hover:text-white hover:bg-white/5"
-                      )}
-                    >
-                      Teorico xG
-                    </button>
-                    <button
-                      onClick={() => {
-                        setHeatmapMode('shots');
-                        setShowToast({ message: "Heatmap: Densità Tiri Reali caricata!", type: 'success' });
-                      }}
-                      className={cn(
-                        "h-8 px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-wider transition-all",
-                        heatmapMode === 'shots'
-                          ? "bg-blue-600 text-white shadow"
-                          : "text-gray-400 hover:text-white hover:bg-white/5"
-                      )}
-                    >
-                      Mappa Tiri
-                    </button>
-                  </div>
+              <button 
+                onClick={() => setShowMatchList(true)}
+                className={cn(
+                  "h-10 px-3 rounded-xl border transition-all outline-none flex items-center justify-center gap-1.5 focus:outline-none shrink-0",
+                  theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-50 border-gray-200 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                 )}
+                title="Le mie partite"
+              >
+                <List className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                <span className="text-[9px] font-black uppercase tracking-wider">Partite</span>
+              </button>
 
-                <button 
-                  onClick={exportToExcel}
+              {effectiveSubStatus && effectiveSubStatus.active && (
+                <button
+                  onClick={() => {
+                    if (isDemoMode) {
+                      setForceShowPaywall(true);
+                    } else {
+                      setShowSubscriptionStatusInfoModal(true);
+                    }
+                  }}
                   className={cn(
-                    "h-10 w-10 flex items-center justify-center rounded-xl border transition-all outline-none shrink-0",
-                    theme === 'dark' ? "bg-emerald-600/10 border-emerald-500/25 text-emerald-500 hover:bg-emerald-600/20" : "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100"
+                    "h-10 px-3 border rounded-xl transition-all outline-none flex items-center justify-center gap-1 cursor-pointer shrink-0 max-w-full text-ellipsis overflow-hidden",
+                    isDemoMode
+                      ? (theme === 'dark' 
+                          ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20" 
+                          : "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100")
+                      : (theme === 'dark' 
+                          ? "bg-amber-500/10 border-amber-500/20 text-amber-500 hover:bg-amber-500/20" 
+                          : "bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100")
                   )}
-                  title="Esporta Excel"
+                  title={isDemoMode ? "Sei in modalità Demo. Clicca per sbloccare tutti i piani!" : "Dettagli Licenza Abbonamento"}
                 >
-                  <FileSpreadsheet className="w-3.5 h-3.5 shrink-0" />
+                  <Sparkles className={cn("w-3 h-3 shrink-0", isDemoMode ? "text-emerald-400 animate-bounce" : "text-amber-500")} />
+                  <span className="text-[8px] font-black uppercase tracking-wider shrink-0">
+                    {isDemoMode ? "DEMO 🚀" : "PREMIUM"}
+                  </span>
                 </button>
+              )}
 
-                <button 
-                  onClick={() => setShowXGTuning(true)}
-                  className={cn(
-                    "h-10 w-10 flex items-center justify-center rounded-xl border transition-all outline-none shrink-0",
-                    theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-50 border-gray-200 text-gray-500 hover:text-gray-900"
-                  )}
-                  title="Personalizza Modello"
-                >
-                  <Settings2 className="w-3.5 h-3.5 shrink-0" />
-                </button>
-
-                {user && currentMatchId && !isReadOnly && (
+              {activeTab === 'xg' && (
+                <>
                   <button 
-                    onClick={() => {
-                      const url = `${window.location.origin}${window.location.pathname}?matchId=${currentMatchId}`;
-                      navigator.clipboard.writeText(url);
-                      setShowToast({ message: "Link di invito copiato!", type: 'success' });
-                    }}
+                    onClick={() => setShowHeatmap(!showHeatmap)}
                     className={cn(
-                      "h-10 w-10 flex items-center justify-center rounded-xl border transition-all outline-none shrink-0",
-                      theme === 'dark' ? "bg-blue-600/10 border-blue-500/20 text-blue-400 hover:bg-blue-600/20" : "bg-blue-50 border-blue-200 text-blue-600 hover:bg-blue-100"
+                      "h-10 px-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1.5 border shrink-0",
+                      showHeatmap 
+                        ? "bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-600/10" 
+                        : (theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-400 hover:text-white" : "bg-gray-50 border-gray-200 hover:bg-gray-100 text-gray-500 hover:text-gray-900")
                     )}
-                    title="Invita Collaboratori"
                   >
-                    <UserPlus className="w-3.5 h-3.5 shrink-0" />
+                    <Flame className={cn("w-3.5 h-3.5", showHeatmap && "animate-pulse")} />
+                    <span className="text-[9px]">Heatmap</span>
                   </button>
-                )}
 
+                  {showHeatmap && (
+                    <div className="flex bg-white/[0.02] border border-white/5 rounded-xl p-0.5 shrink-0 select-none">
+                      <button
+                        onClick={() => {
+                          setHeatmapMode('theoretical');
+                          setShowToast({ message: "Heatmap: Modello Previsionale xG caricato!", type: 'success' });
+                        }}
+                        className={cn(
+                          "h-8 px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-wider transition-all",
+                          heatmapMode === 'theoretical'
+                            ? "bg-blue-600 text-white shadow"
+                            : "text-gray-400 hover:text-white hover:bg-white/5"
+                        )}
+                      >
+                        Teorico xG
+                      </button>
+                      <button
+                        onClick={() => {
+                          setHeatmapMode('shots');
+                          setShowToast({ message: "Heatmap: Densità Tiri Reali caricata!", type: 'success' });
+                        }}
+                        className={cn(
+                          "h-8 px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-wider transition-all",
+                          heatmapMode === 'shots'
+                            ? "bg-blue-600 text-white shadow"
+                            : "text-gray-400 hover:text-white hover:bg-white/5"
+                        )}
+                      >
+                        Mappa Tiri
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {activeTab === 'xg' && !isReadOnly && (
                 <button 
-                  onClick={() => setShowNewMatchConfirm(true)}
+                  onClick={saveMatch}
+                  disabled={isSaving}
                   className={cn(
                     "h-10 px-3 rounded-xl border transition-all outline-none flex items-center justify-center gap-1.5 focus:outline-none shrink-0",
-                    theme === 'dark' ? "bg-[#1d2d24] border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20" : "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100"
+                    isSaving 
+                      ? "opacity-50 cursor-not-allowed" 
+                      : (theme === 'dark' ? "bg-blue-600/15 border-blue-500/25 text-blue-500 hover:bg-blue-600/25" : "bg-blue-600 text-white border-blue-150 shadow-md shadow-blue-500/15")
                   )}
-                  title="Crea Nuova Partita"
+                  title="Salva Partita"
                 >
-                  <PlusCircle className="w-3.5 h-3.5 shrink-0" />
-                  <span className="text-[9px] font-black uppercase tracking-wider hidden sm:inline">Nuova Partita</span>
+                  {isSaving ? <RefreshCw className="w-3.5 h-3.5 animate-spin shrink-0" /> : <Save className="w-3.5 h-3.5 shrink-0" />}
+                  <span className="text-[9px] font-black uppercase tracking-wider">Salva</span>
                 </button>
-
-                {!isReadOnly && (
-                  <button 
-                    onClick={saveMatch}
-                    disabled={isSaving}
-                    className={cn(
-                      "h-10 px-3 rounded-xl border transition-all outline-none flex items-center justify-center gap-1.5 focus:outline-none shrink-0",
-                      isSaving 
-                        ? "opacity-50 cursor-not-allowed" 
-                        : (theme === 'dark' ? "bg-blue-600/15 border-blue-500/25 text-blue-500 hover:bg-blue-600/25" : "bg-blue-600 text-white border-blue-150 shadow-md shadow-blue-500/15")
-                    )}
-                    title="Salva Partita"
-                  >
-                    {isSaving ? <RefreshCw className="w-3.5 h-3.5 animate-spin shrink-0" /> : <Save className="w-3.5 h-3.5 shrink-0" />}
-                    <span className="text-[9px] font-black uppercase tracking-wider hidden sm:inline">Salva</span>
-                  </button>
-                )}
-              </>
-            )}
-
-            {/* Desktop Only theme and login togglers */}
-            <div className="hidden md:flex items-center gap-2">
-              <div className="h-10 px-3 flex items-center justify-center rounded-xl border border-white/5 bg-white/[0.02] text-emerald-400 gap-1.5 text-[9px] font-black uppercase tracking-widest shrink-0">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                V-HUD Attiva
-              </div>
-              <button 
-                onClick={() => user ? logout() : login()}
-                className={cn(
-                  "h-10 w-10 flex items-center justify-center rounded-xl border transition-all outline-none shrink-0",
-                  theme === 'dark' ? "bg-white/[0.02] border-white/5 text-gray-500 hover:text-white" : "bg-gray-50 border-gray-100 text-gray-500 hover:text-gray-900"
-                )}
-                title={user ? "Logout" : "Accedi"}
-              >
-                {user ? <LogOut className="w-3.5 h-3.5 shrink-0" /> : <LogIn className="w-3.5 h-3.5 shrink-0" />}
-              </button>
+              )}
             </div>
           </div>
         </div>
