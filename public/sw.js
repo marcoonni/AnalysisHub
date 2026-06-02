@@ -39,6 +39,22 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Network-First strategy for navigation (index.html) so we always get latest code online
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request).then((networkResponse) => {
+        if (networkResponse.status === 200) {
+          const responseClone = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
+        }
+        return networkResponse;
+      }).catch(() => {
+        return caches.match('/index.html') || caches.match('/');
+      })
+    );
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) {
@@ -51,7 +67,7 @@ self.addEventListener('fetch', (event) => {
         return cachedResponse;
       }
       return fetch(event.request).catch(() => {
-        // Fallback for document navigation
+        // Fallback for document navigation (just in case)
         if (event.request.mode === 'navigate') {
           return caches.match('/index.html');
         }

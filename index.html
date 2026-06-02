@@ -90,9 +90,36 @@
 
       // Catch module and asset loading failures
       window.addEventListener('error', function(event) {
-        const target = event.target || event.srcElement;
+        var target = event.target || event.srcElement;
         if (target && (target.tagName === 'SCRIPT' || target.tagName === 'LINK')) {
-          showBootError('Errore di caricamento risorsa: ' + (target.src || target.href || 'script o stile non trovato'));
+          var url = target.src || target.href || 'script o stile non trovato';
+          showBootError('Errore di caricamento risorsa: ' + url);
+          
+          // Self-healing: if an asset fails to load, it's very likely due to a stale Service Worker cache.
+          // Unregister service workers, clear caches, and reload after a short delay, with loop prevention.
+          var now = Date.now();
+          var lastReload = parseInt(sessionStorage.getItem('last_asset_fail_reload') || '0', 10);
+          if (now - lastReload > 10000) {
+            sessionStorage.setItem('last_asset_fail_reload', now.toString());
+            
+            if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
+              navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                for (var i = 0; i < registrations.length; i++) {
+                  registrations[i].unregister();
+                }
+              });
+            }
+            if (window.caches && caches.keys) {
+              caches.keys().then(function(keys) {
+                keys.forEach(function(key) {
+                  caches.delete(key);
+                });
+              });
+            }
+            setTimeout(function() {
+              window.location.reload();
+            }, 1000);
+          }
         } else {
           showBootError('Errore: ' + (event.message || 'Errore di sintassi o runtime indefinita'));
         }
