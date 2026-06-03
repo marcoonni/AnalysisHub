@@ -100,7 +100,8 @@ import html2canvas from 'html2canvas';
 // List of admin and premium-approved user emails
 export const PREMIUM_ADMIN_EMAILS = [
   'onnivellomarco@gmail.com',
-  'mimmoscogna@gmail.com'
+  'mimmoscogna@gmail.com',
+  'andrea.bonafede2@gmail.com'
 ];
 
 // Types
