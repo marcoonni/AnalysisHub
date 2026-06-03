@@ -2191,23 +2191,6 @@ export default function App() {
   };
 
   const handleGlobalQuickShotRegister = (category: string, team: 'home' | 'away') => {
-    let dx = 15;
-    let dy = 34;
-    if (category === 'corners') {
-      dx = 0.5;
-      dy = 2;
-    } else if (category === 'freeKicks') {
-      dx = 20;
-      dy = 34;
-    } else if (category === 'penalties') {
-      dx = 11;
-      dy = 34;
-    } else if (category === 'crosses') {
-      dx = 15;
-      dy = 58;
-    }
-
-    const finalPlayer = team === 'away' ? 'Avversario' : 'Nessuno';
     const isAway = team === 'away';
 
     if (isAway) {
@@ -2222,25 +2205,6 @@ export default function App() {
       }));
     }
 
-    const xgVal = calculateXG(dx, dy, 'foot', 'none', xgCoeffs);
-    const newShot: Shot = {
-      id: Math.random().toString(36).substr(2, 9),
-      x: dx,
-      y: dy,
-      isGoal: false,
-      bodyPart: 'foot',
-      assistType: 'none',
-      xg: xgVal,
-      timestamp: Date.now(),
-      minute: currentMinute,
-      playerName: finalPlayer,
-      ipoCategory: category,
-      team: team,
-    };
-
-    setShots(prev => [...prev, newShot]);
-    setSelectedShot(newShot);
-
     const catLabels: Record<string, string> = {
       shotsIn: 'Tiro in Area',
       shotsOut: 'Tiro Fuori',
@@ -2254,14 +2218,12 @@ export default function App() {
 
     addMatchEvent({
       type: 'ipo_event',
-      description: `📈 ${categoryLabel} - ${finalPlayer} (${activeTeamName})`,
-      value: xgVal,
-      shotId: newShot.id,
-      minute: newShot.minute
+      description: `📈 ${categoryLabel} (${activeTeamName})`,
+      minute: currentMinute
     });
 
     setShowToast({ 
-      message: `${categoryLabel} aggiunto per ${finalPlayer}! (${activeTeamName})`, 
+      message: `${categoryLabel} aggiunto per ${activeTeamName}!`, 
       type: 'success' 
     });
   };
